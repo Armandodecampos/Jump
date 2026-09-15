@@ -71,18 +71,11 @@
 
                 <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 text-left space-y-2 text-xs sm:text-sm">
                     <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-300">Mover Esquerda:</span>
-                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-pink-400">A</kbd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-300">Mover Direita:</span>
-                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-pink-400">D</kbd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-300">Pular:</span>
-                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-purple-400">ESPAÇO</kbd>
-                    </div>
+                    <p class="text-slate-300 leading-relaxed">
+                        • <strong>Pular:</strong> Toque/clique em qualquer lugar da tela.<br>
+                        • <strong>Mover:</strong> Mantenha pressionado e mova o dedo/mouse para a esquerda ou direita.<br>
+                        • <strong>Teclado:</strong> A / D ou Setas para mover, ESPAÇO para pular.
+                    </p>
                 </div>
 
                 <button id="startBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all">
@@ -121,22 +114,8 @@
         </div>
     </div>
 
-    <!-- Mobile Touch Controls Layout (Analog Joystick on Left, Jump on Right) -->
-    <div class="w-full max-w-lg flex justify-between items-center mt-3 px-3 select-none">
-        <!-- Left Side: Analog Joystick Controller -->
-        <div class="flex items-center justify-center">
-            <div id="joystickBase" class="w-24 h-24 sm:w-28 sm:h-28 bg-slate-800/90 border-2 border-slate-600/80 rounded-full flex items-center justify-center shadow-lg relative touch-none">
-                <div id="joystickKnob" class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-tr from-purple-600 to-pink-500 border-2 border-pink-300/60 rounded-full shadow-md absolute pointer-events-none transition-transform duration-75"></div>
-            </div>
-        </div>
-
-        <!-- Right Side: Jump Button -->
-        <div>
-            <button id="touchJump" class="w-24 h-20 sm:w-28 sm:h-24 bg-gradient-to-tr from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 active:from-purple-700 active:to-pink-600 border-2 border-pink-400/50 rounded-2xl text-base sm:text-lg font-game text-white shadow-lg shadow-purple-500/30 flex items-center justify-center active:scale-90 transition-all touch-none">
-                PULAR
-            </button>
-        </div>
-    </div>
+    <!-- Invisible Full-screen Control Area Overlay -->
+    <div id="screenControlOverlay" class="fixed inset-0 z-0 touch-none select-none"></div>
 </div>
 
 <script>
@@ -278,85 +257,87 @@
         const finalCoins = document.getElementById('finalCoins');
         const soundToggleBtn = document.getElementById('soundToggleBtn');
 
-        // Touch & Analog controls
-        const joystickBase = document.getElementById('joystickBase');
-        const joystickKnob = document.getElementById('joystickKnob');
-        const touchJump = document.getElementById('touchJump');
-
         // Persistent High Score
         let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
         highScoreText.textContent = `${highScore}m`;
 
-        // Input state (Analog X axis: -1.0 to +1.0)
+        // Input state
         let touchAxisX = 0;
         let keyAxisLeft = false;
         let keyAxisRight = false;
 
-        // Joystick Event Handling
-        let isDraggingJoystick = false;
+        // Full Screen Control Logic (Tap to Jump, Hold & Move to Direction)
+        let isTouchingScreen = false;
+        let touchStartX = 0;
 
-        function updateJoystickPos(clientX, clientY) {
-            if (!joystickBase) return;
-            const rect = joystickBase.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const maxRadius = rect.width / 2;
-
-            let deltaX = clientX - centerX;
-            let deltaY = clientY - centerY;
-            const dist = Math.hypot(deltaX, deltaY);
-
-            if (dist > maxRadius) {
-                deltaX = (deltaX / dist) * maxRadius;
-                deltaY = (deltaY / dist) * maxRadius;
-            }
-
-            joystickKnob.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
-            // Calculate subtle analog axis (-1 to +1) with deadzone
-            const rawAxis = deltaX / maxRadius;
-            touchAxisX = Math.abs(rawAxis) < 0.12 ? 0 : rawAxis;
+        function isClickOnInteractiveUI(target) {
+            return target.closest('#startBtn') || target.closest('#restartBtn') || target.closest('#soundToggleBtn');
         }
 
-        function resetJoystick() {
-            isDraggingJoystick = false;
-            touchAxisX = 0;
-            if (joystickKnob) joystickKnob.style.transform = 'translate(0px, 0px)';
-        }
+        function handlePointerDown(clientX, clientY, target) {
+            if (isClickOnInteractiveUI(target)) return;
 
-        // Joystick Touch Listeners
-        joystickBase.addEventListener('touchstart', (e) => {
-            if (e.cancelable) e.preventDefault();
             sound.init();
-            isDraggingJoystick = true;
-            const touch = e.touches[0];
-            updateJoystickPos(touch.clientX, touch.clientY);
-        }, { passive: false });
+            isTouchingScreen = true;
+            touchStartX = clientX;
+            touchAxisX = 0;
+
+            if (gameState === 'PLAYING') {
+                player.tryJump();
+            }
+        }
+
+        function handlePointerMove(clientX) {
+            if (!isTouchingScreen) return;
+
+            const deltaX = clientX - touchStartX;
+            const threshold = 15; // Minimum drag pixels to change direction
+
+            if (Math.abs(deltaX) < threshold) {
+                touchAxisX = 0;
+            } else {
+                // Direction based on drag offset relative to initial touch point
+                const maxRange = 80;
+                touchAxisX = Math.max(-1, Math.min(1, (deltaX - Math.sign(deltaX) * threshold) / maxRange));
+            }
+        }
+
+        function handlePointerUp() {
+            isTouchingScreen = false;
+            touchAxisX = 0;
+        }
+
+        // Fullscreen touch listeners
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                handlePointerDown(touch.clientX, touch.clientY, e.target);
+            }
+        }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
-            if (isDraggingJoystick && e.touches.length > 0) {
-                const touch = e.touches[0];
-                updateJoystickPos(touch.clientX, touch.clientY);
+            if (isTouchingScreen && e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX);
             }
-        }, { passive: false });
+        }, { passive: true });
 
-        window.addEventListener('touchend', () => resetJoystick());
-        window.addEventListener('touchcancel', () => resetJoystick());
+        window.addEventListener('touchend', () => handlePointerUp());
+        window.addEventListener('touchcancel', () => handlePointerUp());
 
-        // Mouse Fallback for testing joystick on desktop
-        joystickBase.addEventListener('mousedown', (e) => {
-            sound.init();
-            isDraggingJoystick = true;
-            updateJoystickPos(e.clientX, e.clientY);
+        // Fullscreen mouse listeners for desktop testing
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                handlePointerDown(e.clientX, e.clientY, e.target);
+            }
         });
 
         window.addEventListener('mousemove', (e) => {
-            if (isDraggingJoystick) updateJoystickPos(e.clientX, e.clientY);
+            if (isTouchingScreen) {
+                handlePointerMove(e.clientX);
+            }
         });
 
-        window.addEventListener('mouseup', () => {
-            if (isDraggingJoystick) resetJoystick();
-        });
+        window.addEventListener('mouseup', () => handlePointerUp());
 
         // Keyboard Event Listeners (A / D / Space + Arrow Keys)
         let isJumpPressed = false;
@@ -379,30 +360,6 @@
             if (e.code === 'KeyD' || e.code === 'ArrowRight') keyAxisRight = false;
             if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') isJumpPressed = false;
         });
-
-        // Touch Jump Button Setup
-        const bindJumpControl = (btn) => {
-            const press = (e) => {
-                if (e.cancelable) e.preventDefault();
-                sound.init();
-                if (!isJumpPressed && gameState === 'PLAYING') player.tryJump();
-                isJumpPressed = true;
-            };
-
-            const release = (e) => {
-                if (e.cancelable) e.preventDefault();
-                isJumpPressed = false;
-            };
-
-            btn.addEventListener('touchstart', press, { passive: false });
-            btn.addEventListener('touchend', release, { passive: false });
-            btn.addEventListener('touchcancel', release, { passive: false });
-            btn.addEventListener('mousedown', press);
-            btn.addEventListener('mouseup', release);
-            btn.addEventListener('mouseleave', release);
-        };
-
-        bindJumpControl(touchJump);
 
         soundToggleBtn.addEventListener('click', () => {
             sound.init();
