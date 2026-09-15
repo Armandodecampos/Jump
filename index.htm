@@ -386,6 +386,7 @@
             coyoteTime: 0,
             facingRight: true,
             hasFirstJumped: false,
+            standingPlatform: null,
 
             reset() {
                 this.x = 240 - this.width / 2;
@@ -396,6 +397,7 @@
                 this.coyoteTime = 0;
                 this.facingRight = true;
                 this.hasFirstJumped = false;
+                this.standingPlatform = null;
             },
 
             tryJump() {
@@ -403,6 +405,7 @@
                     this.vy = this.jumpForce;
                     this.isGrounded = false;
                     this.coyoteTime = 0;
+                    this.standingPlatform = null;
                     this.hasFirstJumped = true;
                     sound.playJump();
                     createParticles(this.x + this.width / 2, this.y + this.height, '#ffffff', 8);
@@ -410,6 +413,15 @@
             },
 
             update() {
+                // Carry player along with moving platform if standing on one
+                if (this.isGrounded && this.standingPlatform && !this.standingPlatform.broken) {
+                    if (this.standingPlatform.type === 'moving') {
+                        this.x += this.standingPlatform.moveSpeed;
+                    }
+                } else {
+                    this.standingPlatform = null;
+                }
+
                 // Determine active horizontal axis (-1 to +1)
                 let currentAxisX = touchAxisX;
                 if (currentAxisX === 0) {
@@ -702,17 +714,9 @@
 
             player.update();
 
-            // Camera movement: Starts scrolling UP smoothly once player makes the first jump
+            // Camera movement: Starts scrolling UP smoothly at a constant pace once player makes the first jump
             if (player.hasFirstJumped) {
-                // Slower camera progression curve
                 currentCameraSpeed = baseCameraSpeed + Math.min(2.0, score / 300);
-                
-                // If player gets high up on screen, gently speed up camera
-                const playerScreenY = player.y - cameraY;
-                if (playerScreenY < 200) {
-                    cameraY -= (200 - playerScreenY) * 0.08;
-                }
-                
                 cameraY -= currentCameraSpeed;
             }
 
@@ -749,6 +753,7 @@
                             player.y = pScreenY - player.height;
                             player.vy = 0;
                             player.isGrounded = true;
+                            player.standingPlatform = p;
                             player.coyoteTime = 6; // frames of coyote time grace period
                             
                             if (p.type === 'fragile') {
