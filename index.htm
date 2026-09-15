@@ -145,6 +145,10 @@
             constructor() {
                 this.ctx = null;
                 this.muted = false;
+                // Menu background music track (using raw=1 for direct audio streaming)
+                this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
+                this.bgMusic.loop = true;
+                this.bgMusic.volume = 0.5;
             }
 
             init() {
@@ -154,6 +158,31 @@
                 }
                 if (this.ctx && this.ctx.state === 'suspended') {
                     this.ctx.resume();
+                }
+                if (gameState === 'MENU' && !this.muted) {
+                    this.playMenuMusic();
+                }
+            }
+
+            playMenuMusic() {
+                if (this.muted) return;
+                this.bgMusic.play().catch(() => {
+                    // Handle browser audio autoplay policy restrictions
+                });
+            }
+
+            stopMenuMusic() {
+                this.bgMusic.pause();
+                this.bgMusic.currentTime = 0;
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                this.bgMusic.muted = this.muted;
+                if (this.muted) {
+                    this.bgMusic.pause();
+                } else if (gameState === 'MENU') {
+                    this.playMenuMusic();
                 }
             }
 
@@ -377,7 +406,7 @@
 
         soundToggleBtn.addEventListener('click', () => {
             sound.init();
-            sound.muted = !sound.muted;
+            sound.toggleMute();
             soundToggleBtn.textContent = sound.muted ? '🔇' : '🔊';
         });
 
@@ -912,6 +941,7 @@
 
         function startGame() {
             gameState = 'PLAYING';
+            sound.stopMenuMusic();
             score = 0;
             coinCount = 0;
             cameraY = 0;
@@ -949,10 +979,21 @@
             startGame();
         });
 
-        // Start animation loop on window load
+        // Start animation loop on window load & handle initial sound unlock
         window.onload = () => {
             generateInitialPlatforms();
             gameLoop();
+
+            // Try playing menu music on first user interaction anywhere on screen
+            const unlockAudio = () => {
+                sound.init();
+                window.removeEventListener('click', unlockAudio);
+                window.removeEventListener('touchstart', unlockAudio);
+                window.removeEventListener('keydown', unlockAudio);
+            };
+            window.addEventListener('click', unlockAudio);
+            window.addEventListener('touchstart', unlockAudio);
+            window.addEventListener('keydown', unlockAudio);
         };
     </script>
 </body>
