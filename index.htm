@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subida Nas Nuvens - Jogo de Plataforma</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        }
+        .font-game {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* Custom game glow effects */
+        .glow-title {
+            text-shadow: 0 0 15px rgba(244, 114, 182, 0.6), 0 0 30px rgba(192, 132, 252, 0.4);
+        }
+        .glow-box {
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 20px 2px rgba(99, 102, 241, 0.2);
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+
+    <div class="w-full max-w-lg flex flex-col items-center">
+        <!-- Header / Stats Bar -->
+        <header class="w-full flex justify-between items-center mb-2 px-3 py-2 bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700/60 shadow-lg">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">☁️</span>
+                <h1 class="text-xl sm:text-2xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+                    Subida Nuvens
+                </h1>
+            </div>
+            <div class="flex items-center gap-4 font-game text-sm sm:text-base">
+                <div class="text-amber-400">
+                    🏆 <span id="highScoreText">0m</span>
+                </div>
+                <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-700/70 hover:bg-slate-600 transition active:scale-95 text-lg">
+                    🔊
+                </button>
+            </div>
+        </header>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full aspect-[4/5] max-h-[75vh] bg-slate-900 rounded-3xl overflow-hidden border-4 border-slate-700/80 shadow-2xl glow-box flex items-center justify-center">
+            
+            <canvas id="gameCanvas" width="480" height="600" class="w-full h-full object-contain"></canvas>
+
+            <!-- Menu Overlay (Start Screen) -->
+            <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+                <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-4xl shadow-lg animate-bounce">
+                    🚀
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-game text-white mb-2 glow-title">Subida Nas Nuvens</h2>
+                <p class="text-slate-300 text-sm sm:text-base mb-6 max-w-xs">
+                    Pule nas plataformas para subir sem parar! A câmera começará a subir assim que você fizer seu primeiro pulo.
+                </p>
+
+                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 text-left space-y-2 text-xs sm:text-sm">
+                    <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-300">Mover Esquerda:</span>
+                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-pink-400">A</kbd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-300">Mover Direita:</span>
+                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-pink-400">D</kbd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-300">Pular:</span>
+                        <kbd class="px-2 py-1 bg-slate-700 border border-slate-600 rounded font-mono text-purple-400">ESPAÇO</kbd>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all">
+                    INICIAR JOGO
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+        <div id="gameOverMenu" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 hidden transition-opacity duration-300">
+            <div class="w-16 h-16 mb-2 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center text-3xl border border-red-500/40">
+                💥
+            </div>
+            <h2 class="text-3xl font-game text-red-400 mb-1">Você Caiu!</h2>
+            <p class="text-slate-400 text-xs sm:text-sm mb-4">A câmera subiu demais e você perdeu a plataforma.</p>
+
+            <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 space-y-3 text-center">
+                <div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider font-bold">Altura Alcançada</div>
+                    <div id="finalScore" class="text-3xl font-game text-yellow-400">0m</div>
+                </div>
+                <div class="border-t border-slate-700 pt-2 flex justify-around text-xs">
+                    <div>
+                        <span class="text-slate-400 block">Recorde:</span>
+                        <span id="bestScore" class="font-bold text-emerald-400 text-sm">0m</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Moedas:</span>
+                        <span id="finalCoins" class="font-bold text-amber-300 text-sm">🪙 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-game text-xl rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all">
+                JOGAR NOVAMENTE
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Touch Controls Layout (Gamepad Style: Directional on Left, Jump on Right) -->
+    <div class="w-full max-w-lg flex justify-between items-center mt-3 px-2 select-none">
+        <!-- Left Side: Directional Buttons (Left & Right) -->
+        <div class="flex gap-2.5">
+            <button id="touchLeft" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-800/90 hover:bg-slate-700 active:bg-purple-600 border-2 border-slate-600/80 active:border-purple-400 rounded-2xl text-2xl sm:text-3xl text-white font-bold flex items-center justify-center shadow-lg active:scale-90 transition-all touch-none">
+                ◄
+            </button>
+            <button id="touchRight" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-800/90 hover:bg-slate-700 active:bg-purple-600 border-2 border-slate-600/80 active:border-purple-400 rounded-2xl text-2xl sm:text-3xl text-white font-bold flex items-center justify-center shadow-lg active:scale-90 transition-all touch-none">
+                ►
+            </button>
+        </div>
+
+        <!-- Right Side: Jump Button -->
+        <div>
+            <button id="touchJump" class="w-24 h-16 sm:w-28 sm:h-20 bg-gradient-to-tr from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 active:from-purple-700 active:to-pink-600 border-2 border-pink-400/50 rounded-2xl text-base sm:text-lg font-game text-white shadow-lg shadow-purple-500/30 flex items-center justify-center active:scale-90 transition-all touch-none">
+                PULAR
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+        // Sound Engine using Web Audio API
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playSpring() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
+                osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playBreak() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI elements
+        const startMenu = document.getElementById('startMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const highScoreText = document.getElementById('highScoreText');
+        const finalScore = document.getElementById('finalScore');
+        const bestScore = document.getElementById('bestScore');
+        const finalCoins = document.getElementById('finalCoins');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+
+        // Touch buttons
+        const touchLeft = document.getElementById('touchLeft');
+        const touchRight = document.getElementById('touchRight');
+        const touchJump = document.getElementById('touchJump');
+
+        // Persistent High Score
+        let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
+        highScoreText.textContent = `${highScore}m`;
+
+        // Input state
+        const keys = {
+            left: false,
+            right: false,
+            jump: false
+        };
+
+        // Keyboard Event Listeners (A / D / Space + Arrow Keys)
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
+                if (!keys.jump && gameState === 'PLAYING') {
+                    player.tryJump();
+                }
+                keys.jump = true;
+                // Prevent browser page scrolling when pressing Space
+                if (e.code === 'Space') e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+        if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') keys.jump = false;
+    });
+
+    // Touch & Mouse Controls Setup
+    const bindControl = (btn, keyName) => {
+        const press = (e) => {
+            if (e.cancelable) e.preventDefault();
+            sound.init();
+            if (keyName === 'jump') {
+                if (!keys.jump && gameState === 'PLAYING') player.tryJump();
+                keys.jump = true;
+            } else {
+                keys[keyName] = true;
+            }
+        };
+
+        const release = (e) => {
+            if (e.cancelable) e.preventDefault();
+            keys[keyName] = false;
+        };
+
+        // Touch Events
+        btn.addEventListener('touchstart', press, { passive: false });
+        btn.addEventListener('touchend', release, { passive: false });
+        btn.addEventListener('touchcancel', release, { passive: false });
+
+        // Mouse Events (allows testing on desktop with clicks too)
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+    };
+
+    bindControl(touchLeft, 'left');
+    bindControl(touchRight, 'right');
+    bindControl(touchJump, 'jump');
+
+    soundToggleBtn.addEventListener('click', () => {
+            sound.init();
+            sound.muted = !sound.muted;
+            soundToggleBtn.textContent = sound.muted ? '🔇' : '🔊';
+        });
+
+        // Game States
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+
+        // Player configuration
+        const player = {
+            x: 240,
+            y: 450,
+            width: 34,
+            height: 38,
+            vx: 0,
+            vy: 0,
+            speed: 6.5,
+            jumpForce: -13.5,
+            gravity: 0.55,
+            isGrounded: false,
+            coyoteTime: 0,
+            facingRight: true,
+            hasFirstJumped: false,
+
+            reset() {
+                this.x = 240 - this.width / 2;
+                this.y = 480;
+                this.vx = 0;
+                this.vy = 0;
+                this.isGrounded = false;
+                this.coyoteTime = 0;
+                this.facingRight = true;
+                this.hasFirstJumped = false;
+            },
+
+            tryJump() {
+                // Can jump if grounded or within coyote time (0.1s tolerance)
+                if (this.isGrounded || this.coyoteTime > 0) {
+                    this.vy = this.jumpForce;
+                    this.isGrounded = false;
+                    this.coyoteTime = 0;
+                    this.hasFirstJumped = true;
+                    sound.playJump();
+                    createParticles(this.x + this.width / 2, this.y + this.height, '#ffffff', 8);
+                }
+            },
+
+            update() {
+                // Horizontal movement
+                if (keys.left) {
+                    this.vx = -this.speed;
+                    this.facingRight = false;
+                } else if (keys.right) {
+                    this.vx = this.speed;
+                    this.facingRight = true;
+                } else {
+                    this.vx *= 0.82; // smooth friction
+                }
+
+                this.x += this.vx;
+
+                // Screen wrap around left/right edges
+                if (this.x + this.width < 0) this.x = canvas.width;
+                else if (this.x > canvas.width) this.x = -this.width;
+
+                // Apply gravity
+                this.vy += this.gravity;
+                this.y += this.vy;
+
+                // Coyote time handling
+                if (!this.isGrounded && this.coyoteTime > 0) {
+                    this.coyoteTime--;
+                }
+            },
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+
+                // Squash & Stretch visual feedback
+                let scaleX = 1;
+                let scaleY = 1;
+                if (!this.isGrounded) {
+                    if (this.vy < 0) { scaleX = 0.85; scaleY = 1.15; }
+                    else { scaleX = 1.1; scaleY = 0.9; }
+                }
+
+                ctx.scale(this.facingRight ? scaleX : -scaleX, scaleY);
+
+                // Body (Cute alien/robot character)
+                ctx.fillStyle = '#ec4899'; // Pink-500
+                ctx.beginPath();
+                ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, [12]);
+                ctx.fill();
+
+                // Inner belly pattern
+                ctx.fillStyle = '#fbcfe8';
+                ctx.beginPath();
+                ctx.ellipse(0, 4, 10, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(4, -6, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupil
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(6, -6, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Antenna / Ears
+                ctx.fillStyle = '#c084fc';
+                ctx.beginPath();
+                ctx.arc(0, -this.height / 2 - 2, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        };
+
+        let platforms = [];
+        let collectibles = [];
+        let particles = [];
+        let cameraY = 0;
+        let highestY = 0;
+        let score = 0;
+        let coinCount = 0;
+        let baseCameraSpeed = 1.2;
+        let currentCameraSpeed = 1.2;
+
+        class Platform {
+            constructor(x, y, width, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = 14;
+                this.type = type; // 'normal', 'moving', 'spring', 'fragile'
+                this.broken = false;
+                this.moveSpeed = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 1.5);
+                this.hasSpring = type === 'spring';
+                this.springHeight = 10;
+                this.springCompressed = false;
+                this.crumbling = false;
+                this.crumbleTimer = 0;
+            }
+
+            update() {
+                if (this.type === 'moving') {
+                    this.x += this.moveSpeed;
+                    if (this.x <= 0 || this.x + this.width >= canvas.width) {
+                        this.moveSpeed *= -1;
+                    }
+                }
+
+                // Handle delayed crumbling for fragile red platforms
+                if (this.crumbling && !this.broken) {
+                    this.crumbleTimer--;
+                    // Emit small dust particles while crumbling
+                    if (this.crumbleTimer % 5 === 0) {
+                        createParticles(this.x + Math.random() * this.width, this.y, '#f87171', 1);
+                    }
+                    // Collapse platform when timer runs out
+                    if (this.crumbleTimer <= 0) {
+                        this.broken = true;
+                        sound.playBreak();
+                        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ef4444', 12);
+                    }
+                }
+            }
+
+            draw(screenY) {
+                if (this.broken) return;
+
+                ctx.save();
+                
+                // Color palette based on platform type
+                let colorGradient;
+                if (this.type === 'normal') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#34d399'); // Emerald-400
+                    colorGradient.addColorStop(1, '#059669'); // Emerald-600
+                } else if (this.type === 'moving') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
+                    colorGradient.addColorStop(1, '#0284c7'); // Sky-600
+                } else if (this.type === 'spring') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#a855f7'); // Purple-500
+                    colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
+                } else if (this.type === 'fragile') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#f87171'); // Red-400
+                    colorGradient.addColorStop(1, '#dc2626'); // Red-600
+                }
+
+                // Shake visual effect when crumbling
+                let offsetX = 0;
+                let offsetY = 0;
+                if (this.crumbling) {
+                    offsetX = (Math.random() - 0.5) * 4;
+                    offsetY = (Math.random() - 0.5) * 2;
+                }
+
+                // Platform main bar
+                ctx.fillStyle = colorGradient;
+                ctx.beginPath();
+                ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 6);
+                ctx.fill();
+
+                // Highlight top edge
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(this.x + 4 + offsetX, screenY + 2 + offsetY, this.width - 8, 3);
+
+                // Spring attachment if present
+                if (this.hasSpring) {
+                    const springX = this.x + this.width / 2 - 8;
+                    const springY = screenY - (this.springCompressed ? 4 : 8);
+                    ctx.fillStyle = '#f59e0b'; // Amber spring
+                    ctx.fillRect(springX + offsetX, springY + offsetY, 16, this.springCompressed ? 4 : 8);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Collectible {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 9;
+                this.collected = false;
+                this.angle = 0;
+            }
+
+            update() {
+                this.angle += 0.05;
+            }
+
+            draw(screenY) {
+                if (this.collected) return;
+
+                const floatY = screenY + Math.sin(this.angle) * 3;
+
+                ctx.save();
+                ctx.fillStyle = '#fbbf24'; // Amber-400
+                ctx.beginPath();
+                ctx.arc(this.x, floatY, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(this.x - 2, floatY - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function createParticles(x, y, color, count = 6) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4 - 1,
+                    radius: Math.random() * 3 + 2,
+                    color: color,
+                    alpha: 1,
+                    life: 20 + Math.random() * 10
+                });
+            }
+        }
+
+        function generateInitialPlatforms() {
+            platforms = [];
+            collectibles = [];
+            
+            // Ground platform right under player
+            platforms.push(new Platform(160, 540, 160, 'normal'));
+
+            let currentY = 460;
+            for (let i = 0; i < 15; i++) {
+                currentY -= 65 + Math.random() * 25;
+                const width = Math.max(70, 120 - Math.floor(i * 2));
+                const x = Math.random() * (canvas.width - width);
+
+                let type = 'normal';
+                const rand = Math.random();
+                if (rand < 0.25) type = 'moving';
+                else if (rand < 0.40) type = 'spring';
+                else if (rand < 0.55) type = 'fragile';
+
+                const platform = new Platform(x, currentY, width, type);
+                platforms.push(platform);
+
+                // Chance to spawn coin on platform
+                if (Math.random() < 0.4 && type !== 'fragile') {
+                    collectibles.push(new Collectible(x + width / 2, currentY - 20));
+                }
+            }
+        }
+
+        function generateHigherPlatforms() {
+            const highestPlatform = platforms.reduce((min, p) => p.y < min.y ? p : min, platforms[0]);
+            
+            if (highestPlatform.y > cameraY - 400) {
+                let currentY = highestPlatform.y;
+                for (let i = 0; i < 5; i++) {
+                    currentY -= 65 + Math.random() * 30;
+                    const width = Math.max(65, 110 - Math.min(50, Math.floor(score / 50)));
+                    const x = Math.random() * (canvas.width - width);
+
+                    let type = 'normal';
+                    const rand = Math.random();
+                    if (rand < 0.35) type = 'moving';
+                    else if (rand < 0.55) type = 'spring';
+                    else if (rand < 0.70) type = 'fragile';
+
+                    platforms.push(new Platform(x, currentY, width, type));
+
+                    if (Math.random() < 0.45 && type !== 'fragile') {
+                        collectibles.push(new Collectible(x + width / 2, currentY - 20));
+                    }
+                }
+            }
+        }
+
+        function updateGame() {
+            if (gameState !== 'PLAYING') return;
+
+            player.update();
+
+            // Camera movement: Starts scrolling UP once player makes the first jump
+            if (player.hasFirstJumped) {
+                // Progressive speed scaling with height
+                currentCameraSpeed = baseCameraSpeed + Math.min(3.5, score / 200);
+                
+                // If player is high up on screen, speed up camera to catch up
+                const playerScreenY = player.y - cameraY;
+                if (playerScreenY < 200) {
+                    cameraY -= (200 - playerScreenY) * 0.1;
+                }
+                
+                cameraY -= currentCameraSpeed;
+            }
+
+            // Track height score
+            const currentMeter = Math.max(0, Math.floor((500 - player.y) / 10));
+            if (currentMeter > score) {
+                score = currentMeter;
+            }
+
+            // Generate platforms as we climb higher
+            generateHigherPlatforms();
+
+            // Collision check with platforms (only when falling down)
+            player.isGrounded = false;
+            if (player.vy > 0) {
+                platforms.forEach(p => {
+                    if (p.broken) return;
+
+                    const pScreenY = p.y;
+                    // Player feet collision window
+                    if (
+                        player.x + player.width > p.x &&
+                        player.x < p.x + p.width &&
+                        player.y + player.height >= pScreenY &&
+                        player.y + player.height <= pScreenY + p.height + player.vy
+                    ) {
+                        if (p.hasSpring) {
+                            player.vy = -18; // Super Bounce!
+                            p.springCompressed = true;
+                            setTimeout(() => p.springCompressed = false, 200);
+                            sound.playSpring();
+                            createParticles(player.x + player.width / 2, pScreenY, '#f59e0b', 12);
+                        } else {
+                            player.y = pScreenY - player.height;
+                            player.vy = 0;
+                            player.isGrounded = true;
+                            player.coyoteTime = 6; // frames of coyote time grace period
+                            
+                            if (p.type === 'fragile') {
+                                if (!p.crumbling) {
+                                    p.crumbling = true;
+                                    p.crumbleTimer = 24; // Crumble delay (~0.4s at 60fps)
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Collectible collisions
+            collectibles.forEach(c => {
+                if (!c.collected) {
+                    const dx = (player.x + player.width / 2) - c.x;
+                    const dy = (player.y + player.height / 2) - c.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < player.width / 2 + c.radius) {
+                        c.collected = true;
+                        coinCount++;
+                        sound.playCoin();
+                        createParticles(c.x, c.y, '#fbbf24', 8);
+                    }
+                }
+            });
+
+            // Update platforms (moving ones)
+            platforms.forEach(p => p.update());
+
+            // Update collectibles
+            collectibles.forEach(c => c.update());
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= 0.04;
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // Cleanup offscreen platforms & collectibles far below camera
+            platforms = platforms.filter(p => p.y < cameraY + canvas.height + 100);
+            collectibles = collectibles.filter(c => c.y < cameraY + canvas.height + 100);
+
+            // GAME OVER CONDITION: Player falls off bottom edge of camera view
+            if (player.y - cameraY > canvas.height + 50) {
+                triggerGameOver();
+            }
+        }
+
+        function drawBackground() {
+            // Gradient changes color as you climb higher into space!
+            const skyProgress = Math.min(1, score / 500);
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            
+            if (skyProgress < 0.5) {
+                bgGradient.addColorStop(0, '#0f172a'); // Deep night sky
+                bgGradient.addColorStop(1, '#1e293b');
+            } else {
+                bgGradient.addColorStop(0, '#020617'); // Cosmic dark void
+                bgGradient.addColorStop(1, '#0f172a');
+            }
+
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle parallax background stars/clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            for (let i = 0; i < 25; i++) {
+                const starX = (i * 73 + 12) % canvas.width;
+                const starY = (i * 97 - cameraY * 0.2) % canvas.height;
+                const adjustedY = starY < 0 ? starY + canvas.height : starY;
+                ctx.beginPath();
+                ctx.arc(starX, adjustedY, (i % 3) + 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background
+            drawBackground();
+
+            // Transform coordinates based on camera scroll Y
+            ctx.save();
+            ctx.translate(0, -cameraY);
+
+            // Draw platforms
+            platforms.forEach(p => p.draw(p.y));
+
+            // Draw collectibles
+            collectibles.forEach(c => c.draw(c.y));
+
+            // Draw particles
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = pt.alpha;
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw Player
+            player.draw();
+
+            ctx.restore();
+
+            if (gameState === 'PLAYING') {
+                // HUD - Height & Coins
+                ctx.save();
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+                ctx.beginPath();
+                ctx.roundRect(12, 12, 140, 44, 12);
+                ctx.fill();
+
+                ctx.font = 'bold 18px "Fredoka One", cursive';
+                ctx.fillStyle = '#facc15'; // Amber height text
+                ctx.fillText(`🚀 ${score}m`, 22, 40);
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillText(`🪙 ${coinCount}`, 95, 40);
+
+                // Prompt before first jump
+                if (!player.hasFirstJumped) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 16px "Nunito", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Pressione ESPAÇO para Pular!', canvas.width / 2, canvas.height / 2 + 80);
+                    ctx.textAlign = 'left';
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function gameLoop() {
+            updateGame();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameState = 'PLAYING';
+            score = 0;
+            coinCount = 0;
+            cameraY = 0;
+            player.reset();
+            generateInitialPlatforms();
+
+            startMenu.classList.add('hidden');
+            gameOverMenu.classList.add('hidden');
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            sound.playGameOver();
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('subida_nuvens_highscore', highScore.toString());
+                highScoreText.textContent = `${highScore}m`;
+            }
+
+            finalScore.textContent = `${score}m`;
+            bestScore.textContent = `${highScore}m`;
+            finalCoins.textContent = `🪙 ${coinCount}`;
+
+            gameOverMenu.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', () => {
+            sound.init();
+            startGame();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            sound.init();
+            startGame();
+        });
+
+        // Start animation loop on window load
+        window.onload = () => {
+            generateInitialPlatforms();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
