@@ -112,35 +112,93 @@
 </div>
 
 <script>
-        // Sound Engine using Web Audio API optimized for instant, zero-latency playback
+        // Sound Engine using pre-synthesized PCM AudioBuffers for guaranteed instant 0ms playback
         class SoundEngine {
             constructor() {
                 this.muted = false;
                 this.isUnlocked = false;
 
-                // Eagerly instantiate AudioContext with lowest latency hint
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
                 this.ctx = AudioCtx ? new AudioCtx({ latencyHint: 'interactive' }) : null;
 
-                // Pre-generate jetpack noise buffer immediately
-                this.jetpackNoiseBuffer = null;
-                if (this.ctx) {
-                    const bufferSize = this.ctx.sampleRate * 1;
-                    this.jetpackNoiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                    const output = this.jetpackNoiseBuffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) {
-                        output[i] = Math.random() * 2 - 1;
-                    }
-                }
-
-                this.jetpackNoiseNode = null;
-                this.jetpackGainNode = null;
-                this.jetpackFilterNode = null;
+                // Pre-baked audio buffers
+                this.buffers = {};
+                this.jetpackSource = null;
 
                 // Background menu music
                 this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
                 this.bgMusic.loop = true;
                 this.bgMusic.volume = 0.5;
+
+                if (this.ctx) {
+                    this.prebakeBuffers();
+                }
+            }
+
+            prebakeBuffers() {
+                const sr = this.ctx.sampleRate;
+
+                // 1. Jump Sound (Punchy retro 8-bit blip upward pitch)
+                const jumpLen = Math.floor(sr * 0.08);
+                const jumpBuf = this.ctx.createBuffer(1, jumpLen, sr);
+                const jumpData = jumpBuf.getChannelData(0);
+                for (let i = 0; i < jumpLen; i++) {
+                    const t = i / sr;
+                    const freq = 280 + t * 4000; // Rapid square-ish pitch sweep
+                    const env = Math.exp(-t * 35);
+                    const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 0.3 : -0.3;
+                    jumpData[i] = wave * env;
+                }
+                this.buffers.jump = jumpBuf;
+
+                // 2. Spring Sound (Fast bouncy synth sweep)
+                const springLen = Math.floor(sr * 0.15);
+                const springBuf = this.ctx.createBuffer(1, springLen, sr);
+                const springData = springBuf.getChannelData(0);
+                for (let i = 0; i < springLen; i++) {
+                    const t = i / sr;
+                    const freq = 300 + Math.sin(t * 80) * 400 + t * 2500;
+                    const env = Math.exp(-t * 18);
+                    springData[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
+                }
+                this.buffers.spring = springBuf;
+
+                // 3. Break Sound (Crisp crunch noise burst)
+                const breakLen = Math.floor(sr * 0.12);
+                const breakBuf = this.ctx.createBuffer(1, breakLen, sr);
+                const breakData = breakBuf.getChannelData(0);
+                for (let i = 0; i < breakLen; i++) {
+                    const t = i / sr;
+                    const env = Math.exp(-t * 28);
+                    const noise = (Math.random() * 2 - 1) * 0.35;
+                    breakData[i] = noise * env;
+                }
+                this.buffers.break = breakBuf;
+
+                // 4. GameOver Sound (Retro low buzz drop)
+                const goLen = Math.floor(sr * 0.25);
+                const goBuf = this.ctx.createBuffer(1, goLen, sr);
+                const goData = goBuf.getChannelData(0);
+                for (let i = 0; i < goLen; i++) {
+                    const t = i / sr;
+                    const freq = Math.max(50, 240 - t * 700);
+                    const env = Math.exp(-t * 12);
+                    const wave = (i % Math.floor(sr / freq) < sr / freq / 2) ? 0.3 : -0.3;
+                    goData[i] = wave * env;
+                }
+                this.buffers.gameOver = goBuf;
+
+                // 5. Jetpack Continuous Thruster Loop Buffer
+                const jetLen = Math.floor(sr * 0.5);
+                const jetBuf = this.ctx.createBuffer(1, jetLen, sr);
+                const jetData = jetBuf.getChannelData(0);
+                let lastOut = 0;
+                for (let i = 0; i < jetLen; i++) {
+                    const white = Math.random() * 2 - 1;
+                    lastOut = (lastOut + 0.08 * white) / 1.08; // Low pass filter for engine roar
+                    jetData[i] = lastOut * 0.6;
+                }
+                this.buffers.jetpack = jetBuf;
             }
 
             init() {
@@ -149,15 +207,13 @@
                     this.ctx.resume();
                 }
 
-                // Attach a silent keep-alive oscillator to keep the audio hardware pipeline warm
                 if (!this.isUnlocked) {
                     try {
-                        const keepAliveOsc = this.ctx.createOscillator();
-                        const keepAliveGain = this.ctx.createGain();
-                        keepAliveGain.gain.value = 0.00001; // virtually silent
-                        keepAliveOsc.connect(keepAliveGain);
-                        keepAliveGain.connect(this.ctx.destination);
-                        keepAliveOsc.start(0);
+                        const buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+                        const source = this.ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(this.ctx.destination);
+                        source.start(0);
                         this.isUnlocked = true;
                     } catch (e) {}
                 }
@@ -165,6 +221,21 @@
                 if (gameState === 'MENU' && !this.muted) {
                     this.playMenuMusic();
                 }
+            }
+
+            playBuffer(bufName, volume = 0.4) {
+                if (this.muted || !this.ctx || !this.buffers[bufName]) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                try {
+                    const src = this.ctx.createBufferSource();
+                    src.buffer = this.buffers[bufName];
+                    const gain = this.ctx.createGain();
+                    gain.gain.value = volume;
+                    src.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    src.start(0);
+                } catch (e) {}
             }
 
             playMenuMusic() {
@@ -189,44 +260,34 @@
             }
 
             startJetpackSound() {
-                if (this.jetpackNoiseNode || this.muted || !this.ctx || !this.jetpackNoiseBuffer) return;
+                if (this.jetpackSource || this.muted || !this.ctx || !this.buffers.jetpack) return;
                 if (this.ctx.state === 'suspended') this.ctx.resume();
 
-                const now = this.ctx.currentTime;
-                this.jetpackNoiseNode = this.ctx.createBufferSource();
-                this.jetpackNoiseNode.buffer = this.jetpackNoiseBuffer;
-                this.jetpackNoiseNode.loop = true;
-
-                this.jetpackFilterNode = this.ctx.createBiquadFilter();
-                this.jetpackFilterNode.type = 'bandpass';
-                this.jetpackFilterNode.frequency.value = 450;
-                this.jetpackFilterNode.Q.value = 1.2;
-
-                this.jetpackGainNode = this.ctx.createGain();
-                this.jetpackGainNode.gain.value = 0.25;
-
-                this.jetpackNoiseNode.connect(this.jetpackFilterNode);
-                this.jetpackFilterNode.connect(this.jetpackGainNode);
-                this.jetpackGainNode.connect(this.ctx.destination);
-
-                this.jetpackNoiseNode.start(0);
+                try {
+                    this.jetpackSource = this.ctx.createBufferSource();
+                    this.jetpackSource.buffer = this.buffers.jetpack;
+                    this.jetpackSource.loop = true;
+                    const gain = this.ctx.createGain();
+                    gain.gain.value = 0.3;
+                    this.jetpackSource.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    this.jetpackSource.start(0);
+                } catch (e) {}
             }
 
             stopJetpackSound() {
-                if (this.jetpackNoiseNode) {
+                if (this.jetpackSource) {
                     try {
-                        this.jetpackNoiseNode.stop(0);
-                        this.jetpackNoiseNode.disconnect();
+                        this.jetpackSource.stop(0);
+                        this.jetpackSource.disconnect();
                     } catch (e) {}
-                    this.jetpackNoiseNode = null;
-                    this.jetpackGainNode = null;
-                    this.jetpackFilterNode = null;
+                    this.jetpackSource = null;
                 }
             }
 
             updateJetpack(isActive) {
                 if (isActive && !this.muted) {
-                    if (!this.jetpackNoiseNode) {
+                    if (!this.jetpackSource) {
                         this.startJetpackSound();
                     }
                 } else {
@@ -235,113 +296,23 @@
             }
 
             playJump() {
-                if (this.muted || !this.ctx) return;
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(250, now);
-                osc.frequency.exponentialRampToValueAtTime(600, now + 0.12);
-
-                gain.gain.setValueAtTime(0.35, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start(0);
-                osc.stop(now + 0.12);
+                this.playBuffer('jump', 0.45);
             }
 
             playSpring() {
-                if (this.muted || !this.ctx) return;
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(900, now + 0.2);
-
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start(0);
-                osc.stop(now + 0.2);
+                this.playBuffer('spring', 0.5);
             }
 
             playCoin() {
-                if (this.muted || !this.ctx) return;
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(987.77, now);
-                osc.frequency.setValueAtTime(1318.51, now + 0.06);
-
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start(0);
-                osc.stop(now + 0.2);
+                this.playBuffer('spring', 0.35);
             }
 
             playBreak() {
-                if (this.muted || !this.ctx) return;
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
-
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start(0);
-                osc.stop(now + 0.18);
+                this.playBuffer('break', 0.4);
             }
 
             playGameOver() {
-                if (this.muted || !this.ctx) return;
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(100, now + 0.35);
-
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-
-                osc.start(0);
-                osc.stop(now + 0.35);
+                this.playBuffer('gameOver', 0.5);
             }
         }
 
