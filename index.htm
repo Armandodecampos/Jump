@@ -72,8 +72,8 @@
                 <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 text-left space-y-2 text-xs sm:text-sm">
                     <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
                     <p class="text-slate-300 leading-relaxed">
-                        • <strong>Pular:</strong> Toque/clique em qualquer lugar da tela.<br>
-                        • <strong>Mover:</strong> Mantenha pressionado e mova o dedo/mouse para a esquerda ou direita.<br>
+                        • <strong>Pular:</strong> Deslize o dedo/mouse para cima.<br>
+                        • <strong>Mover:</strong> Deslize o dedo/mouse para os lados.<br>
                         • <strong>Teclado:</strong> A / D ou Setas para mover, ESPAÇO para pular.
                     </p>
                 </div>
@@ -269,6 +269,8 @@
         // Full Screen Control Logic (Tap to Jump, Hold & Move to Direction)
         let isTouchingScreen = false;
         let touchStartX = 0;
+        let touchStartY = 0;
+        let hasSwipedJumped = false;
 
         function isClickOnInteractiveUI(target) {
             return target.closest('#startBtn') || target.closest('#restartBtn') || target.closest('#soundToggleBtn');
@@ -280,17 +282,16 @@
             sound.init();
             isTouchingScreen = true;
             touchStartX = clientX;
+            touchStartY = clientY;
             touchAxisX = 0;
-
-            if (gameState === 'PLAYING') {
-                player.tryJump();
-            }
+            hasSwipedJumped = false;
         }
 
-        function handlePointerMove(clientX) {
+        function handlePointerMove(clientX, clientY) {
             if (!isTouchingScreen) return;
 
             const deltaX = clientX - touchStartX;
+            const deltaY = clientY - touchStartY;
             const threshold = 15; // Minimum drag pixels to change direction
 
             if (Math.abs(deltaX) < threshold) {
@@ -300,11 +301,20 @@
                 const maxRange = 80;
                 touchAxisX = Math.max(-1, Math.min(1, (deltaX - Math.sign(deltaX) * threshold) / maxRange));
             }
+
+            // Swipe UP to Jump
+            if (deltaY < -25 && !hasSwipedJumped) {
+                if (gameState === 'PLAYING') {
+                    player.tryJump();
+                    hasSwipedJumped = true;
+                }
+            }
         }
 
         function handlePointerUp() {
             isTouchingScreen = false;
             touchAxisX = 0;
+            hasSwipedJumped = false;
         }
 
         // Fullscreen touch listeners
@@ -317,7 +327,8 @@
 
         window.addEventListener('touchmove', (e) => {
             if (isTouchingScreen && e.touches.length > 0) {
-                handlePointerMove(e.touches[0].clientX);
+                const touch = e.touches[0];
+                handlePointerMove(touch.clientX, touch.clientY);
             }
         }, { passive: true });
 
@@ -333,7 +344,7 @@
 
         window.addEventListener('mousemove', (e) => {
             if (isTouchingScreen) {
-                handlePointerMove(e.clientX);
+                handlePointerMove(e.clientX, e.clientY);
             }
         });
 
@@ -887,7 +898,7 @@
                     ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 16px "Nunito", sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('Pressione ESPAÇO para Pular!', canvas.width / 2, canvas.height / 2 + 80);
+                    ctx.fillText('Deslize para CIMA para Pular!', canvas.width / 2, canvas.height / 2 + 80);
                     ctx.textAlign = 'left';
                 }
 
