@@ -112,42 +112,56 @@
 </div>
 
 <script>
-        // Sound Engine using Web Audio API
+        // Sound Engine using Web Audio API optimized for instant, zero-latency playback
         class SoundEngine {
             constructor() {
-                this.ctx = null;
                 this.muted = false;
-                // Menu background music track (using raw=1 for direct audio streaming)
-                this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
-                this.bgMusic.loop = true;
-                this.bgMusic.volume = 0.5;
+                this.isUnlocked = false;
 
-                // Jetpack audio nodes & cached buffer for low latency
+                // Eagerly instantiate AudioContext with lowest latency hint
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = AudioCtx ? new AudioCtx({ latencyHint: 'interactive' }) : null;
+
+                // Pre-generate jetpack noise buffer immediately
                 this.jetpackNoiseBuffer = null;
-                this.jetpackNoiseNode = null;
-                this.jetpackGainNode = null;
-                this.jetpackFilterNode = null;
-            }
-
-            init() {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) {
-                        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
-                    }
-                }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
-                // Pre-create noise buffer for immediate jetpack playback without startup lag
-                if (this.ctx && !this.jetpackNoiseBuffer) {
-                    const bufferSize = this.ctx.sampleRate * 1; // 1 second loop buffer
+                if (this.ctx) {
+                    const bufferSize = this.ctx.sampleRate * 1;
                     this.jetpackNoiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                     const output = this.jetpackNoiseBuffer.getChannelData(0);
                     for (let i = 0; i < bufferSize; i++) {
                         output[i] = Math.random() * 2 - 1;
                     }
                 }
+
+                this.jetpackNoiseNode = null;
+                this.jetpackGainNode = null;
+                this.jetpackFilterNode = null;
+
+                // Background menu music
+                this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
+                this.bgMusic.loop = true;
+                this.bgMusic.volume = 0.5;
+            }
+
+            init() {
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                // Attach a silent keep-alive oscillator to keep the audio hardware pipeline warm
+                if (!this.isUnlocked) {
+                    try {
+                        const keepAliveOsc = this.ctx.createOscillator();
+                        const keepAliveGain = this.ctx.createGain();
+                        keepAliveGain.gain.value = 0.00001; // virtually silent
+                        keepAliveOsc.connect(keepAliveGain);
+                        keepAliveGain.connect(this.ctx.destination);
+                        keepAliveOsc.start(0);
+                        this.isUnlocked = true;
+                    } catch (e) {}
+                }
+
                 if (gameState === 'MENU' && !this.muted) {
                     this.playMenuMusic();
                 }
@@ -155,9 +169,7 @@
 
             playMenuMusic() {
                 if (this.muted) return;
-                this.bgMusic.play().catch(() => {
-                    // Handle browser audio autoplay policy restrictions
-                });
+                this.bgMusic.play().catch(() => {});
             }
 
             stopMenuMusic() {
@@ -176,15 +188,9 @@
                 }
             }
 
-            ensureContext() {
-                if (!this.ctx) this.init();
-                else if (this.ctx.state === 'suspended') this.ctx.resume();
-            }
-
             startJetpackSound() {
-                if (this.jetpackNoiseNode || this.muted) return;
-                this.ensureContext();
-                if (!this.ctx || !this.jetpackNoiseBuffer) return;
+                if (this.jetpackNoiseNode || this.muted || !this.ctx || !this.jetpackNoiseBuffer) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
 
                 const now = this.ctx.currentTime;
                 this.jetpackNoiseNode = this.ctx.createBufferSource();
@@ -193,11 +199,11 @@
 
                 this.jetpackFilterNode = this.ctx.createBiquadFilter();
                 this.jetpackFilterNode.type = 'bandpass';
-                this.jetpackFilterNode.frequency.setValueAtTime(450, now);
-                this.jetpackFilterNode.Q.setValueAtTime(1.2, now);
+                this.jetpackFilterNode.frequency.value = 450;
+                this.jetpackFilterNode.Q.value = 1.2;
 
                 this.jetpackGainNode = this.ctx.createGain();
-                this.jetpackGainNode.gain.setValueAtTime(0.25, now);
+                this.jetpackGainNode.gain.value = 0.25;
 
                 this.jetpackNoiseNode.connect(this.jetpackFilterNode);
                 this.jetpackFilterNode.connect(this.jetpackGainNode);
@@ -209,7 +215,7 @@
             stopJetpackSound() {
                 if (this.jetpackNoiseNode) {
                     try {
-                        this.jetpackNoiseNode.stop();
+                        this.jetpackNoiseNode.stop(0);
                         this.jetpackNoiseNode.disconnect();
                     } catch (e) {}
                     this.jetpackNoiseNode = null;
@@ -229,93 +235,113 @@
             }
 
             playJump() {
-                if (this.muted) return;
-                this.ensureContext();
-                if (!this.ctx) return;
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
+
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(250, now);
-                osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.12);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.15);
+
+                osc.start(0);
+                osc.stop(now + 0.12);
             }
 
             playSpring() {
-                if (this.muted) return;
-                this.ensureContext();
-                if (!this.ctx) return;
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
+
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(900, now + 0.25);
+                osc.frequency.linearRampToValueAtTime(900, now + 0.2);
+
                 gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.25);
-            }
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
-            playCoin() {
-                if (this.muted) return;
-                this.ensureContext();
-                if (!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(987.77, now); // B5
-                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
-                gain.gain.setValueAtTime(0.25, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.25);
-            }
 
-            playBreak() {
-                if (this.muted) return;
-                this.ensureContext();
-                if (!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, now);
-                osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
+                osc.start(0);
                 osc.stop(now + 0.2);
             }
 
-            playGameOver() {
-                if (this.muted) return;
-                this.ensureContext();
-                if (!this.ctx) return;
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(100, now + 0.4);
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now);
+                osc.frequency.setValueAtTime(1318.51, now + 0.06);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.4);
+
+                osc.start(0);
+                osc.stop(now + 0.2);
+            }
+
+            playBreak() {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(0);
+                osc.stop(now + 0.18);
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.35);
+
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(0);
+                osc.stop(now + 0.35);
             }
         }
 
