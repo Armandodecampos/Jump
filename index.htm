@@ -117,9 +117,19 @@
             constructor() {
                 this.ctx = null;
                 this.muted = false;
+                this.unlocked = false;
                 this.buffers = {};
                 this.jetpackSource = null;
                 this.bgMusicSource = null;
+
+                // Pre-initialize AudioContext and prebake buffers into memory immediately
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+                        this.prebakeBuffers();
+                    }
+                } catch (e) {}
             }
 
             prebakeBuffers() {
@@ -168,7 +178,21 @@
                 }
                 this.buffers.spring = springBuf;
 
-                // 3. Break Sound
+                // 3. Jetpack Pickup Sound (Power-up chime)
+                const jpPickLen = Math.floor(sr * 0.2);
+                const jpPickBuf = this.ctx.createBuffer(1, jpPickLen, sr);
+                const jpPickData = jpPickBuf.getChannelData(0);
+                for (let i = 0; i < jpPickLen; i++) {
+                    const t = i / sr;
+                    const step = Math.floor(t * 20);
+                    const freq = 523.25 * Math.pow(1.2, step);
+                    const env = Math.exp(-t * 12);
+                    const wave = Math.sin(2 * Math.PI * freq * t);
+                    jpPickData[i] = wave * 0.4 * env;
+                }
+                this.buffers.jetpackPickup = jpPickBuf;
+
+                // 4. Break Sound
                 const breakLen = Math.floor(sr * 0.12);
                 const breakBuf = this.ctx.createBuffer(1, breakLen, sr);
                 const breakData = breakBuf.getChannelData(0);
@@ -180,7 +204,7 @@
                 }
                 this.buffers.break = breakBuf;
 
-                // 4. GameOver Sound
+                // 5. GameOver Sound
                 const goLen = Math.floor(sr * 0.25);
                 const goBuf = this.ctx.createBuffer(1, goLen, sr);
                 const goData = goBuf.getChannelData(0);
@@ -193,7 +217,7 @@
                 }
                 this.buffers.gameOver = goBuf;
 
-                // 5. Jetpack Engine Roar Loop
+                // 6. Jetpack Engine Roar Loop
                 const jetLen = Math.floor(sr * 0.5);
                 const jetBuf = this.ctx.createBuffer(1, jetLen, sr);
                 const jetData = jetBuf.getChannelData(0);
@@ -206,22 +230,40 @@
                 this.buffers.jetpack = jetBuf;
             }
 
-            init() {
+            unlockAudio() {
                 if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) {
-                        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
-                        this.prebakeBuffers();
+                    try {
+                        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                        if (AudioCtx) {
+                            this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+                            this.prebakeBuffers();
+                        }
+                    } catch (e) {}
+                }
+                if (this.ctx) {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    if (!this.unlocked) {
+                        try {
+                            const silentBuf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+                            const src = this.ctx.createBufferSource();
+                            src.buffer = silentBuf;
+                            src.connect(this.ctx.destination);
+                            src.start(0);
+                            this.unlocked = true;
+                        } catch (e) {}
                     }
                 }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
+            }
+
+            init() {
+                this.unlockAudio();
             }
 
             playBuffer(bufName, volume = 0.4) {
                 if (this.muted) return;
-                this.init();
+                this.unlockAudio();
                 if (!this.ctx || !this.buffers[bufName]) return;
 
                 try {
@@ -237,7 +279,7 @@
 
             playMenuMusic() {
                 if (this.muted) return;
-                this.init();
+                this.unlockAudio();
                 if (!this.ctx || !this.buffers.bgMusic || this.bgMusicSource) return;
 
                 try {
@@ -274,7 +316,7 @@
 
             startJetpackSound() {
                 if (this.jetpackSource || this.muted) return;
-                this.init();
+                this.unlockAudio();
                 if (!this.ctx || !this.buffers.jetpack) return;
 
                 try {
@@ -317,8 +359,12 @@
                 this.playBuffer('spring', 0.5);
             }
 
+            playJetpackPickup() {
+                this.playBuffer('jetpackPickup', 0.5);
+            }
+
             playCoin() {
-                this.playBuffer('spring', 0.35);
+                this.playJetpackPickup();
             }
 
             playBreak() {
@@ -1000,7 +1046,7 @@
                         c.collected = true;
                         coinCount++; // jetpack count
                         player.activateJetpack(150); // 2.5 seconds of jetpack flight
-                        sound.playSpring();
+                        sound.playJetpackPickup();
                         createParticles(c.x, c.y, '#ff4500', 12);
                     }
                 }
@@ -1167,16 +1213,15 @@
             generateInitialPlatforms();
             gameLoop();
 
-            // Try playing menu music on first user interaction anywhere on screen
+            // Unlock audio context on any first user interaction anywhere on screen
             const unlockAudio = () => {
-                sound.init();
-                window.removeEventListener('click', unlockAudio);
-                window.removeEventListener('touchstart', unlockAudio);
-                window.removeEventListener('keydown', unlockAudio);
+                sound.unlockAudio();
             };
-            window.addEventListener('click', unlockAudio);
-            window.addEventListener('touchstart', unlockAudio);
-            window.addEventListener('keydown', unlockAudio);
+            window.addEventListener('pointerdown', unlockAudio, { passive: true });
+            window.addEventListener('touchstart', unlockAudio, { passive: true });
+            window.addEventListener('mousedown', unlockAudio, { passive: true });
+            window.addEventListener('click', unlockAudio, { passive: true });
+            window.addEventListener('keydown', unlockAudio, { passive: true });
         };
     </script>
 </body>
