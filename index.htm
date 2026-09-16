@@ -217,10 +217,6 @@
                 if (this.ctx && this.ctx.state === 'suspended') {
                     this.ctx.resume();
                 }
-
-                if (gameState === 'MENU' && !this.muted) {
-                    this.playMenuMusic();
-                }
             }
 
             playBuffer(bufName, volume = 0.4) {
