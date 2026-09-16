@@ -112,7 +112,7 @@
 </div>
 
 <script>
-        // Sound Engine using pre-synthesized PCM AudioBuffers for guaranteed instant 0ms playback
+        // Sound Engine using 100% local pre-synthesized PCM AudioBuffers for guaranteed 0ms playback
         class SoundEngine {
             constructor() {
                 this.muted = false;
@@ -124,11 +124,7 @@
                 // Pre-baked audio buffers
                 this.buffers = {};
                 this.jetpackSource = null;
-
-                // Background menu music
-                this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
-                this.bgMusic.loop = true;
-                this.bgMusic.volume = 0.5;
+                this.bgMusicSource = null;
 
                 if (this.ctx) {
                     this.prebakeBuffers();
@@ -137,6 +133,23 @@
 
             prebakeBuffers() {
                 const sr = this.ctx.sampleRate;
+
+                // 0. Ambient Background Music Loop (Gentle 8-second synth chord progression)
+                const bgLen = Math.floor(sr * 8);
+                const bgBuf = this.ctx.createBuffer(1, bgLen, sr);
+                const bgData = bgBuf.getChannelData(0);
+                const chordPitches = [261.63, 329.63, 392.00, 523.25, 349.23, 440.00, 523.25, 659.25]; // C major & F major 7th
+                for (let i = 0; i < bgLen; i++) {
+                    const t = i / sr;
+                    const chordIdx = Math.floor((t / 2) % chordPitches.length);
+                    const freq1 = chordPitches[chordIdx];
+                    const freq2 = chordPitches[(chordIdx + 2) % chordPitches.length];
+                    const env = 0.5 + 0.5 * Math.sin(t * Math.PI * 2); // Soft breathing swell
+                    const wave1 = Math.sin(2 * Math.PI * freq1 * t);
+                    const wave2 = Math.sin(2 * Math.PI * freq2 * t);
+                    bgData[i] = (wave1 + wave2) * 0.05 * env;
+                }
+                this.buffers.bgMusic = bgBuf;
 
                 // 1. Jump Sound (Punchy retro 8-bit blip upward pitch)
                 const jumpLen = Math.floor(sr * 0.08);
@@ -239,20 +252,35 @@
             }
 
             playMenuMusic() {
-                if (this.muted) return;
-                this.bgMusic.play().catch(() => {});
+                if (this.muted || !this.ctx || !this.buffers.bgMusic || this.bgMusicSource) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                try {
+                    this.bgMusicSource = this.ctx.createBufferSource();
+                    this.bgMusicSource.buffer = this.buffers.bgMusic;
+                    this.bgMusicSource.loop = true;
+                    const gain = this.ctx.createGain();
+                    gain.gain.value = 0.3;
+                    this.bgMusicSource.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    this.bgMusicSource.start(0);
+                } catch (e) {}
             }
 
             stopMenuMusic() {
-                this.bgMusic.pause();
-                this.bgMusic.currentTime = 0;
+                if (this.bgMusicSource) {
+                    try {
+                        this.bgMusicSource.stop(0);
+                        this.bgMusicSource.disconnect();
+                    } catch (e) {}
+                    this.bgMusicSource = null;
+                }
             }
 
             toggleMute() {
                 this.muted = !this.muted;
-                this.bgMusic.muted = this.muted;
                 if (this.muted) {
-                    this.bgMusic.pause();
+                    this.stopMenuMusic();
                     this.stopJetpackSound();
                 } else if (gameState === 'MENU') {
                     this.playMenuMusic();
