@@ -795,8 +795,8 @@
                 const platform = new Platform(x, currentY, width, type);
                 platforms.push(platform);
 
-                // Chance to spawn coin on platform
-                if (Math.random() < 0.4 && type !== 'fragile') {
+                // Chance to spawn coin on platform (reduced to 1/3 of previous 0.4 rate)
+                if (Math.random() < 0.133 && type !== 'fragile') {
                     collectibles.push(new Collectible(x + width / 2, currentY - 20));
                 }
             }
@@ -820,7 +820,8 @@
 
                     platforms.push(new Platform(x, currentY, width, type));
 
-                    if (Math.random() < 0.45 && type !== 'fragile') {
+                    // Chance to spawn jetpack on platform (reduced to 1/3 of previous 0.45 rate)
+                    if (Math.random() < 0.15 && type !== 'fragile') {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20));
                     }
                 }
