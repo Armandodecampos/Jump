@@ -87,7 +87,6 @@
                 💥
             </div>
             <h2 class="text-3xl font-game text-red-400 mb-1">Você Caiu!</h2>
-            <p class="text-slate-400 text-xs sm:text-sm mb-4">A câmera subiu demais e você perdeu a plataforma.</p>
 
             <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 space-y-3 text-center">
                 <div>
@@ -122,6 +121,11 @@
                 this.bgMusic = new Audio('https://dl.dropbox.com/scl/fi/a08pi4qrgx9q3e54yaesd/peaceful-exploration.mp3?rlkey=dxc9usnl777oiwpjaol43hfxx&raw=1');
                 this.bgMusic.loop = true;
                 this.bgMusic.volume = 0.5;
+
+                // Jetpack audio nodes
+                this.jetpackNoiseNode = null;
+                this.jetpackGainNode = null;
+                this.jetpackFilterNode = null;
             }
 
             init() {
@@ -154,8 +158,59 @@
                 this.bgMusic.muted = this.muted;
                 if (this.muted) {
                     this.bgMusic.pause();
+                    this.stopJetpackSound();
                 } else if (gameState === 'MENU') {
                     this.playMenuMusic();
+                }
+            }
+
+            startJetpackSound() {
+                if (this.jetpackNoiseNode || !this.ctx || this.muted) return;
+                const bufferSize = this.ctx.sampleRate * 2;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                this.jetpackNoiseNode = this.ctx.createBufferSource();
+                this.jetpackNoiseNode.buffer = noiseBuffer;
+                this.jetpackNoiseNode.loop = true;
+
+                this.jetpackFilterNode = this.ctx.createBiquadFilter();
+                this.jetpackFilterNode.type = 'bandpass';
+                this.jetpackFilterNode.frequency.setValueAtTime(450, this.ctx.currentTime);
+                this.jetpackFilterNode.Q.setValueAtTime(1.2, this.ctx.currentTime);
+
+                this.jetpackGainNode = this.ctx.createGain();
+                this.jetpackGainNode.gain.setValueAtTime(0.25, this.ctx.currentTime);
+
+                this.jetpackNoiseNode.connect(this.jetpackFilterNode);
+                this.jetpackFilterNode.connect(this.jetpackGainNode);
+                this.jetpackGainNode.connect(this.ctx.destination);
+
+                this.jetpackNoiseNode.start();
+            }
+
+            stopJetpackSound() {
+                if (this.jetpackNoiseNode) {
+                    try {
+                        this.jetpackNoiseNode.stop();
+                        this.jetpackNoiseNode.disconnect();
+                    } catch (e) {}
+                    this.jetpackNoiseNode = null;
+                    this.jetpackGainNode = null;
+                    this.jetpackFilterNode = null;
+                }
+            }
+
+            updateJetpack(isActive) {
+                if (isActive && !this.muted) {
+                    if (!this.jetpackNoiseNode) {
+                        this.startJetpackSound();
+                    }
+                } else {
+                    this.stopJetpackSound();
                 }
             }
 
@@ -411,6 +466,7 @@
                 this.hasFirstJumped = false;
                 this.standingPlatform = null;
                 this.jetpackTimer = 0;
+                sound.stopJetpackSound();
             },
 
             activateJetpack(duration = 150) {
@@ -488,6 +544,9 @@
                 if (!this.isGrounded && this.coyoteTime > 0) {
                     this.coyoteTime--;
                 }
+
+                // Update continuous jetpack thruster sound effect
+                sound.updateJetpack(this.jetpackTimer > 0);
             },
 
             draw() {
@@ -1038,6 +1097,7 @@
 
         function triggerGameOver() {
             gameState = 'GAMEOVER';
+            sound.stopJetpackSound();
             sound.playGameOver();
 
             if (score > highScore) {
