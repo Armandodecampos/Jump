@@ -540,6 +540,7 @@
                 this.springCompressed = false;
                 this.crumbling = false;
                 this.crumbleTimer = 0;
+                this.respawnTimer = 0;
             }
 
             update() {
@@ -558,8 +559,20 @@
                     }
                     if (this.crumbleTimer <= 0) {
                         this.broken = true;
+                        this.respawnTimer = 180; // 3 seconds at 60fps
                         sound.playBreak();
                         createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ef4444', 12);
+                    }
+                }
+
+                // Handle respawning after 3 seconds
+                if (this.broken) {
+                    this.respawnTimer--;
+                    if (this.respawnTimer <= 0) {
+                        this.broken = false;
+                        this.crumbling = false;
+                        this.crumbleTimer = 0;
+                        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#60a5fa', 10);
                     }
                 }
             }
@@ -725,10 +738,12 @@
 
             player.update();
 
-            // Camera movement: Starts scrolling UP smoothly at a constant pace once player makes the first jump
+            // Camera movement: Smoothly follows the player as they climb higher
             if (player.hasFirstJumped) {
-                currentCameraSpeed = baseCameraSpeed + Math.min(2.0, score / 300);
-                cameraY -= currentCameraSpeed;
+                const targetCameraY = player.y - canvas.height * 0.55;
+                if (targetCameraY < cameraY) {
+                    cameraY += (targetCameraY - cameraY) * 0.1;
+                }
             }
 
             // Track height score
