@@ -102,8 +102,8 @@
                         <span id="bestScore" class="font-bold text-emerald-400 text-sm">0m</span>
                     </div>
                     <div>
-                        <span class="text-slate-400 block">Moedas:</span>
-                        <span id="finalCoins" class="font-bold text-amber-300 text-sm">🪙 0</span>
+                        <span class="text-slate-400 block">Jatos:</span>
+                        <span id="finalCoins" class="font-bold text-amber-300 text-sm">🚀 0</span>
                     </div>
                 </div>
             </div>
@@ -398,6 +398,7 @@
             facingRight: true,
             hasFirstJumped: false,
             standingPlatform: null,
+            jetpackTimer: 0,
 
             reset() {
                 this.x = 240 - this.width / 2;
@@ -409,6 +410,12 @@
                 this.facingRight = true;
                 this.hasFirstJumped = false;
                 this.standingPlatform = null;
+                this.jetpackTimer = 0;
+            },
+
+            activateJetpack(duration = 150) {
+                this.jetpackTimer = duration;
+                this.hasFirstJumped = true;
             },
 
             tryJump() {
@@ -458,8 +465,23 @@
                 if (this.x + this.width < 0) this.x = canvas.width;
                 else if (this.x > canvas.width) this.x = -this.width;
 
-                // Apply gravity
-                this.vy += this.gravity;
+                // Apply gravity or jetpack flight boost
+                if (this.jetpackTimer > 0) {
+                    this.jetpackTimer--;
+                    this.vy = -11.5; // Constant upward propulsion
+                    this.isGrounded = false;
+
+                    // Spawn fiery thruster particles from back of character
+                    const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
+                    createParticles(
+                        this.x + (this.facingRight ? 4 : this.width - 4),
+                        this.y + this.height - 2,
+                        fireColor,
+                        2
+                    );
+                } else {
+                    this.vy += this.gravity;
+                }
                 this.y += this.vy;
 
                 // Coyote time handling
@@ -511,6 +533,62 @@
                 ctx.beginPath();
                 ctx.arc(0, -this.height / 2 - 2, 4, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Draw Jetpack on Character's back when active or equipped
+                if (this.jetpackTimer > 0) {
+                    const jpX = -this.width / 2 - 6;
+                    const jpY = -6;
+
+                    // Metallic Thruster Tanks
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(jpX, jpY, 8, 18);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(jpX + 1, jpY + 2, 6, 14);
+
+                    // Nozzle
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(jpX + 1, jpY + 18, 6, 4);
+
+                    // Caprichada Animação de Fogo e Chamas do Jato
+                    const flameHeight = 16 + Math.random() * 14;
+                    const flameWidth = 10 + Math.random() * 4;
+
+                    // Outer Red/Orange Flame plume
+                    const outerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight);
+                    outerGradient.addColorStop(0, '#ff4500'); // OrangeRed
+                    outerGradient.addColorStop(0.5, '#f97316'); // Orange-500
+                    outerGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+                    ctx.fillStyle = outerGradient;
+                    ctx.beginPath();
+                    ctx.moveTo(jpX + 4 - flameWidth / 2, jpY + 22);
+                    ctx.quadraticCurveTo(
+                        jpX + 4 + (Math.random() - 0.5) * 8,
+                        jpY + 22 + flameHeight * 0.6,
+                        jpX + 4,
+                        jpY + 22 + flameHeight
+                    );
+                    ctx.quadraticCurveTo(
+                        jpX + 4 + (Math.random() - 0.5) * 8,
+                        jpY + 22 + flameHeight * 0.6,
+                        jpX + 4 + flameWidth / 2,
+                        jpY + 22
+                    );
+                    ctx.fill();
+
+                    // Inner Intense Yellow Flame Core
+                    const innerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight * 0.6);
+                    innerGradient.addColorStop(0, '#ffffff'); // White hot base
+                    innerGradient.addColorStop(0.4, '#facc15'); // Yellow
+                    innerGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
+
+                    ctx.fillStyle = innerGradient;
+                    ctx.beginPath();
+                    ctx.moveTo(jpX + 4 - flameWidth / 3, jpY + 22);
+                    ctx.lineTo(jpX + 4, jpY + 22 + flameHeight * 0.65);
+                    ctx.lineTo(jpX + 4 + flameWidth / 3, jpY + 22);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -636,7 +714,7 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.radius = 9;
+                this.radius = 12;
                 this.collected = false;
                 this.angle = 0;
             }
@@ -651,15 +729,31 @@
                 const floatY = screenY + Math.sin(this.angle) * 3;
 
                 ctx.save();
-                ctx.fillStyle = '#fbbf24'; // Amber-400
+                ctx.translate(this.x, floatY);
+
+                // Jetpack body (Red & Silver rocket pack)
+                ctx.fillStyle = '#94a3b8'; // Metallic grey frame
                 ctx.beginPath();
-                ctx.arc(this.x, floatY, this.radius, 0, Math.PI * 2);
+                ctx.roundRect(-8, -10, 16, 20, 4);
                 ctx.fill();
 
-                ctx.fillStyle = '#fef08a';
+                // Twin Red Fuel Tanks
+                ctx.fillStyle = '#ef4444'; // Red-500
+                ctx.fillRect(-7, -8, 5, 14);
+                ctx.fillRect(2, -8, 5, 14);
+
+                // Thruster Nozzles
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(-6, 6, 3, 4);
+                ctx.fillRect(3, 6, 3, 4);
+
+                // Small idle thruster glow
+                ctx.fillStyle = '#f59e0b';
                 ctx.beginPath();
-                ctx.arc(this.x - 2, floatY - 2, 3, 0, Math.PI * 2);
+                ctx.arc(-4.5, 10, 2, 0, Math.PI * 2);
+                ctx.arc(4.5, 10, 2, 0, Math.PI * 2);
                 ctx.fill();
+
                 ctx.restore();
             }
         }
@@ -793,7 +887,7 @@
                 });
             }
 
-            // Collectible collisions
+            // Collectible collisions (Jetpack pickup)
             collectibles.forEach(c => {
                 if (!c.collected) {
                     const dx = (player.x + player.width / 2) - c.x;
@@ -801,9 +895,10 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < player.width / 2 + c.radius) {
                         c.collected = true;
-                        coinCount++;
-                        sound.playCoin();
-                        createParticles(c.x, c.y, '#fbbf24', 8);
+                        coinCount++; // jetpack count
+                        player.activateJetpack(150); // 2.5 seconds of jetpack flight
+                        sound.playSpring();
+                        createParticles(c.x, c.y, '#ff4500', 12);
                     }
                 }
             });
@@ -906,7 +1001,7 @@
                 ctx.fillText(`🚀 ${score}m`, 22, 40);
 
                 ctx.fillStyle = '#f59e0b';
-                ctx.fillText(`🪙 ${coinCount}`, 95, 40);
+                ctx.fillText(`🚀 ${coinCount}`, 95, 40);
 
                 // Prompt before first jump
                 if (!player.hasFirstJumped) {
@@ -952,7 +1047,7 @@
 
             finalScore.textContent = `${score}m`;
             bestScore.textContent = `${highScore}m`;
-            finalCoins.textContent = `🪙 ${coinCount}`;
+            finalCoins.textContent = `🚀 ${coinCount}`;
 
             gameOverMenu.classList.remove('hidden');
         }
