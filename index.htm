@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    <!-- Howler.js Audio Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
     <style>
         * {
             user-select: none;
@@ -112,30 +114,90 @@
 </div>
 
 <script>
-        // Sound Engine using Web Audio API for instant zero-latency playback
-        class SoundEngine {
-            constructor() {
-                this.ctx = null;
-                this.muted = false;
-                this.buffers = {};
-                this.jetpackSource = null;
-                this.bgMusicSource = null;
+        // Helper to convert PCM Float32 samples into base64 WAV Data URI for Howler.js
+        function createWavBase64(pcmSamples, sampleRate = 44100) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const bytesPerSample = bitsPerSample / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmSamples.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
             }
 
-            prebakeBuffers() {
-                if (!this.ctx) return;
-                const sr = this.ctx.sampleRate || 44100;
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
 
-                const synthSound = (name, lengthInSec, generatorFn) => {
+            let offset = 44;
+            for (let i = 0; i < pcmSamples.length; i++) {
+                let s = Math.max(-1, Math.min(1, pcmSamples[i]));
+                s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                view.setInt16(offset, s, true);
+                offset += 2;
+            }
+
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return 'data:audio/wav;base64,' + btoa(binary);
+        }
+
+        // Sound Engine powered by Howler.js for instant zero-latency Web Audio API playback
+        class SoundEngine {
+            constructor() {
+                this.muted = false;
+                this.sounds = {};
+                this.jetpackSoundId = null;
+                this.bgMusicSoundId = null;
+            }
+
+            init() {
+                if (Object.keys(this.sounds).length > 0) {
+                    if (Howler.ctx && Howler.ctx.state === 'suspended') {
+                        Howler.ctx.resume();
+                    }
+                    return;
+                }
+
+                const sr = 44100;
+
+                const createSound = (name, lengthInSec, volume, loop, generatorFn) => {
                     const len = Math.floor(sr * lengthInSec);
-                    const audioBuf = this.ctx.createBuffer(1, len, sr);
-                    const data = audioBuf.getChannelData(0);
-                    generatorFn(data, sr, len);
-                    this.buffers[name] = audioBuf;
+                    const samples = new Float32Array(len);
+                    generatorFn(samples, sr, len);
+                    const dataUri = createWavBase64(samples, sr);
+
+                    this.sounds[name] = new Howl({
+                        src: [dataUri],
+                        format: ['wav'],
+                        volume: volume,
+                        loop: loop,
+                        html5: false, // Force Web Audio API for 0ms latency
+                        preload: true
+                    });
                 };
 
                 // 0. Ambient Background Music Loop
-                synthSound('bgMusic', 8, (data, sr, len) => {
+                createSound('bgMusic', 8, 0.3, true, (data, sr, len) => {
                     const chordPitches = [261.63, 329.63, 392.00, 523.25, 349.23, 440.00, 523.25, 659.25];
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
@@ -150,7 +212,7 @@
                 });
 
                 // 1. Jump Sound (Instant 8-bit blip)
-                synthSound('jump', 0.08, (data, sr, len) => {
+                createSound('jump', 0.08, 0.45, false, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
                         const freq = 280 + t * 4000;
@@ -161,7 +223,7 @@
                 });
 
                 // 2. Spring Sound
-                synthSound('spring', 0.15, (data, sr, len) => {
+                createSound('spring', 0.15, 0.5, false, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
                         const freq = 300 + Math.sin(t * 80) * 400 + t * 2500;
@@ -171,7 +233,7 @@
                 });
 
                 // 3. Break Sound
-                synthSound('break', 0.12, (data, sr, len) => {
+                createSound('break', 0.12, 0.4, false, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
                         const env = Math.exp(-t * 28);
@@ -181,7 +243,7 @@
                 });
 
                 // 4. GameOver Sound
-                synthSound('gameOver', 0.25, (data, sr, len) => {
+                createSound('gameOver', 0.25, 0.5, false, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
                         const freq = Math.max(50, 240 - t * 700);
@@ -192,7 +254,7 @@
                 });
 
                 // 5. Jetpack Engine Roar Loop
-                synthSound('jetpack', 0.5, (data, sr, len) => {
+                createSound('jetpack', 0.5, 0.3, true, (data, sr, len) => {
                     let lastOut = 0;
                     for (let i = 0; i < len; i++) {
                         const white = Math.random() * 2 - 1;
@@ -200,66 +262,38 @@
                         data[i] = lastOut * 0.6;
                     }
                 });
-            }
 
-            init() {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) {
-                        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
-                        this.prebakeBuffers();
-                    }
-                }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
+                if (Howler.ctx && Howler.ctx.state === 'suspended') {
+                    Howler.ctx.resume();
                 }
             }
 
-            playBuffer(bufName, volume = 0.4) {
+            playSound(name) {
                 if (this.muted) return;
                 this.init();
-                if (!this.ctx || !this.buffers[bufName]) return;
-
-                try {
-                    const src = this.ctx.createBufferSource();
-                    src.buffer = this.buffers[bufName];
-                    const gain = this.ctx.createGain();
-                    gain.gain.value = volume;
-                    src.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    src.start(0);
-                } catch (e) {}
+                if (this.sounds[name]) {
+                    this.sounds[name].play();
+                }
             }
 
             playMenuMusic() {
                 if (this.muted) return;
                 this.init();
-                if (!this.ctx || !this.buffers.bgMusic || this.bgMusicSource) return;
-
-                try {
-                    this.bgMusicSource = this.ctx.createBufferSource();
-                    this.bgMusicSource.buffer = this.buffers.bgMusic;
-                    this.bgMusicSource.loop = true;
-                    const gain = this.ctx.createGain();
-                    gain.gain.value = 0.3;
-                    this.bgMusicSource.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    this.bgMusicSource.start(0);
-                } catch (e) {}
+                if (this.sounds.bgMusic && !this.sounds.bgMusic.playing(this.bgMusicSoundId)) {
+                    this.bgMusicSoundId = this.sounds.bgMusic.play();
+                }
             }
 
             stopMenuMusic() {
-                if (this.bgMusicSource) {
-                    try {
-                        this.bgMusicSource.stop(0);
-                        this.bgMusicSource.disconnect();
-                    } catch (e) {}
-                    this.bgMusicSource = null;
+                if (this.sounds.bgMusic) {
+                    this.sounds.bgMusic.stop();
+                    this.bgMusicSoundId = null;
                 }
             }
 
             toggleMute() {
                 this.muted = !this.muted;
+                Howler.mute(this.muted);
                 if (this.muted) {
                     this.stopMenuMusic();
                     this.stopJetpackSound();
@@ -269,35 +303,23 @@
             }
 
             startJetpackSound() {
-                if (this.jetpackSource || this.muted) return;
+                if (this.muted) return;
                 this.init();
-                if (!this.ctx || !this.buffers.jetpack) return;
-
-                try {
-                    this.jetpackSource = this.ctx.createBufferSource();
-                    this.jetpackSource.buffer = this.buffers.jetpack;
-                    this.jetpackSource.loop = true;
-                    const gain = this.ctx.createGain();
-                    gain.gain.value = 0.3;
-                    this.jetpackSource.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    this.jetpackSource.start(0);
-                } catch (e) {}
+                if (this.sounds.jetpack && !this.sounds.jetpack.playing(this.jetpackSoundId)) {
+                    this.jetpackSoundId = this.sounds.jetpack.play();
+                }
             }
 
             stopJetpackSound() {
-                if (this.jetpackSource) {
-                    try {
-                        this.jetpackSource.stop(0);
-                        this.jetpackSource.disconnect();
-                    } catch (e) {}
-                    this.jetpackSource = null;
+                if (this.sounds.jetpack) {
+                    this.sounds.jetpack.stop();
+                    this.jetpackSoundId = null;
                 }
             }
 
             updateJetpack(isActive) {
                 if (isActive && !this.muted) {
-                    if (!this.jetpackSource) {
+                    if (!this.sounds.jetpack || !this.sounds.jetpack.playing(this.jetpackSoundId)) {
                         this.startJetpackSound();
                     }
                 } else {
@@ -306,23 +328,23 @@
             }
 
             playJump() {
-                this.playBuffer('jump', 0.45);
+                this.playSound('jump');
             }
 
             playSpring() {
-                this.playBuffer('spring', 0.5);
+                this.playSound('spring');
             }
 
             playCoin() {
-                this.playBuffer('spring', 0.35);
+                this.playSound('spring');
             }
 
             playBreak() {
-                this.playBuffer('break', 0.4);
+                this.playSound('break');
             }
 
             playGameOver() {
-                this.playBuffer('gameOver', 0.5);
+                this.playSound('gameOver');
             }
         }
 
