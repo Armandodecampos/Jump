@@ -112,7 +112,7 @@
 </div>
 
 <script>
-        // Sound Engine using Web Audio API instantiated directly inside user gesture handlers
+        // Sound Engine using Web Audio API for instant zero-latency playback
         class SoundEngine {
             constructor() {
                 this.ctx = null;
@@ -124,86 +124,82 @@
 
             prebakeBuffers() {
                 if (!this.ctx) return;
-                const sr = this.ctx.sampleRate;
+                const sr = this.ctx.sampleRate || 44100;
+
+                const synthSound = (name, lengthInSec, generatorFn) => {
+                    const len = Math.floor(sr * lengthInSec);
+                    const audioBuf = this.ctx.createBuffer(1, len, sr);
+                    const data = audioBuf.getChannelData(0);
+                    generatorFn(data, sr, len);
+                    this.buffers[name] = audioBuf;
+                };
 
                 // 0. Ambient Background Music Loop
-                const bgLen = Math.floor(sr * 8);
-                const bgBuf = this.ctx.createBuffer(1, bgLen, sr);
-                const bgData = bgBuf.getChannelData(0);
-                const chordPitches = [261.63, 329.63, 392.00, 523.25, 349.23, 440.00, 523.25, 659.25];
-                for (let i = 0; i < bgLen; i++) {
-                    const t = i / sr;
-                    const chordIdx = Math.floor((t / 2) % chordPitches.length);
-                    const freq1 = chordPitches[chordIdx];
-                    const freq2 = chordPitches[(chordIdx + 2) % chordPitches.length];
-                    const env = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
-                    const wave1 = Math.sin(2 * Math.PI * freq1 * t);
-                    const wave2 = Math.sin(2 * Math.PI * freq2 * t);
-                    bgData[i] = (wave1 + wave2) * 0.05 * env;
-                }
-                this.buffers.bgMusic = bgBuf;
+                synthSound('bgMusic', 8, (data, sr, len) => {
+                    const chordPitches = [261.63, 329.63, 392.00, 523.25, 349.23, 440.00, 523.25, 659.25];
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const chordIdx = Math.floor((t / 2) % chordPitches.length);
+                        const freq1 = chordPitches[chordIdx];
+                        const freq2 = chordPitches[(chordIdx + 2) % chordPitches.length];
+                        const env = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+                        const wave1 = Math.sin(2 * Math.PI * freq1 * t);
+                        const wave2 = Math.sin(2 * Math.PI * freq2 * t);
+                        data[i] = (wave1 + wave2) * 0.05 * env;
+                    }
+                });
 
                 // 1. Jump Sound (Instant 8-bit blip)
-                const jumpLen = Math.floor(sr * 0.08);
-                const jumpBuf = this.ctx.createBuffer(1, jumpLen, sr);
-                const jumpData = jumpBuf.getChannelData(0);
-                for (let i = 0; i < jumpLen; i++) {
-                    const t = i / sr;
-                    const freq = 280 + t * 4000;
-                    const env = Math.exp(-t * 35);
-                    const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 0.3 : -0.3;
-                    jumpData[i] = wave * env;
-                }
-                this.buffers.jump = jumpBuf;
+                synthSound('jump', 0.08, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const freq = 280 + t * 4000;
+                        const env = Math.exp(-t * 35);
+                        const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 0.3 : -0.3;
+                        data[i] = wave * env;
+                    }
+                });
 
                 // 2. Spring Sound
-                const springLen = Math.floor(sr * 0.15);
-                const springBuf = this.ctx.createBuffer(1, springLen, sr);
-                const springData = springBuf.getChannelData(0);
-                for (let i = 0; i < springLen; i++) {
-                    const t = i / sr;
-                    const freq = 300 + Math.sin(t * 80) * 400 + t * 2500;
-                    const env = Math.exp(-t * 18);
-                    springData[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
-                }
-                this.buffers.spring = springBuf;
+                synthSound('spring', 0.15, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const freq = 300 + Math.sin(t * 80) * 400 + t * 2500;
+                        const env = Math.exp(-t * 18);
+                        data[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
+                    }
+                });
 
                 // 3. Break Sound
-                const breakLen = Math.floor(sr * 0.12);
-                const breakBuf = this.ctx.createBuffer(1, breakLen, sr);
-                const breakData = breakBuf.getChannelData(0);
-                for (let i = 0; i < breakLen; i++) {
-                    const t = i / sr;
-                    const env = Math.exp(-t * 28);
-                    const noise = (Math.random() * 2 - 1) * 0.35;
-                    breakData[i] = noise * env;
-                }
-                this.buffers.break = breakBuf;
+                synthSound('break', 0.12, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const env = Math.exp(-t * 28);
+                        const noise = (Math.random() * 2 - 1) * 0.35;
+                        data[i] = noise * env;
+                    }
+                });
 
                 // 4. GameOver Sound
-                const goLen = Math.floor(sr * 0.25);
-                const goBuf = this.ctx.createBuffer(1, goLen, sr);
-                const goData = goBuf.getChannelData(0);
-                for (let i = 0; i < goLen; i++) {
-                    const t = i / sr;
-                    const freq = Math.max(50, 240 - t * 700);
-                    const env = Math.exp(-t * 12);
-                    const wave = (i % Math.floor(sr / freq) < sr / freq / 2) ? 0.3 : -0.3;
-                    goData[i] = wave * env;
-                }
-                this.buffers.gameOver = goBuf;
+                synthSound('gameOver', 0.25, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const freq = Math.max(50, 240 - t * 700);
+                        const env = Math.exp(-t * 12);
+                        const wave = (i % Math.floor(sr / freq) < sr / freq / 2) ? 0.3 : -0.3;
+                        data[i] = wave * env;
+                    }
+                });
 
                 // 5. Jetpack Engine Roar Loop
-                const jetLen = Math.floor(sr * 0.5);
-                const jetBuf = this.ctx.createBuffer(1, jetLen, sr);
-                const jetData = jetBuf.getChannelData(0);
-                let lastOut = 0;
-                for (let i = 0; i < jetLen; i++) {
-                    const white = Math.random() * 2 - 1;
-                    lastOut = (lastOut + 0.08 * white) / 1.08;
-                    jetData[i] = lastOut * 0.6;
-                }
-                this.buffers.jetpack = jetBuf;
+                synthSound('jetpack', 0.5, (data, sr, len) => {
+                    let lastOut = 0;
+                    for (let i = 0; i < len; i++) {
+                        const white = Math.random() * 2 - 1;
+                        lastOut = (lastOut + 0.08 * white) / 1.08;
+                        data[i] = lastOut * 0.6;
+                    }
+                });
             }
 
             init() {
@@ -1162,20 +1158,25 @@
             startGame();
         });
 
-        // Start animation loop on window load & handle initial sound unlock
+        // Start animation loop on window load & handle initial sound unlock and buffer pre-baking
         window.onload = () => {
+            // Eagerly instantiate AudioContext and pre-bake all sound buffers in memory before user interaction
+            sound.init();
+
             generateInitialPlatforms();
             gameLoop();
 
-            // Try playing menu music on first user interaction anywhere on screen
+            // Unlock and resume AudioContext instantly on first user interaction anywhere on screen
             const unlockAudio = () => {
                 sound.init();
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
+                window.removeEventListener('pointerdown', unlockAudio);
                 window.removeEventListener('keydown', unlockAudio);
             };
             window.addEventListener('click', unlockAudio);
             window.addEventListener('touchstart', unlockAudio);
+            window.addEventListener('pointerdown', unlockAudio);
             window.addEventListener('keydown', unlockAudio);
         };
     </script>
