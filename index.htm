@@ -112,14 +112,59 @@
 </div>
 
 <script>
-        // Native Web Audio API Sound Engine with pre-baked AudioBuffer instances for instant zero-latency playback
+        // Helper to generate a WAV Blob and Blob URL cached in browser memory
+        function createWavBlobUrl(pcmSamples, sampleRate = 44100) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const bytesPerSample = bitsPerSample / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmSamples.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(v, offset, str) {
+                for (let i = 0; i < str.length; i++) {
+                    v.setUint8(offset + i, str.charCodeAt(i));
+                }
+            }
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            let offset = 44;
+            for (let i = 0; i < pcmSamples.length; i++) {
+                let s = Math.max(-1, Math.min(1, pcmSamples[i]));
+                s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                view.setInt16(offset, s, true);
+                offset += 2;
+            }
+
+            const blob = new Blob([buffer], { type: 'audio/wav' });
+            return URL.createObjectURL(blob);
+        }
+
+        // Zero-Latency Sound Engine combining pre-baked AudioBuffers with preloaded Blob URL Audio cache
         class SoundEngine {
             constructor() {
                 this.muted = false;
                 this.ctx = null;
                 this.buffers = {};
+                this.cachedAudio = {};
                 this.bgMusicSource = null;
                 this.jetpackSource = null;
+                this.unlocked = false;
             }
 
             init() {
@@ -134,19 +179,33 @@
                     this.ctx.resume();
                 }
 
-                if (Object.keys(this.buffers).length > 0 || !this.ctx) {
+                if (Object.keys(this.buffers).length > 0) {
                     return;
                 }
 
-                const sr = this.ctx.sampleRate || 44100;
+                const sr = (this.ctx && this.ctx.sampleRate) ? this.ctx.sampleRate : 44100;
 
                 const createSound = (name, lengthInSec, volume, loop, generatorFn) => {
                     const len = Math.floor(sr * lengthInSec);
-                    const audioBuffer = this.ctx.createBuffer(1, len, sr);
-                    const samples = audioBuffer.getChannelData(0);
+                    const samples = new Float32Array(len);
                     generatorFn(samples, sr, len);
 
-                    this.buffers[name] = { buffer: audioBuffer, volume, loop };
+                    // 1. Web Audio API AudioBuffer
+                    let audioBuffer = null;
+                    if (this.ctx) {
+                        audioBuffer = this.ctx.createBuffer(1, len, sr);
+                        audioBuffer.getChannelData(0).set(samples);
+                    }
+
+                    // 2. Pre-cached Blob URL for instant browser memory/cache lookup
+                    const blobUrl = createWavBlobUrl(samples, sr);
+                    const audioElement = new Audio(blobUrl);
+                    audioElement.preload = 'auto';
+                    audioElement.volume = volume;
+                    audioElement.loop = loop;
+
+                    this.buffers[name] = { buffer: audioBuffer, volume, loop, blobUrl };
+                    this.cachedAudio[name] = audioElement;
                 };
 
                 // 0. Ambient Background Music Loop
@@ -215,6 +274,24 @@
                         data[i] = lastOut * 0.6;
                     }
                 });
+            }
+
+            unlockHardware() {
+                this.init();
+                if (this.ctx) {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    if (!this.unlocked) {
+                        // Play a tiny silent buffer to instantly warm up hardware audio pipeline
+                        const buffer = this.ctx.createBuffer(1, 1, 22050);
+                        const source = this.ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(this.ctx.destination);
+                        source.start(0);
+                        this.unlocked = true;
+                    }
+                }
             }
 
             playSound(name) {
@@ -1165,16 +1242,16 @@
 
             // Unlock and resume AudioContext instantly on first user interaction anywhere on screen
             const unlockAudio = () => {
-                sound.init();
+                sound.unlockHardware();
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
                 window.removeEventListener('pointerdown', unlockAudio);
                 window.removeEventListener('keydown', unlockAudio);
             };
-            window.addEventListener('click', unlockAudio);
-            window.addEventListener('touchstart', unlockAudio);
-            window.addEventListener('pointerdown', unlockAudio);
-            window.addEventListener('keydown', unlockAudio);
+            window.addEventListener('click', unlockAudio, { passive: true });
+            window.addEventListener('touchstart', unlockAudio, { passive: true });
+            window.addEventListener('pointerdown', unlockAudio, { passive: true });
+            window.addEventListener('keydown', unlockAudio, { passive: true });
         };
     </script>
 </body>
