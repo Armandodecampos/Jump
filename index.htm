@@ -417,12 +417,17 @@
         function handlePointerDown(clientX, clientY, target) {
             if (isClickOnInteractiveUI(target)) return;
 
-            sound.init();
+            sound.unlockHardware();
             isTouchingScreen = true;
             touchStartX = clientX;
             touchStartY = clientY;
             touchAxisX = 0;
             hasSwipedJumped = false;
+
+            // Instantly trigger jump on tap/click without waiting for swipe gesture!
+            if (gameState === 'PLAYING') {
+                player.tryJump();
+            }
         }
 
         function handlePointerMove(clientX, clientY) {
@@ -1151,7 +1156,7 @@
                     ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 16px "Nunito", sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('Deslize para CIMA para Pular!', canvas.width / 2, canvas.height / 2 + 80);
+                    ctx.fillText('Toque na tela ou Espaço para Pular!', canvas.width / 2, canvas.height / 2 + 80);
                     ctx.textAlign = 'left';
                 }
 
