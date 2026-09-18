@@ -508,10 +508,6 @@
             touchStartY = clientY;
             touchAxisX = 0;
             hasSwipedJumped = false;
-
-            if (gameState === 'PLAYING') {
-                player.tryJump();
-            }
         }
 
         function handlePointerMove(clientX, clientY) {
@@ -530,7 +526,7 @@
             }
 
             // Swipe UP to Jump
-            if (deltaY < -25 && !hasSwipedJumped) {
+            if (deltaY < -20 && !hasSwipedJumped) {
                 if (gameState === 'PLAYING') {
                     player.tryJump();
                     hasSwipedJumped = true;
@@ -616,8 +612,8 @@
             height: 38,
             vx: 0,
             vy: 0,
-            maxSpeed: 4.8, // Reduced speed for smoother, lower sensitivity control
-            accel: 0.3,    // Soft acceleration
+            maxSpeed: 2.4, // Reduced speed so character moves slowly
+            accel: 0.18,   // Soft acceleration for slow movement
             jumpForce: -13.2, // Increased jump height for better balance
             gravity: 0.42,  // Reduced gravity for floatier, slower jump execution
             isGrounded: false,
@@ -1240,7 +1236,7 @@
                     ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 16px "Nunito", sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('Toque na tela ou Espaço para Pular!', canvas.width / 2, canvas.height / 2 + 80);
+                    ctx.fillText('Deslize para cima ou Espaço para Pular!', canvas.width / 2, canvas.height / 2 + 80);
                     ctx.textAlign = 'left';
                 }
 
