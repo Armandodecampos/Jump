@@ -155,7 +155,7 @@
             return URL.createObjectURL(blob);
         }
 
-        // Ultra-low-latency Web Audio Engine optimized for Chrome autoplay & zero context lag
+        // Ultra-low-latency Web Audio Engine with continuous silent hardware keep-alive stream
         class SoundEngine {
             constructor() {
                 this.muted = false;
@@ -163,25 +163,59 @@
                 this.buffers = {};
                 this.jetpackSource = null;
                 this.bgMusicSource = null;
+                this.keepAliveNode = null;
                 this.unlocked = false;
-            }
 
-            // Must be called synchronously inside user gesture (click/tap/keydown)
-            ensureContext() {
-                if (!this.ctx) {
+                // Pre-initialize AudioContext and synthesize sound buffers on page load
+                try {
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
                     if (AudioCtx) {
                         this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+                        this.buildBuffers();
+                    }
+                } catch (e) {}
+            }
+
+            ensureContext() {
+                if (!this.ctx) {
+                    try {
+                        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                        if (AudioCtx) {
+                            this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+                        }
+                    } catch (e) {}
+                }
+
+                if (this.ctx) {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    if (Object.keys(this.buffers).length === 0) {
+                        this.buildBuffers();
+                    }
+                    if (!this.unlocked) {
+                        this.startKeepAliveStream();
                     }
                 }
+            }
 
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
-                }
+            startKeepAliveStream() {
+                if (!this.ctx || this.unlocked) return;
+                try {
+                    // Pre-warm audio hardware and keep stream active with a looping silent buffer
+                    const silentBuffer = this.ctx.createBuffer(1, 44100, 44100); // 1 sec silence
+                    this.keepAliveNode = this.ctx.createBufferSource();
+                    this.keepAliveNode.buffer = silentBuffer;
+                    this.keepAliveNode.loop = true;
 
-                if (this.ctx && Object.keys(this.buffers).length === 0) {
-                    this.buildBuffers();
-                }
+                    const gain = this.ctx.createGain();
+                    gain.gain.value = 0.00001; // Silent output to hold OS audio hardware thread awake
+
+                    this.keepAliveNode.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    this.keepAliveNode.start(0);
+                    this.unlocked = true;
+                } catch (e) {}
             }
 
             buildBuffers() {
@@ -248,14 +282,7 @@
 
             unlockHardware() {
                 this.ensureContext();
-                if (this.ctx && !this.unlocked) {
-                    const buffer = this.ctx.createBuffer(1, 1, 22050);
-                    const source = this.ctx.createBufferSource();
-                    source.buffer = buffer;
-                    source.connect(this.ctx.destination);
-                    source.start(0);
-                    this.unlocked = true;
-                }
+                this.startKeepAliveStream();
             }
 
             playBuffer(name, volume = 1) {
