@@ -8,8 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-    <!-- Howler.js Audio Library CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
     <style>
         * {
             user-select: none;
@@ -114,86 +112,41 @@
 </div>
 
 <script>
-        // Helper to convert PCM Float32 samples into base64 WAV Data URI for Howler.js
-        function createWavBase64(pcmSamples, sampleRate = 44100) {
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const bytesPerSample = bitsPerSample / 8;
-            const blockAlign = numChannels * bytesPerSample;
-            const byteRate = sampleRate * blockAlign;
-            const dataSize = pcmSamples.length * bytesPerSample;
-            const buffer = new ArrayBuffer(44 + dataSize);
-            const view = new DataView(buffer);
-
-            function writeString(view, offset, string) {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            }
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + dataSize, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            let offset = 44;
-            for (let i = 0; i < pcmSamples.length; i++) {
-                let s = Math.max(-1, Math.min(1, pcmSamples[i]));
-                s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                view.setInt16(offset, s, true);
-                offset += 2;
-            }
-
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return 'data:audio/wav;base64,' + btoa(binary);
-        }
-
-        // Sound Engine powered by Howler.js for instant zero-latency Web Audio API playback
+        // Native Web Audio API Sound Engine with pre-baked AudioBuffer instances for instant zero-latency playback
         class SoundEngine {
             constructor() {
                 this.muted = false;
-                this.sounds = {};
-                this.jetpackSoundId = null;
-                this.bgMusicSoundId = null;
+                this.ctx = null;
+                this.buffers = {};
+                this.bgMusicSource = null;
+                this.jetpackSource = null;
             }
 
             init() {
-                if (Object.keys(this.sounds).length > 0) {
-                    if (Howler.ctx && Howler.ctx.state === 'suspended') {
-                        Howler.ctx.resume();
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
                     }
+                }
+
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                if (Object.keys(this.buffers).length > 0 || !this.ctx) {
                     return;
                 }
 
-                const sr = 44100;
+                const sr = this.ctx.sampleRate || 44100;
 
                 const createSound = (name, lengthInSec, volume, loop, generatorFn) => {
                     const len = Math.floor(sr * lengthInSec);
-                    const samples = new Float32Array(len);
+                    const audioBuffer = this.ctx.createBuffer(1, len, sr);
+                    const samples = audioBuffer.getChannelData(0);
                     generatorFn(samples, sr, len);
-                    const dataUri = createWavBase64(samples, sr);
 
-                    this.sounds[name] = new Howl({
-                        src: [dataUri],
-                        format: ['wav'],
-                        volume: volume,
-                        loop: loop,
-                        html5: false, // Force Web Audio API for 0ms latency
-                        preload: true
-                    });
+                    this.buffers[name] = { buffer: audioBuffer, volume, loop };
                 };
 
                 // 0. Ambient Background Music Loop
@@ -262,38 +215,51 @@
                         data[i] = lastOut * 0.6;
                     }
                 });
-
-                if (Howler.ctx && Howler.ctx.state === 'suspended') {
-                    Howler.ctx.resume();
-                }
             }
 
             playSound(name) {
                 if (this.muted) return;
                 this.init();
-                if (this.sounds[name]) {
-                    this.sounds[name].play();
-                }
+                if (!this.ctx) return;
+                const snd = this.buffers[name];
+                if (!snd) return;
+
+                const source = this.ctx.createBufferSource();
+                source.buffer = snd.buffer;
+                const gainNode = this.ctx.createGain();
+                gainNode.gain.value = snd.volume;
+                source.connect(gainNode);
+                gainNode.connect(this.ctx.destination);
+                source.start(0);
+                return source;
             }
 
             playMenuMusic() {
                 if (this.muted) return;
                 this.init();
-                if (this.sounds.bgMusic && !this.sounds.bgMusic.playing(this.bgMusicSoundId)) {
-                    this.bgMusicSoundId = this.sounds.bgMusic.play();
+                if (!this.ctx) return;
+                if (!this.bgMusicSource && this.buffers.bgMusic) {
+                    const snd = this.buffers.bgMusic;
+                    this.bgMusicSource = this.ctx.createBufferSource();
+                    this.bgMusicSource.buffer = snd.buffer;
+                    this.bgMusicSource.loop = true;
+                    const gainNode = this.ctx.createGain();
+                    gainNode.gain.value = snd.volume;
+                    this.bgMusicSource.connect(gainNode);
+                    gainNode.connect(this.ctx.destination);
+                    this.bgMusicSource.start(0);
                 }
             }
 
             stopMenuMusic() {
-                if (this.sounds.bgMusic) {
-                    this.sounds.bgMusic.stop();
-                    this.bgMusicSoundId = null;
+                if (this.bgMusicSource) {
+                    try { this.bgMusicSource.stop(); } catch (e) {}
+                    this.bgMusicSource = null;
                 }
             }
 
             toggleMute() {
                 this.muted = !this.muted;
-                Howler.mute(this.muted);
                 if (this.muted) {
                     this.stopMenuMusic();
                     this.stopJetpackSound();
@@ -305,21 +271,30 @@
             startJetpackSound() {
                 if (this.muted) return;
                 this.init();
-                if (this.sounds.jetpack && !this.sounds.jetpack.playing(this.jetpackSoundId)) {
-                    this.jetpackSoundId = this.sounds.jetpack.play();
+                if (!this.ctx) return;
+                if (!this.jetpackSource && this.buffers.jetpack) {
+                    const snd = this.buffers.jetpack;
+                    this.jetpackSource = this.ctx.createBufferSource();
+                    this.jetpackSource.buffer = snd.buffer;
+                    this.jetpackSource.loop = true;
+                    const gainNode = this.ctx.createGain();
+                    gainNode.gain.value = snd.volume;
+                    this.jetpackSource.connect(gainNode);
+                    gainNode.connect(this.ctx.destination);
+                    this.jetpackSource.start(0);
                 }
             }
 
             stopJetpackSound() {
-                if (this.sounds.jetpack) {
-                    this.sounds.jetpack.stop();
-                    this.jetpackSoundId = null;
+                if (this.jetpackSource) {
+                    try { this.jetpackSource.stop(); } catch (e) {}
+                    this.jetpackSource = null;
                 }
             }
 
             updateJetpack(isActive) {
                 if (isActive && !this.muted) {
-                    if (!this.sounds.jetpack || !this.sounds.jetpack.playing(this.jetpackSoundId)) {
+                    if (!this.jetpackSource) {
                         this.startJetpackSound();
                     }
                 } else {
@@ -915,8 +890,8 @@
                 const platform = new Platform(x, currentY, width, type);
                 platforms.push(platform);
 
-                // Chance to spawn coin on platform (reduced to 1/3 of previous 0.4 rate)
-                if (Math.random() < 0.133 && type !== 'fragile') {
+                // Very rare rocket / jetpack spawn rate (~3%)
+                if (Math.random() < 0.03 && type !== 'fragile') {
                     collectibles.push(new Collectible(x + width / 2, currentY - 20));
                 }
             }
@@ -940,8 +915,8 @@
 
                     platforms.push(new Platform(x, currentY, width, type));
 
-                    // Chance to spawn jetpack on platform (reduced to 1/3 of previous 0.45 rate)
-                    if (Math.random() < 0.15 && type !== 'fragile') {
+                    // Very rare rocket / jetpack spawn rate (~3%)
+                    if (Math.random() < 0.03 && type !== 'fragile') {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20));
                     }
                 }
