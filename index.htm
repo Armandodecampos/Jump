@@ -350,16 +350,17 @@
 
             playJump() {
                 if (this.muted) return;
-                // Dual trigger: 1. Instant HTML5 Audio Pool + 2. Web Audio API
-                this.playPool('jump');
                 this.ensureContext();
                 if (!this.ctx) return;
 
                 if (this.jumpOsc && this.jumpGain) {
                     const now = this.ctx.currentTime;
+                    this.jumpOsc.frequency.cancelScheduledValues(now);
+                    this.jumpGain.gain.cancelScheduledValues(now);
+
                     this.jumpOsc.frequency.setValueAtTime(320, now);
                     this.jumpOsc.frequency.exponentialRampToValueAtTime(950, now + 0.08);
-                    this.jumpGain.gain.cancelScheduledValues(now);
+
                     this.jumpGain.gain.setValueAtTime(0.4, now);
                     this.jumpGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.08);
                 } else {
@@ -508,7 +509,6 @@
             touchAxisX = 0;
             hasSwipedJumped = false;
 
-            // Instantly trigger jump on tap/click without waiting for swipe gesture!
             if (gameState === 'PLAYING') {
                 player.tryJump();
             }
