@@ -155,12 +155,13 @@
             return URL.createObjectURL(blob);
         }
 
-        // Absolute minimum physical latency synth engine using pre-connected, running Audio Nodes
+        // Dual-Engine Zero-Latency Sound Architecture (Web Audio API + Pre-Warmed HTML5 Audio Pool)
         class SoundEngine {
             constructor() {
                 this.muted = false;
                 this.ctx = null;
                 this.buffers = {};
+                this.audioPool = {};
                 this.jetpackSource = null;
                 this.bgMusicSource = null;
                 this.keepAliveNode = null;
@@ -173,7 +174,7 @@
                 try {
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
                     if (AudioCtx) {
-                        this.ctx = new AudioCtx({ latencyHint: 0 }); // Hard minimum buffer size (<1ms)
+                        this.ctx = new AudioCtx({ latencyHint: 'interactive' });
                         this.buildBuffers();
                     }
                 } catch (e) {}
@@ -246,9 +247,22 @@
                 const createBuf = (name, lengthInSec, generatorFn) => {
                     const len = Math.floor(sr * lengthInSec);
                     const buf = this.ctx.createBuffer(1, len, sr);
-                    const data = buf.getChannelData(0);
-                    generatorFn(data, sr, len);
+                    const pcm = new Float32Array(len);
+                    generatorFn(pcm, sr, len);
+                    buf.getChannelData(0).set(pcm);
                     this.buffers[name] = buf;
+
+                    // Build pre-cached HTML5 Audio Pool for instant direct play
+                    try {
+                        const blobUrl = createWavBlobUrl(pcm, sr);
+                        const pool = [];
+                        for (let i = 0; i < 3; i++) {
+                            const audio = new Audio(blobUrl);
+                            audio.preload = 'auto';
+                            pool.push(audio);
+                        }
+                        this.audioPool[name] = { pool, index: 0 };
+                    } catch (e) {}
                 };
 
                 // 1. Jump Sound Buffer
@@ -301,6 +315,19 @@
                 });
             }
 
+            playPool(name) {
+                if (this.muted) return;
+                const poolObj = this.audioPool[name];
+                if (poolObj && poolObj.pool.length > 0) {
+                    try {
+                        const a = poolObj.pool[poolObj.index];
+                        a.currentTime = 0;
+                        a.play().catch(() => {});
+                        poolObj.index = (poolObj.index + 1) % poolObj.pool.length;
+                    } catch (e) {}
+                }
+            }
+
             unlockHardware() {
                 this.ensureContext();
                 this.startKeepAliveStream();
@@ -323,11 +350,12 @@
 
             playJump() {
                 if (this.muted) return;
+                // Dual trigger: 1. Instant HTML5 Audio Pool + 2. Web Audio API
+                this.playPool('jump');
                 this.ensureContext();
                 if (!this.ctx) return;
 
                 if (this.jumpOsc && this.jumpGain) {
-                    // Instantly trigger pre-connected, running oscillator tone (0ms latency!)
                     const now = this.ctx.currentTime;
                     this.jumpOsc.frequency.setValueAtTime(320, now);
                     this.jumpOsc.frequency.exponentialRampToValueAtTime(950, now + 0.08);
