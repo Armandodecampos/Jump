@@ -478,7 +478,7 @@
         let isJumpPressed = false;
 
         window.addEventListener('keydown', (e) => {
-            sound.init();
+            sound.ensureContext();
             if (e.code === 'KeyA' || e.code === 'ArrowLeft') keyAxisLeft = true;
             if (e.code === 'KeyD' || e.code === 'ArrowRight') keyAxisRight = true;
             if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
@@ -497,7 +497,7 @@
         });
 
         soundToggleBtn.addEventListener('click', () => {
-            sound.init();
+            sound.ensureContext();
             sound.toggleMute();
             soundToggleBtn.textContent = sound.muted ? '🔇' : '🔊';
         });
@@ -1182,12 +1182,12 @@
         }
 
         startBtn.addEventListener('click', () => {
-            sound.init();
+            sound.ensureContext();
             startGame();
         });
 
         restartBtn.addEventListener('click', () => {
-            sound.init();
+            sound.ensureContext();
             startGame();
         });
 
