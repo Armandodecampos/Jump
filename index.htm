@@ -836,7 +836,7 @@
                 this.x = x;
                 this.y = y;
                 this.width = width;
-                this.height = 14;
+                this.height = 16;
                 this.type = type; // 'normal', 'moving', 'spring', 'fragile'
                 this.broken = false;
                 this.moveSpeed = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.2);
@@ -846,6 +846,36 @@
                 this.crumbling = false;
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
+                this.puffs = [];
+                this.generateCloudShape();
+            }
+
+            generateCloudShape() {
+                this.puffs = [];
+                // Number of cloud puffs based on width with random variance
+                const minPuffs = Math.max(3, Math.floor(this.width / 18));
+                const puffCount = minPuffs + Math.floor(Math.random() * 3);
+                const step = this.width / Math.max(1, puffCount - 1);
+
+                let maxTopOffset = 0;
+
+                for (let i = 0; i < puffCount; i++) {
+                    const jitterX = (i === 0 || i === puffCount - 1) ? 0 : (Math.random() - 0.5) * step * 0.5;
+                    const cx = i * step + jitterX;
+
+                    // Middle puffs bulge higher and larger
+                    const centerDist = Math.abs((i - (puffCount - 1) / 2) / Math.max(1, (puffCount - 1) / 2));
+                    const centerFactor = 1 - centerDist;
+
+                    const r = 10 + centerFactor * 8 + Math.random() * 6;
+                    const cy = this.height / 2 - (centerFactor * 5 + Math.random() * 4);
+
+                    this.puffs.push({ cx, cy, r });
+
+                    const topExtent = cy - r;
+                    if (topExtent < maxTopOffset) maxTopOffset = topExtent;
+                }
+                this.maxPuffTop = maxTopOffset;
             }
 
             update() {
@@ -886,26 +916,6 @@
                 if (this.broken) return;
 
                 ctx.save();
-                
-                // Color palette based on platform type
-                let colorGradient;
-                if (this.type === 'normal') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#34d399'); // Emerald-400
-                    colorGradient.addColorStop(1, '#059669'); // Emerald-600
-                } else if (this.type === 'moving') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
-                    colorGradient.addColorStop(1, '#0284c7'); // Sky-600
-                } else if (this.type === 'spring') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#a855f7'); // Purple-500
-                    colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
-                } else if (this.type === 'fragile') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#f87171'); // Red-400
-                    colorGradient.addColorStop(1, '#dc2626'); // Red-600
-                }
 
                 // Shake visual effect when crumbling
                 let offsetX = 0;
@@ -915,22 +925,77 @@
                     offsetY = (Math.random() - 0.5) * 2;
                 }
 
-                // Platform main bar
-                ctx.fillStyle = colorGradient;
+                const topY = screenY + (this.maxPuffTop || -10);
+                const bottomY = screenY + this.height + 6;
+
+                // Color gradients based on cloud type
+                let cloudGradient = ctx.createLinearGradient(0, topY, 0, bottomY);
+                if (this.type === 'normal') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#e6f4ea');
+                    cloudGradient.addColorStop(1, '#34d399');
+                } else if (this.type === 'moving') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#e0f2fe');
+                    cloudGradient.addColorStop(1, '#38bdf8');
+                } else if (this.type === 'spring') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#f3e8ff');
+                    cloudGradient.addColorStop(1, '#c084fc');
+                } else if (this.type === 'fragile') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#ffe4e6');
+                    cloudGradient.addColorStop(1, '#f87171');
+                }
+
+                // Cloud Drop Shadow for depth
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetY = 4;
+
+                // Draw solid combined cloud shape
+                ctx.fillStyle = cloudGradient;
                 ctx.beginPath();
-                ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 6);
+                // Base filler rectangle/pill
+                ctx.roundRect(this.x + offsetX, screenY + offsetY + 2, this.width, this.height, 8);
+                // Circular cloud puffs
+                this.puffs.forEach(p => {
+                    ctx.arc(this.x + p.cx + offsetX, screenY + p.cy + offsetY, p.r, 0, Math.PI * 2);
+                });
                 ctx.fill();
 
-                // Highlight top edge
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.fillRect(this.x + 4 + offsetX, screenY + 2 + offsetY, this.width - 8, 3);
+                // Turn off shadow for highlights & spring
+                ctx.shadowColor = 'transparent';
 
-                // Spring attachment if present
+                // Soft white top highlight arcs on cloud puffs
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2.5;
+                this.puffs.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(
+                        this.x + p.cx + offsetX,
+                        screenY + p.cy + offsetY,
+                        p.r - 1.5,
+                        Math.PI * 1.15,
+                        Math.PI * 1.85
+                    );
+                    ctx.stroke();
+                });
+
+                // Spring attachment on cloud center if spring type
                 if (this.hasSpring) {
                     const springX = this.x + this.width / 2 - 8;
-                    const springY = screenY - (this.springCompressed ? 4 : 8);
-                    ctx.fillStyle = '#f59e0b'; // Amber spring
+                    const springY = screenY - (this.springCompressed ? 2 : 8);
+
+                    // Spring base plate
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(springX + offsetX - 2, springY + offsetY + (this.springCompressed ? 4 : 8), 20, 3);
+
+                    // Coiled Spring
+                    ctx.fillStyle = '#f59e0b';
                     ctx.fillRect(springX + offsetX, springY + offsetY, 16, this.springCompressed ? 4 : 8);
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(springX + offsetX + 2, springY + offsetY + 1, 12, 2);
                 }
 
                 ctx.restore();
