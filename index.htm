@@ -44,10 +44,13 @@
                     Subida Nuvens
                 </h1>
             </div>
-            <div class="flex items-center gap-4 font-game text-sm sm:text-base">
+            <div class="flex items-center gap-3 font-game text-sm sm:text-base">
                 <div class="text-amber-400">
                     🏆 <span id="highScoreText">0m</span>
                 </div>
+                <button id="styleToggleHeaderBtn" class="px-2.5 py-1 rounded-xl bg-slate-700/70 hover:bg-slate-600 transition active:scale-95 text-xs sm:text-sm flex items-center gap-1 border border-slate-600/50">
+                    <span id="styleIconHeader">☁️</span>
+                </button>
                 <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-700/70 hover:bg-slate-600 transition active:scale-95 text-lg">
                     🔊
                 </button>
@@ -67,13 +70,21 @@
                     Pule nas plataformas para subir sem parar! A câmera começará a subir assim que você fizer seu primeiro pulo.
                 </p>
 
-                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-6 text-left space-y-2 text-xs sm:text-sm">
+                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-4 text-left space-y-2 text-xs sm:text-sm">
                     <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
                     <p class="text-slate-300 leading-relaxed">
                         • <strong>Pular:</strong> Deslize o dedo/mouse para cima.<br>
                         • <strong>Mover:</strong> Deslize o dedo/mouse para os lados.<br>
                         • <strong>Teclado:</strong> A / D ou Setas para mover, ESPAÇO para pular.
                     </p>
+                </div>
+
+                <!-- Platform Style Selector in Menu -->
+                <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 w-full max-w-xs mb-6 flex justify-between items-center text-xs sm:text-sm">
+                    <span class="font-bold text-slate-300">Estilo das Plataformas:</span>
+                    <button id="styleToggleMenuBtn" class="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-game transition active:scale-95 shadow border border-purple-400/30 flex items-center gap-1.5">
+                        <span id="styleMenuText">☁️ Nuvens</span>
+                    </button>
                 </div>
 
                 <button id="startBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all">
@@ -479,10 +490,43 @@
         const finalScore = document.getElementById('finalScore');
         const bestScore = document.getElementById('bestScore');
         const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const styleToggleHeaderBtn = document.getElementById('styleToggleHeaderBtn');
+        const styleIconHeader = document.getElementById('styleIconHeader');
+        const styleToggleMenuBtn = document.getElementById('styleToggleMenuBtn');
+        const styleMenuText = document.getElementById('styleMenuText');
 
-        // Persistent High Score
+        // Persistent High Score & Platform Style Choice ('cloud' or 'classic')
         let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
         highScoreText.textContent = `${highScore}m`;
+
+        let platformStyle = localStorage.getItem('subida_nuvens_platform_style') || 'cloud';
+
+        function updateStyleUI() {
+            if (platformStyle === 'cloud') {
+                styleIconHeader.textContent = '☁️ Nuvens';
+                styleMenuText.textContent = '☁️ Nuvens';
+            } else {
+                styleIconHeader.textContent = '▬ Clássico';
+                styleMenuText.textContent = '▬ Clássico';
+            }
+        }
+        updateStyleUI();
+
+        function togglePlatformStyle() {
+            platformStyle = platformStyle === 'cloud' ? 'classic' : 'cloud';
+            localStorage.setItem('subida_nuvens_platform_style', platformStyle);
+            updateStyleUI();
+        }
+
+        styleToggleHeaderBtn.addEventListener('click', () => {
+            sound.ensureContext();
+            togglePlatformStyle();
+        });
+
+        styleToggleMenuBtn.addEventListener('click', () => {
+            sound.ensureContext();
+            togglePlatformStyle();
+        });
 
         // Input state
         let touchAxisX = 0;
@@ -496,7 +540,7 @@
         let hasSwipedJumped = false;
 
         function isClickOnInteractiveUI(target) {
-            return target.closest('#startBtn') || target.closest('#restartBtn') || target.closest('#soundToggleBtn');
+            return target.closest('#startBtn') || target.closest('#restartBtn') || target.closest('#soundToggleBtn') || target.closest('#styleToggleHeaderBtn') || target.closest('#styleToggleMenuBtn');
         }
 
         function handlePointerDown(clientX, clientY, target) {
@@ -1003,23 +1047,57 @@
                     offsetY = (Math.random() - 0.5) * 2;
                 }
 
-                // Ultra-fast cached drawImage execution
-                if (this.cachedCanvas) {
-                    ctx.drawImage(
-                        this.cachedCanvas,
-                        this.x + offsetX - this.cacheOffsetX,
-                        screenY + offsetY - this.cacheOffsetY
-                    );
+                if (platformStyle === 'cloud') {
+                    // Render cloud platform using offscreen canvas cache
+                    if (this.cachedCanvas) {
+                        ctx.drawImage(
+                            this.cachedCanvas,
+                            this.x + offsetX - this.cacheOffsetX,
+                            screenY + offsetY - this.cacheOffsetY
+                        );
+                    }
+                } else {
+                    // Render classic rectangular platform bar
+                    let colorGradient;
+                    if (this.type === 'normal') {
+                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                        colorGradient.addColorStop(0, '#34d399'); // Emerald-400
+                        colorGradient.addColorStop(1, '#059669'); // Emerald-600
+                    } else if (this.type === 'moving') {
+                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                        colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
+                        colorGradient.addColorStop(1, '#0284c7'); // Sky-600
+                    } else if (this.type === 'spring') {
+                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                        colorGradient.addColorStop(0, '#a855f7'); // Purple-500
+                        colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
+                    } else if (this.type === 'fragile') {
+                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                        colorGradient.addColorStop(0, '#f87171'); // Red-400
+                        colorGradient.addColorStop(1, '#dc2626'); // Red-600
+                    }
+
+                    // Platform main bar
+                    ctx.fillStyle = colorGradient;
+                    ctx.beginPath();
+                    ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 6);
+                    ctx.fill();
+
+                    // Highlight top edge
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(this.x + 4 + offsetX, screenY + 2 + offsetY, this.width - 8, 3);
                 }
 
-                // Spring attachment on cloud center if spring type
+                // Spring attachment on center if spring type
                 if (this.hasSpring) {
                     const springX = this.x + this.width / 2 - 8;
-                    const springY = screenY - (this.springCompressed ? 2 : 8);
+                    const springY = screenY - (this.springCompressed ? (platformStyle === 'cloud' ? 2 : 4) : 8);
 
                     // Spring base plate
-                    ctx.fillStyle = '#78350f';
-                    ctx.fillRect(springX + offsetX - 2, springY + offsetY + (this.springCompressed ? 4 : 8), 20, 3);
+                    if (platformStyle === 'cloud') {
+                        ctx.fillStyle = '#78350f';
+                        ctx.fillRect(springX + offsetX - 2, springY + offsetY + (this.springCompressed ? 4 : 8), 20, 3);
+                    }
 
                     // Coiled Spring
                     ctx.fillStyle = '#f59e0b';
