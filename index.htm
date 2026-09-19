@@ -114,8 +114,13 @@
                     </button>
                 </div>
 
+                <!-- Return to Main Menu Button -->
+                <button id="goToMenuBtn" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-amber-300 font-game text-base rounded-xl shadow transition active:scale-95 border border-slate-600 flex items-center justify-center gap-2">
+                    🏠 MENU INICIAL
+                </button>
+
                 <button id="doneOptionsBtn" class="w-full py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-game text-lg rounded-xl shadow transition active:scale-95">
-                    VOLTAR
+                    VOLTAR AO JOGO
                 </button>
             </div>
         </div>
@@ -521,6 +526,7 @@
         const optionsModal = document.getElementById('optionsModal');
         const closeOptionsBtn = document.getElementById('closeOptionsBtn');
         const doneOptionsBtn = document.getElementById('doneOptionsBtn');
+        const goToMenuBtn = document.getElementById('goToMenuBtn');
         const styleToggleOptionBtn = document.getElementById('styleToggleOptionBtn');
         const styleOptionText = document.getElementById('styleOptionText');
         const soundToggleOptionBtn = document.getElementById('soundToggleOptionBtn');
@@ -572,8 +578,17 @@
             openOptionsModal();
         });
 
+        function returnToMainMenu() {
+            gameState = 'MENU';
+            sound.stopJetpackSound();
+            closeOptionsModal();
+            gameOverMenu.classList.add('hidden');
+            startMenu.classList.remove('hidden');
+        }
+
         closeOptionsBtn.addEventListener('click', () => closeOptionsModal());
         doneOptionsBtn.addEventListener('click', () => closeOptionsModal());
+        goToMenuBtn.addEventListener('click', () => returnToMainMenu());
 
         styleToggleOptionBtn.addEventListener('click', () => {
             sound.ensureContext();
