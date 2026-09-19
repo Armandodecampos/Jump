@@ -847,7 +847,11 @@
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
                 this.puffs = [];
+                this.cachedCanvas = null;
+                this.cacheOffsetX = 0;
+                this.cacheOffsetY = 0;
                 this.generateCloudShape();
+                this.renderToCache();
             }
 
             generateCloudShape() {
@@ -876,6 +880,80 @@
                     if (topExtent < maxTopOffset) maxTopOffset = topExtent;
                 }
                 this.maxPuffTop = maxTopOffset;
+            }
+
+            renderToCache() {
+                const padding = 20; // Extra padding for drop shadow and puff extent
+                this.cacheOffsetX = padding;
+                this.cacheOffsetY = padding - (this.maxPuffTop || -10);
+
+                const cWidth = Math.ceil(this.width + padding * 2);
+                const cHeight = Math.ceil(this.height + padding * 2 + Math.abs(this.maxPuffTop || -10));
+
+                const offscreen = document.createElement('canvas');
+                offscreen.width = cWidth;
+                offscreen.height = cHeight;
+                const oCtx = offscreen.getContext('2d');
+
+                const originX = padding;
+                const originY = padding + Math.abs(this.maxPuffTop || -10);
+
+                const topY = originY + (this.maxPuffTop || -10);
+                const bottomY = originY + this.height + 6;
+
+                // Color gradients based on cloud type
+                let cloudGradient = oCtx.createLinearGradient(0, topY, 0, bottomY);
+                if (this.type === 'normal') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#e6f4ea');
+                    cloudGradient.addColorStop(1, '#34d399');
+                } else if (this.type === 'moving') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#e0f2fe');
+                    cloudGradient.addColorStop(1, '#38bdf8');
+                } else if (this.type === 'spring') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#f3e8ff');
+                    cloudGradient.addColorStop(1, '#c084fc');
+                } else if (this.type === 'fragile') {
+                    cloudGradient.addColorStop(0, '#ffffff');
+                    cloudGradient.addColorStop(0.45, '#ffe4e6');
+                    cloudGradient.addColorStop(1, '#f87171');
+                }
+
+                // Cloud Drop Shadow for depth
+                oCtx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+                oCtx.shadowBlur = 6;
+                oCtx.shadowOffsetY = 3;
+
+                // Draw solid combined cloud shape
+                oCtx.fillStyle = cloudGradient;
+                oCtx.beginPath();
+                oCtx.roundRect(originX, originY + 2, this.width, this.height, 8);
+                this.puffs.forEach(p => {
+                    oCtx.arc(originX + p.cx, originY + p.cy, p.r, 0, Math.PI * 2);
+                });
+                oCtx.fill();
+
+                // Turn off shadow for highlights
+                oCtx.shadowColor = 'transparent';
+
+                // Soft white top highlight arcs on cloud puffs
+                oCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                oCtx.lineWidth = 2.5;
+                this.puffs.forEach(p => {
+                    oCtx.beginPath();
+                    oCtx.arc(
+                        originX + p.cx,
+                        originY + p.cy,
+                        p.r - 1.5,
+                        Math.PI * 1.15,
+                        Math.PI * 1.85
+                    );
+                    oCtx.stroke();
+                });
+
+                this.cachedCanvas = offscreen;
             }
 
             update() {
@@ -925,62 +1003,14 @@
                     offsetY = (Math.random() - 0.5) * 2;
                 }
 
-                const topY = screenY + (this.maxPuffTop || -10);
-                const bottomY = screenY + this.height + 6;
-
-                // Color gradients based on cloud type
-                let cloudGradient = ctx.createLinearGradient(0, topY, 0, bottomY);
-                if (this.type === 'normal') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#e6f4ea');
-                    cloudGradient.addColorStop(1, '#34d399');
-                } else if (this.type === 'moving') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#e0f2fe');
-                    cloudGradient.addColorStop(1, '#38bdf8');
-                } else if (this.type === 'spring') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#f3e8ff');
-                    cloudGradient.addColorStop(1, '#c084fc');
-                } else if (this.type === 'fragile') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#ffe4e6');
-                    cloudGradient.addColorStop(1, '#f87171');
-                }
-
-                // Cloud Drop Shadow for depth
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-                ctx.shadowBlur = 8;
-                ctx.shadowOffsetY = 4;
-
-                // Draw solid combined cloud shape
-                ctx.fillStyle = cloudGradient;
-                ctx.beginPath();
-                // Base filler rectangle/pill
-                ctx.roundRect(this.x + offsetX, screenY + offsetY + 2, this.width, this.height, 8);
-                // Circular cloud puffs
-                this.puffs.forEach(p => {
-                    ctx.arc(this.x + p.cx + offsetX, screenY + p.cy + offsetY, p.r, 0, Math.PI * 2);
-                });
-                ctx.fill();
-
-                // Turn off shadow for highlights & spring
-                ctx.shadowColor = 'transparent';
-
-                // Soft white top highlight arcs on cloud puffs
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.lineWidth = 2.5;
-                this.puffs.forEach(p => {
-                    ctx.beginPath();
-                    ctx.arc(
-                        this.x + p.cx + offsetX,
-                        screenY + p.cy + offsetY,
-                        p.r - 1.5,
-                        Math.PI * 1.15,
-                        Math.PI * 1.85
+                // Ultra-fast cached drawImage execution
+                if (this.cachedCanvas) {
+                    ctx.drawImage(
+                        this.cachedCanvas,
+                        this.x + offsetX - this.cacheOffsetX,
+                        screenY + offsetY - this.cacheOffsetY
                     );
-                    ctx.stroke();
-                });
+                }
 
                 // Spring attachment on cloud center if spring type
                 if (this.hasSpring) {
