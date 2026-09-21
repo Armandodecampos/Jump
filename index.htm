@@ -901,6 +901,10 @@
                     this.isJetpackFiring = false;
                     this.jetpackSputtering = false;
                     this.vy += this.gravity;
+                    // Cap falling speed when offscreen below the camera view so falling takes longer
+                    if (this.y > cameraY + canvas.height && this.vy > 0) {
+                        this.vy = Math.min(this.vy, 1.8);
+                    }
                     sound.updateJetpack(false);
                 }
                 this.y += this.vy;
@@ -1456,8 +1460,8 @@
                 if (pt.alpha <= 0) particles.splice(i, 1);
             }
 
-            // Cleanup platforms that reach the bottom edge of the screen
-            const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height : cameraY + canvas.height + 100;
+            // Cleanup platforms that reach the green line near the bottom edge of the screen
+            const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 30 : cameraY + canvas.height + 100;
             platforms = platforms.filter(p => {
                 if (p.y >= platformBottomCutoff) {
                     if (player.hasFirstJumped && !p.broken) {
@@ -1468,7 +1472,7 @@
                 return true;
             });
 
-            // Cleanup collectibles after falling 1 full vertical screen height below the screen
+            // Cleanup collectibles after falling 1 full vertical screen height below the screen bottom
             const itemBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height * 2 : cameraY + canvas.height + 100;
             collectibles = collectibles.filter(c => c.y < itemBottomCutoff);
 
@@ -1539,6 +1543,20 @@
             ctx.restore();
 
             if (gameState === 'PLAYING') {
+                // Draw green boundary line where platforms start disappearing
+                if (player.hasFirstJumped) {
+                    ctx.save();
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([8, 6]);
+                    const greenLineY = canvas.height - 30;
+                    ctx.beginPath();
+                    ctx.moveTo(0, greenLineY);
+                    ctx.lineTo(canvas.width, greenLineY);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
                 // HUD - Height
                 ctx.save();
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
