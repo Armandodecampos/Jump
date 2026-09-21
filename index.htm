@@ -1088,47 +1088,35 @@
             }
         }
 
-        // Helper to calculate next platform x position guaranteeing reachable horizontal distance
+        // Helper to calculate next platform x position guaranteeing reachable direct horizontal distance
         function calculateReachableX(prevX, prevWidth, nextWidth, dy) {
-            // Player jump physics: max horizontal jump distance is ~110-120px depending on dy
-            // Capped safe horizontal gap distance from edge to edge
-            const safeMaxReach = Math.min(85, Math.max(50, 115 - dy * 0.4));
+            // Capped safe horizontal gap distance from edge to edge on direct screen view
+            const safeMaxReach = Math.min(80, Math.max(45, 110 - dy * 0.4));
 
-            const minXRaw = prevX - safeMaxReach - nextWidth + 10;
-            const maxXRaw = prevX + prevWidth + safeMaxReach - 10;
-            const rawX = minXRaw + Math.random() * (maxXRaw - minXRaw);
+            const minX = Math.max(0, prevX - safeMaxReach - nextWidth + 10);
+            const maxX = Math.min(canvas.width - nextWidth, prevX + prevWidth + safeMaxReach - 10);
 
-            return ((rawX % canvas.width) + canvas.width) % canvas.width;
-        }
+            if (minX >= maxX) {
+                return Math.max(0, Math.min(canvas.width - nextWidth, (minX + maxX) / 2));
+            }
 
-        function getEdgeDistance(p1X, p1W, p2X, p2W, canvasWidth) {
-            let dDirect = Infinity;
-            if (p2X >= p1X + p1W) dDirect = p2X - (p1X + p1W);
-            else if (p1X >= p2X + p2W) dDirect = p1X - (p2X + p2W);
-            else dDirect = 0;
-
-            let dWrapRight = (canvasWidth - (p1X + p1W)) + p2X;
-            let dWrapLeft = p1X + (canvasWidth - (p2X + p2W));
-
-            let minDist = Math.min(dDirect, dWrapRight, dWrapLeft);
-            let type = 'direct';
-            if (minDist === dWrapRight) type = 'wrapRight';
-            else if (minDist === dWrapLeft) type = 'wrapLeft';
-            return { minDist, type };
+            return minX + Math.random() * (maxX - minX);
         }
 
         function createIntermediateFragileIfNeeded(p1, p2, dy) {
-            const edge = getEdgeDistance(p1.x, p1.width, p2.x, p2.width, canvas.width);
-            if (edge.minDist <= 30) return null;
+            let dDirect = 0;
+            if (p2.x > p1.x + p1.width) dDirect = p2.x - (p1.x + p1.width);
+            else if (p1.x > p2.x + p2.width) dDirect = p1.x - (p2.x + p2.width);
+            else return null;
+
+            if (dDirect <= 25) return null;
 
             const c1 = p1.x + p1.width / 2;
-            let c2 = p2.x + p2.width / 2;
-            if (edge.type === 'wrapRight') c2 += canvas.width;
-            if (edge.type === 'wrapLeft') c2 -= canvas.width;
+            const c2 = p2.x + p2.width / 2;
 
             const fragWidth = Math.max(50, Math.min(65, p2.width - 10));
             const midCenterX = (c1 + c2) / 2;
-            const midX = ((midCenterX - fragWidth / 2) % canvas.width + canvas.width) % canvas.width;
+            const midX = Math.max(0, Math.min(canvas.width - fragWidth, midCenterX - fragWidth / 2));
             const midY = p1.y - dy / 2;
 
             return new Platform(midX, midY, fragWidth, 'fragile');
