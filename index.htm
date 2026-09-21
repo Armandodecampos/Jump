@@ -737,8 +737,8 @@
             },
 
             activateJetpack(forcedWillFail = null) {
-                // 30% chance to fail with sputtering jolts, 70% chance to fly double duration non-failing
-                if (forcedWillFail !== null) {
+                // 30% chance to fail with sputtering jolts, 70% chance to fly higher (double duration) without failing
+                if (typeof forcedWillFail === 'boolean') {
                     this.willFail = forcedWillFail;
                 } else {
                     this.willFail = Math.random() < 0.3;
@@ -747,7 +747,7 @@
                 if (this.willFail) {
                     this.jetpackTimer = 180; // Standard duration with prolonged failure phase
                 } else {
-                    this.jetpackTimer = 300; // Double flight duration
+                    this.jetpackTimer = 320; // 70% chance: flies higher
                 }
                 this.jetpackMaxTimer = this.jetpackTimer;
                 this.hasFirstJumped = true;
@@ -1434,7 +1434,7 @@
                     if (dist < player.width / 2 + c.radius) {
                         c.collected = true;
                         coinCount++; // jetpack count
-                        player.activateJetpack(150); // 2.5 seconds of jetpack flight
+                        player.activateJetpack(); // 70% chance non-failing (flying higher) / 30% failing
                         sound.playSpring();
                         createParticles(c.x, c.y, '#ff4500', 12);
                     }
