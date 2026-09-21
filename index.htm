@@ -1101,6 +1101,39 @@
             return ((rawX % canvas.width) + canvas.width) % canvas.width;
         }
 
+        function getEdgeDistance(p1X, p1W, p2X, p2W, canvasWidth) {
+            let dDirect = Infinity;
+            if (p2X >= p1X + p1W) dDirect = p2X - (p1X + p1W);
+            else if (p1X >= p2X + p2W) dDirect = p1X - (p2X + p2W);
+            else dDirect = 0;
+
+            let dWrapRight = (canvasWidth - (p1X + p1W)) + p2X;
+            let dWrapLeft = p1X + (canvasWidth - (p2X + p2W));
+
+            let minDist = Math.min(dDirect, dWrapRight, dWrapLeft);
+            let type = 'direct';
+            if (minDist === dWrapRight) type = 'wrapRight';
+            else if (minDist === dWrapLeft) type = 'wrapLeft';
+            return { minDist, type };
+        }
+
+        function createIntermediateFragileIfNeeded(p1, p2, dy) {
+            const edge = getEdgeDistance(p1.x, p1.width, p2.x, p2.width, canvas.width);
+            if (edge.minDist <= 30) return null;
+
+            const c1 = p1.x + p1.width / 2;
+            let c2 = p2.x + p2.width / 2;
+            if (edge.type === 'wrapRight') c2 += canvas.width;
+            if (edge.type === 'wrapLeft') c2 -= canvas.width;
+
+            const fragWidth = Math.max(50, Math.min(65, p2.width - 10));
+            const midCenterX = (c1 + c2) / 2;
+            const midX = ((midCenterX - fragWidth / 2) % canvas.width + canvas.width) % canvas.width;
+            const midY = p1.y - dy / 2;
+
+            return new Platform(midX, midY, fragWidth, 'fragile');
+        }
+
         function generateInitialPlatforms() {
             platforms = [];
             collectibles = [];
@@ -1143,6 +1176,13 @@
                 }
 
                 const platform = new Platform(x, currentY, width, type);
+
+                // If wide gap, place an intermediate red fragile platform to bridge the jump
+                const intermediate = createIntermediateFragileIfNeeded(prevPlatform, platform, dy);
+                if (intermediate) {
+                    platforms.push(intermediate);
+                }
+
                 platforms.push(platform);
                 prevPlatform = platform;
 
@@ -1189,6 +1229,13 @@
                     }
 
                     const platform = new Platform(x, currentY, width, type);
+
+                    // If wide gap, place an intermediate red fragile platform to bridge the jump
+                    const intermediate = createIntermediateFragileIfNeeded(prevPlatform, platform, dy);
+                    if (intermediate) {
+                        platforms.push(intermediate);
+                    }
+
                     platforms.push(platform);
                     prevPlatform = platform;
 
@@ -1291,9 +1338,18 @@
                 if (pt.alpha <= 0) particles.splice(i, 1);
             }
 
-            // Cleanup offscreen platforms & collectibles far below camera
-            platforms = platforms.filter(p => p.y < cameraY + canvas.height + 100);
-            collectibles = collectibles.filter(c => c.y < cameraY + canvas.height + 100);
+            // Cleanup platforms that reach near bottom of screen once camera has started climbing
+            const bottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 50 : cameraY + canvas.height + 100;
+            platforms = platforms.filter(p => {
+                if (p.y >= bottomCutoff) {
+                    if (player.hasFirstJumped && !p.broken) {
+                        createParticles(p.x + p.width / 2, p.y, '#94a3b8', 4);
+                    }
+                    return false;
+                }
+                return true;
+            });
+            collectibles = collectibles.filter(c => c.y < bottomCutoff);
 
             // GAME OVER CONDITION: Player falls off bottom edge of camera view
             if (player.y - cameraY > canvas.height + 50) {
