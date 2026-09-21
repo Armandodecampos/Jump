@@ -199,6 +199,7 @@
                 this.buffers = {};
                 this.audioPool = {};
                 this.jetpackSource = null;
+                this.jetpackGain = null;
                 this.bgMusicSource = null;
                 this.keepAliveNode = null;
                 this.jumpOsc = null;
@@ -467,11 +468,11 @@
                     this.jetpackSource.buffer = this.buffers['jetpack'];
                     this.jetpackSource.loop = true;
 
-                    const gain = this.ctx.createGain();
-                    gain.gain.setValueAtTime(0.2, now);
+                    this.jetpackGain = this.ctx.createGain();
+                    this.jetpackGain.gain.setValueAtTime(0.2, now);
 
-                    this.jetpackSource.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    this.jetpackSource.connect(this.jetpackGain);
+                    this.jetpackGain.connect(this.ctx.destination);
                     this.jetpackSource.start(now);
                 }
             }
@@ -480,13 +481,19 @@
                 if (this.jetpackSource) {
                     try { this.jetpackSource.stop(); } catch (e) {}
                     this.jetpackSource = null;
+                    this.jetpackGain = null;
                 }
             }
 
-            updateJetpack(isActive) {
+            updateJetpack(isActive, volume = 0.2) {
                 if (isActive && !this.muted) {
                     if (!this.jetpackSource) {
                         this.startJetpackSound();
+                    }
+                    if (this.jetpackGain && this.ctx) {
+                        const now = this.ctx.currentTime;
+                        this.jetpackGain.gain.cancelScheduledValues(now);
+                        this.jetpackGain.gain.setValueAtTime(Math.max(0.00001, volume), now);
                     }
                 } else {
                     this.stopJetpackSound();
@@ -706,6 +713,8 @@
             hasFirstJumped: false,
             standingPlatform: null,
             jetpackTimer: 0,
+            isJetpackFiring: false,
+            jetpackSputtering: false,
 
             reset() {
                 this.x = (canvas.width || 480) / 2 - this.width / 2;
@@ -718,6 +727,8 @@
                 this.hasFirstJumped = false;
                 this.standingPlatform = null;
                 this.jetpackTimer = 0;
+                this.isJetpackFiring = false;
+                this.jetpackSputtering = false;
                 sound.stopJetpackSound();
             },
 
@@ -776,19 +787,67 @@
                 // Apply gravity or jetpack flight boost
                 if (this.jetpackTimer > 0) {
                     this.jetpackTimer--;
-                    this.vy = -11.5; // Constant upward propulsion
                     this.isGrounded = false;
 
-                    // Spawn fiery thruster particles from back of character
-                    const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
-                    createParticles(
-                        this.x + (this.facingRight ? 4 : this.width - 4),
-                        this.y + this.height - 2,
-                        fireColor,
-                        2
-                    );
+                    let jetpackVolume = 0.2;
+                    if (this.jetpackTimer > 50) {
+                        // Normal full flight
+                        this.vy = -11.5;
+                        this.isJetpackFiring = true;
+                        this.jetpackSputtering = false;
+
+                        // Spawn fiery thruster particles from back of character
+                        const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
+                        createParticles(
+                            this.x + (this.facingRight ? 4 : this.width - 4),
+                            this.y + this.height - 2,
+                            fireColor,
+                            2
+                        );
+                    } else {
+                        // Failing / Sputtering phase ("falhando e dando tranco")
+                        this.jetpackSputtering = true;
+                        const progress = this.jetpackTimer / 50; // 1.0 down to 0.0
+
+                        // Sputter pattern (intermittent cuts)
+                        const pattern = Math.sin(this.jetpackTimer * 0.7) + (Math.random() - 0.5) * 0.9;
+                        this.isJetpackFiring = pattern > (0.4 - progress * 0.5);
+
+                        if (this.isJetpackFiring) {
+                            // Sputtering thrust: reduced velocity
+                            this.vy = -11.5 * (0.25 + 0.65 * progress);
+                            jetpackVolume = 0.2 * (0.35 + 0.65 * progress);
+
+                            // Spawn smaller fire/spark particles
+                            const fireColor = Math.random() < 0.6 ? '#ff4500' : '#ffff00';
+                            createParticles(
+                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.y + this.height - 2,
+                                fireColor,
+                                1
+                            );
+                        } else {
+                            // Engine cuts out: sudden downward jolt ("tranco")
+                            this.vy = Math.min(this.vy + 1.2, 2.5);
+                            jetpackVolume = 0; // Audio cuts out during fail burst
+
+                            // Spawn dark smoke/soot particles
+                            const smokeColor = Math.random() < 0.5 ? '#64748b' : '#334155';
+                            createParticles(
+                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.y + this.height - 2,
+                                smokeColor,
+                                2
+                            );
+                        }
+                    }
+
+                    sound.updateJetpack(true, jetpackVolume);
                 } else {
+                    this.isJetpackFiring = false;
+                    this.jetpackSputtering = false;
                     this.vy += this.gravity;
+                    sound.updateJetpack(false);
                 }
                 this.y += this.vy;
 
@@ -796,9 +855,6 @@
                 if (!this.isGrounded && this.coyoteTime > 0) {
                     this.coyoteTime--;
                 }
-
-                // Update continuous jetpack thruster sound effect
-                sound.updateJetpack(this.jetpackTimer > 0);
             },
 
             draw() {
@@ -847,8 +903,14 @@
 
                 // Draw Jetpack on Character's back when active or equipped
                 if (this.jetpackTimer > 0) {
-                    const jpX = -this.width / 2 - 6;
-                    const jpY = -6;
+                    let jpX = -this.width / 2 - 6;
+                    let jpY = -6;
+
+                    // Slight visual vibration/shudder of jetpack tank when failing
+                    if (this.jetpackSputtering) {
+                        jpX += (Math.random() - 0.5) * 2;
+                        jpY += (Math.random() - 0.5) * 2;
+                    }
 
                     // Metallic Thruster Tanks
                     ctx.fillStyle = '#64748b';
@@ -860,45 +922,54 @@
                     ctx.fillStyle = '#1e293b';
                     ctx.fillRect(jpX + 1, jpY + 18, 6, 4);
 
-                    // Caprichada Animação de Fogo e Chamas do Jato
-                    const flameHeight = 16 + Math.random() * 14;
-                    const flameWidth = 10 + Math.random() * 4;
+                    // Draw flame only when engine thruster is currently firing
+                    if (this.isJetpackFiring) {
+                        const sputterScale = this.jetpackSputtering ? (0.4 + Math.random() * 0.4) : 1.0;
+                        const flameHeight = (16 + Math.random() * 14) * sputterScale;
+                        const flameWidth = (10 + Math.random() * 4) * sputterScale;
 
-                    // Outer Red/Orange Flame plume
-                    const outerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight);
-                    outerGradient.addColorStop(0, '#ff4500'); // OrangeRed
-                    outerGradient.addColorStop(0.5, '#f97316'); // Orange-500
-                    outerGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                        // Outer Red/Orange Flame plume
+                        const outerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight);
+                        outerGradient.addColorStop(0, '#ff4500'); // OrangeRed
+                        outerGradient.addColorStop(0.5, '#f97316'); // Orange-500
+                        outerGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
-                    ctx.fillStyle = outerGradient;
-                    ctx.beginPath();
-                    ctx.moveTo(jpX + 4 - flameWidth / 2, jpY + 22);
-                    ctx.quadraticCurveTo(
-                        jpX + 4 + (Math.random() - 0.5) * 8,
-                        jpY + 22 + flameHeight * 0.6,
-                        jpX + 4,
-                        jpY + 22 + flameHeight
-                    );
-                    ctx.quadraticCurveTo(
-                        jpX + 4 + (Math.random() - 0.5) * 8,
-                        jpY + 22 + flameHeight * 0.6,
-                        jpX + 4 + flameWidth / 2,
-                        jpY + 22
-                    );
-                    ctx.fill();
+                        ctx.fillStyle = outerGradient;
+                        ctx.beginPath();
+                        ctx.moveTo(jpX + 4 - flameWidth / 2, jpY + 22);
+                        ctx.quadraticCurveTo(
+                            jpX + 4 + (Math.random() - 0.5) * 8,
+                            jpY + 22 + flameHeight * 0.6,
+                            jpX + 4,
+                            jpY + 22 + flameHeight
+                        );
+                        ctx.quadraticCurveTo(
+                            jpX + 4 + (Math.random() - 0.5) * 8,
+                            jpY + 22 + flameHeight * 0.6,
+                            jpX + 4 + flameWidth / 2,
+                            jpY + 22
+                        );
+                        ctx.fill();
 
-                    // Inner Intense Yellow Flame Core
-                    const innerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight * 0.6);
-                    innerGradient.addColorStop(0, '#ffffff'); // White hot base
-                    innerGradient.addColorStop(0.4, '#facc15'); // Yellow
-                    innerGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
+                        // Inner Intense Yellow Flame Core
+                        const innerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight * 0.6);
+                        innerGradient.addColorStop(0, '#ffffff'); // White hot base
+                        innerGradient.addColorStop(0.4, '#facc15'); // Yellow
+                        innerGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
 
-                    ctx.fillStyle = innerGradient;
-                    ctx.beginPath();
-                    ctx.moveTo(jpX + 4 - flameWidth / 3, jpY + 22);
-                    ctx.lineTo(jpX + 4, jpY + 22 + flameHeight * 0.65);
-                    ctx.lineTo(jpX + 4 + flameWidth / 3, jpY + 22);
-                    ctx.fill();
+                        ctx.fillStyle = innerGradient;
+                        ctx.beginPath();
+                        ctx.moveTo(jpX + 4 - flameWidth / 3, jpY + 22);
+                        ctx.lineTo(jpX + 4, jpY + 22 + flameHeight * 0.65);
+                        ctx.lineTo(jpX + 4 + flameWidth / 3, jpY + 22);
+                        ctx.fill();
+                    } else if (this.jetpackSputtering) {
+                        // Small smoke puff coming directly out of nozzle when thruster cuts out
+                        ctx.fillStyle = 'rgba(100, 116, 139, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(jpX + 4 + (Math.random() - 0.5) * 3, jpY + 24 + Math.random() * 4, 3 + Math.random() * 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 }
 
                 ctx.restore();
