@@ -713,6 +713,8 @@
             hasFirstJumped: false,
             standingPlatform: null,
             jetpackTimer: 0,
+            jetpackMaxTimer: 0,
+            willFail: true,
             isJetpackFiring: false,
             jetpackSputtering: false,
 
@@ -727,13 +729,27 @@
                 this.hasFirstJumped = false;
                 this.standingPlatform = null;
                 this.jetpackTimer = 0;
+                this.jetpackMaxTimer = 0;
+                this.willFail = true;
                 this.isJetpackFiring = false;
                 this.jetpackSputtering = false;
                 sound.stopJetpackSound();
             },
 
-            activateJetpack(duration = 150) {
-                this.jetpackTimer = duration;
+            activateJetpack(forcedWillFail = null) {
+                // 30% chance to fail with sputtering jolts, 70% chance to fly double duration non-failing
+                if (forcedWillFail !== null) {
+                    this.willFail = forcedWillFail;
+                } else {
+                    this.willFail = Math.random() < 0.3;
+                }
+
+                if (this.willFail) {
+                    this.jetpackTimer = 180; // Standard duration with prolonged failure phase
+                } else {
+                    this.jetpackTimer = 300; // Double flight duration
+                }
+                this.jetpackMaxTimer = this.jetpackTimer;
                 this.hasFirstJumped = true;
             },
 
@@ -790,54 +806,92 @@
                     this.isGrounded = false;
 
                     let jetpackVolume = 0.2;
-                    if (this.jetpackTimer > 50) {
-                        // Normal full flight
-                        this.vy = -11.5;
-                        this.isJetpackFiring = true;
-                        this.jetpackSputtering = false;
 
-                        // Spawn fiery thruster particles from back of character
-                        const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
-                        createParticles(
-                            this.x + (this.facingRight ? 4 : this.width - 4),
-                            this.y + this.height - 2,
-                            fireColor,
-                            2
-                        );
+                    if (this.willFail) {
+                        // 30% CHANCE: FAILING ROCKET (Prolonged failure phase with jolts/trancos)
+                        const failThreshold = 100; // Prolonged failing phase (100 frames)
+
+                        if (this.jetpackTimer > failThreshold) {
+                            // Normal full thrust
+                            this.vy = -11.5;
+                            this.isJetpackFiring = true;
+                            this.jetpackSputtering = false;
+
+                            const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
+                            createParticles(
+                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.y + this.height - 2,
+                                fireColor,
+                                2
+                            );
+                        } else {
+                            // Prolonged failing & sputtering phase ("falhando e dando tranco")
+                            this.jetpackSputtering = true;
+                            const progress = this.jetpackTimer / failThreshold; // 1.0 down to 0.0
+
+                            // Sputter pattern (intermittent thruster cuts)
+                            const pattern = Math.sin(this.jetpackTimer * 0.5) + (Math.random() - 0.5) * 0.8;
+                            this.isJetpackFiring = pattern > (0.3 - progress * 0.4);
+
+                            if (this.isJetpackFiring) {
+                                // Sputtering thrust: velocity gradually decays
+                                this.vy = -11.5 * (0.15 + 0.75 * progress);
+                                jetpackVolume = 0.2 * (0.2 + 0.8 * progress);
+
+                                const fireColor = Math.random() < 0.6 ? '#ff4500' : '#ffff00';
+                                createParticles(
+                                    this.x + (this.facingRight ? 4 : this.width - 4),
+                                    this.y + this.height - 2,
+                                    fireColor,
+                                    1
+                                );
+                            } else {
+                                // Engine cuts out: sudden downward jolt ("dando uns tranco")
+                                this.vy = Math.min(this.vy + 1.2, 2.5);
+                                jetpackVolume = 0; // Audio cuts out when thruster fails
+
+                                const smokeColor = Math.random() < 0.5 ? '#64748b' : '#334155';
+                                createParticles(
+                                    this.x + (this.facingRight ? 4 : this.width - 4),
+                                    this.y + this.height - 2,
+                                    smokeColor,
+                                    2
+                                );
+                            }
+                        }
                     } else {
-                        // Failing / Sputtering phase ("falhando e dando tranco")
-                        this.jetpackSputtering = true;
-                        const progress = this.jetpackTimer / 50; // 1.0 down to 0.0
+                        // 70% CHANCE: DOUBLE DURATION NON-FAILING ROCKET
+                        const decayThreshold = 80;
 
-                        // Sputter pattern (intermittent cuts)
-                        const pattern = Math.sin(this.jetpackTimer * 0.7) + (Math.random() - 0.5) * 0.9;
-                        this.isJetpackFiring = pattern > (0.4 - progress * 0.5);
+                        if (this.jetpackTimer > decayThreshold) {
+                            // Full double-duration propulsion
+                            this.vy = -11.5;
+                            this.isJetpackFiring = true;
+                            this.jetpackSputtering = false;
 
-                        if (this.isJetpackFiring) {
-                            // Sputtering thrust: reduced velocity
-                            this.vy = -11.5 * (0.25 + 0.65 * progress);
-                            jetpackVolume = 0.2 * (0.35 + 0.65 * progress);
+                            const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
+                            createParticles(
+                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.y + this.height - 2,
+                                fireColor,
+                                2
+                            );
+                        } else {
+                            // Smooth speed decay without sputtering or engine cuts
+                            this.jetpackSputtering = false;
+                            this.isJetpackFiring = true;
+                            const progress = this.jetpackTimer / decayThreshold; // 1.0 down to 0.0
 
-                            // Spawn smaller fire/spark particles
-                            const fireColor = Math.random() < 0.6 ? '#ff4500' : '#ffff00';
+                            // Gradually decreasing velocity
+                            this.vy = -11.5 * (0.15 + 0.85 * progress);
+                            jetpackVolume = 0.2 * (0.2 + 0.8 * progress);
+
+                            const fireColor = Math.random() < 0.5 ? '#ff4500' : '#ffa500';
                             createParticles(
                                 this.x + (this.facingRight ? 4 : this.width - 4),
                                 this.y + this.height - 2,
                                 fireColor,
                                 1
-                            );
-                        } else {
-                            // Engine cuts out: sudden downward jolt ("tranco")
-                            this.vy = Math.min(this.vy + 1.2, 2.5);
-                            jetpackVolume = 0; // Audio cuts out during fail burst
-
-                            // Spawn dark smoke/soot particles
-                            const smokeColor = Math.random() < 0.5 ? '#64748b' : '#334155';
-                            createParticles(
-                                this.x + (this.facingRight ? 4 : this.width - 4),
-                                this.y + this.height - 2,
-                                smokeColor,
-                                2
                             );
                         }
                     }
@@ -924,7 +978,12 @@
 
                     // Draw flame only when engine thruster is currently firing
                     if (this.isJetpackFiring) {
-                        const sputterScale = this.jetpackSputtering ? (0.4 + Math.random() * 0.4) : 1.0;
+                        let sputterScale = 1.0;
+                        if (this.jetpackSputtering) {
+                            sputterScale = 0.3 + Math.random() * 0.4;
+                        } else if (!this.willFail && this.jetpackTimer <= 80) {
+                            sputterScale = 0.3 + 0.7 * (this.jetpackTimer / 80);
+                        }
                         const flameHeight = (16 + Math.random() * 14) * sputterScale;
                         const flameWidth = (10 + Math.random() * 4) * sputterScale;
 
