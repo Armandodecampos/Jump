@@ -1456,10 +1456,10 @@
                 if (pt.alpha <= 0) particles.splice(i, 1);
             }
 
-            // Cleanup platforms that reach lower portion of screen once camera has started climbing
-            const bottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 160 : cameraY + canvas.height + 100;
+            // Cleanup platforms that reach the bottom edge of the screen
+            const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height : cameraY + canvas.height + 100;
             platforms = platforms.filter(p => {
-                if (p.y >= bottomCutoff) {
+                if (p.y >= platformBottomCutoff) {
                     if (player.hasFirstJumped && !p.broken) {
                         createParticles(p.x + p.width / 2, p.y, '#ef4444', 6);
                     }
@@ -1467,10 +1467,13 @@
                 }
                 return true;
             });
-            collectibles = collectibles.filter(c => c.y < bottomCutoff);
 
-            // GAME OVER CONDITION: Player falls off bottom edge of camera view
-            if (player.y - cameraY > canvas.height + 50) {
+            // Cleanup collectibles after falling 1 full vertical screen height below the screen
+            const itemBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height * 2 : cameraY + canvas.height + 100;
+            collectibles = collectibles.filter(c => c.y < itemBottomCutoff);
+
+            // GAME OVER CONDITION: Player falls 1 full vertical screen height below screen bottom
+            if (player.y - cameraY > canvas.height * 2) {
                 triggerGameOver();
             }
         }
