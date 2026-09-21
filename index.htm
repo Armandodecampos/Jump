@@ -901,10 +901,6 @@
                     this.isJetpackFiring = false;
                     this.jetpackSputtering = false;
                     this.vy += this.gravity;
-                    // Cap falling speed when offscreen below the camera view so falling takes longer
-                    if (this.y > cameraY + canvas.height && this.vy > 0) {
-                        this.vy = Math.min(this.vy, 1.8);
-                    }
                     sound.updateJetpack(false);
                 }
                 this.y += this.vy;
@@ -1461,7 +1457,7 @@
             }
 
             // Cleanup platforms that reach the green line near the bottom edge of the screen
-            const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 30 : cameraY + canvas.height + 100;
+            const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 60 : cameraY + canvas.height + 100;
             platforms = platforms.filter(p => {
                 if (p.y >= platformBottomCutoff) {
                     if (player.hasFirstJumped && !p.broken) {
@@ -1549,7 +1545,7 @@
                     ctx.strokeStyle = '#22c55e';
                     ctx.lineWidth = 3;
                     ctx.setLineDash([8, 6]);
-                    const greenLineY = canvas.height - 30;
+                    const greenLineY = canvas.height - 60;
                     ctx.beginPath();
                     ctx.moveTo(0, greenLineY);
                     ctx.lineTo(canvas.width, greenLineY);
