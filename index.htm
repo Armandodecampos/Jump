@@ -98,14 +98,6 @@
                     </button>
                 </div>
 
-                <!-- Platform Style Toggle -->
-                <div class="flex justify-between items-center text-sm">
-                    <span class="font-bold text-slate-200">Plataformas:</span>
-                    <button id="styleToggleOptionBtn" class="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-game transition active:scale-95 border border-purple-400/30">
-                        <span id="styleOptionText">☁️ Nuvens</span>
-                    </button>
-                </div>
-
                 <!-- Audio Toggle -->
                 <div class="flex justify-between items-center text-sm">
                     <span class="font-bold text-slate-200">Áudio do Jogo:</span>
@@ -527,34 +519,15 @@
         const closeOptionsBtn = document.getElementById('closeOptionsBtn');
         const doneOptionsBtn = document.getElementById('doneOptionsBtn');
         const goToMenuBtn = document.getElementById('goToMenuBtn');
-        const styleToggleOptionBtn = document.getElementById('styleToggleOptionBtn');
-        const styleOptionText = document.getElementById('styleOptionText');
         const soundToggleOptionBtn = document.getElementById('soundToggleOptionBtn');
         const soundOptionText = document.getElementById('soundOptionText');
 
-        // Persistent High Score & Platform Style Choice ('cloud' or 'classic')
+        // Persistent High Score
         let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
         highScoreText.textContent = `${highScore}m`;
 
-        let platformStyle = localStorage.getItem('subida_nuvens_platform_style') || 'cloud';
-
-        function updateStyleUI() {
-            if (platformStyle === 'cloud') {
-                styleOptionText.textContent = '☁️ Nuvens';
-            } else {
-                styleOptionText.textContent = '▬ Clássico';
-            }
-        }
-        updateStyleUI();
-
         function updateSoundUI() {
             soundOptionText.textContent = sound.muted ? '🔇 Muted' : '🔊 Som Ativado';
-        }
-
-        function togglePlatformStyle() {
-            platformStyle = platformStyle === 'cloud' ? 'classic' : 'cloud';
-            localStorage.setItem('subida_nuvens_platform_style', platformStyle);
-            updateStyleUI();
         }
 
         function openOptionsModal() {
@@ -589,11 +562,6 @@
         closeOptionsBtn.addEventListener('click', () => closeOptionsModal());
         doneOptionsBtn.addEventListener('click', () => closeOptionsModal());
         goToMenuBtn.addEventListener('click', () => returnToMainMenu());
-
-        styleToggleOptionBtn.addEventListener('click', () => {
-            sound.ensureContext();
-            togglePlatformStyle();
-        });
 
         soundToggleOptionBtn.addEventListener('click', () => {
             sound.ensureContext();
@@ -962,114 +930,6 @@
                 this.crumbling = false;
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
-                this.puffs = [];
-                this.cachedCanvas = null;
-                this.cacheOffsetX = 0;
-                this.cacheOffsetY = 0;
-                this.generateCloudShape();
-                this.renderToCache();
-            }
-
-            generateCloudShape() {
-                this.puffs = [];
-                // Number of cloud puffs based on width with random variance
-                const minPuffs = Math.max(3, Math.floor(this.width / 18));
-                const puffCount = minPuffs + Math.floor(Math.random() * 3);
-                const step = this.width / Math.max(1, puffCount - 1);
-
-                let maxTopOffset = 0;
-
-                for (let i = 0; i < puffCount; i++) {
-                    const jitterX = (i === 0 || i === puffCount - 1) ? 0 : (Math.random() - 0.5) * step * 0.5;
-                    const cx = i * step + jitterX;
-
-                    // Middle puffs bulge higher and larger
-                    const centerDist = Math.abs((i - (puffCount - 1) / 2) / Math.max(1, (puffCount - 1) / 2));
-                    const centerFactor = 1 - centerDist;
-
-                    const r = 10 + centerFactor * 8 + Math.random() * 6;
-                    const cy = this.height / 2 - (centerFactor * 5 + Math.random() * 4);
-
-                    this.puffs.push({ cx, cy, r });
-
-                    const topExtent = cy - r;
-                    if (topExtent < maxTopOffset) maxTopOffset = topExtent;
-                }
-                this.maxPuffTop = maxTopOffset;
-            }
-
-            renderToCache() {
-                const padding = 20; // Extra padding for drop shadow and puff extent
-                this.cacheOffsetX = padding;
-                this.cacheOffsetY = padding - (this.maxPuffTop || -10);
-
-                const cWidth = Math.ceil(this.width + padding * 2);
-                const cHeight = Math.ceil(this.height + padding * 2 + Math.abs(this.maxPuffTop || -10));
-
-                const offscreen = document.createElement('canvas');
-                offscreen.width = cWidth;
-                offscreen.height = cHeight;
-                const oCtx = offscreen.getContext('2d');
-
-                const originX = padding;
-                const originY = padding + Math.abs(this.maxPuffTop || -10);
-
-                const topY = originY + (this.maxPuffTop || -10);
-                const bottomY = originY + this.height + 6;
-
-                // Color gradients based on cloud type
-                let cloudGradient = oCtx.createLinearGradient(0, topY, 0, bottomY);
-                if (this.type === 'normal') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#e6f4ea');
-                    cloudGradient.addColorStop(1, '#34d399');
-                } else if (this.type === 'moving') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#e0f2fe');
-                    cloudGradient.addColorStop(1, '#38bdf8');
-                } else if (this.type === 'spring') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#f3e8ff');
-                    cloudGradient.addColorStop(1, '#c084fc');
-                } else if (this.type === 'fragile') {
-                    cloudGradient.addColorStop(0, '#ffffff');
-                    cloudGradient.addColorStop(0.45, '#ffe4e6');
-                    cloudGradient.addColorStop(1, '#f87171');
-                }
-
-                // Cloud Drop Shadow for depth
-                oCtx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-                oCtx.shadowBlur = 6;
-                oCtx.shadowOffsetY = 3;
-
-                // Draw solid combined cloud shape
-                oCtx.fillStyle = cloudGradient;
-                oCtx.beginPath();
-                oCtx.roundRect(originX, originY + 2, this.width, this.height, 8);
-                this.puffs.forEach(p => {
-                    oCtx.arc(originX + p.cx, originY + p.cy, p.r, 0, Math.PI * 2);
-                });
-                oCtx.fill();
-
-                // Turn off shadow for highlights
-                oCtx.shadowColor = 'transparent';
-
-                // Soft white top highlight arcs on cloud puffs
-                oCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                oCtx.lineWidth = 2.5;
-                this.puffs.forEach(p => {
-                    oCtx.beginPath();
-                    oCtx.arc(
-                        originX + p.cx,
-                        originY + p.cy,
-                        p.r - 1.5,
-                        Math.PI * 1.15,
-                        Math.PI * 1.85
-                    );
-                    oCtx.stroke();
-                });
-
-                this.cachedCanvas = offscreen;
             }
 
             update() {
@@ -1119,57 +979,40 @@
                     offsetY = (Math.random() - 0.5) * 2;
                 }
 
-                if (platformStyle === 'cloud') {
-                    // Render cloud platform using offscreen canvas cache
-                    if (this.cachedCanvas) {
-                        ctx.drawImage(
-                            this.cachedCanvas,
-                            this.x + offsetX - this.cacheOffsetX,
-                            screenY + offsetY - this.cacheOffsetY
-                        );
-                    }
-                } else {
-                    // Render classic rectangular platform bar
-                    let colorGradient;
-                    if (this.type === 'normal') {
-                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                        colorGradient.addColorStop(0, '#34d399'); // Emerald-400
-                        colorGradient.addColorStop(1, '#059669'); // Emerald-600
-                    } else if (this.type === 'moving') {
-                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                        colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
-                        colorGradient.addColorStop(1, '#0284c7'); // Sky-600
-                    } else if (this.type === 'spring') {
-                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                        colorGradient.addColorStop(0, '#a855f7'); // Purple-500
-                        colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
-                    } else if (this.type === 'fragile') {
-                        colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                        colorGradient.addColorStop(0, '#f87171'); // Red-400
-                        colorGradient.addColorStop(1, '#dc2626'); // Red-600
-                    }
-
-                    // Platform main bar
-                    ctx.fillStyle = colorGradient;
-                    ctx.beginPath();
-                    ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 6);
-                    ctx.fill();
-
-                    // Highlight top edge
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(this.x + 4 + offsetX, screenY + 2 + offsetY, this.width - 8, 3);
+                // Render classic rectangular platform bar
+                let colorGradient;
+                if (this.type === 'normal') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#34d399'); // Emerald-400
+                    colorGradient.addColorStop(1, '#059669'); // Emerald-600
+                } else if (this.type === 'moving') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
+                    colorGradient.addColorStop(1, '#0284c7'); // Sky-600
+                } else if (this.type === 'spring') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#a855f7'); // Purple-500
+                    colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
+                } else if (this.type === 'fragile') {
+                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    colorGradient.addColorStop(0, '#f87171'); // Red-400
+                    colorGradient.addColorStop(1, '#dc2626'); // Red-600
                 }
+
+                // Platform main bar
+                ctx.fillStyle = colorGradient;
+                ctx.beginPath();
+                ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 6);
+                ctx.fill();
+
+                // Highlight top edge
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(this.x + 4 + offsetX, screenY + 2 + offsetY, this.width - 8, 3);
 
                 // Spring attachment on center if spring type
                 if (this.hasSpring) {
                     const springX = this.x + this.width / 2 - 8;
-                    const springY = screenY - (this.springCompressed ? (platformStyle === 'cloud' ? 2 : 4) : 8);
-
-                    // Spring base plate
-                    if (platformStyle === 'cloud') {
-                        ctx.fillStyle = '#78350f';
-                        ctx.fillRect(springX + offsetX - 2, springY + offsetY + (this.springCompressed ? 4 : 8), 20, 3);
-                    }
+                    const springY = screenY - (this.springCompressed ? 4 : 8);
 
                     // Coiled Spring
                     ctx.fillStyle = '#f59e0b';
