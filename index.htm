@@ -1326,12 +1326,12 @@
                 if (pt.alpha <= 0) particles.splice(i, 1);
             }
 
-            // Cleanup platforms that reach near bottom of screen once camera has started climbing
-            const bottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 50 : cameraY + canvas.height + 100;
+            // Cleanup platforms that reach lower portion of screen once camera has started climbing
+            const bottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 160 : cameraY + canvas.height + 100;
             platforms = platforms.filter(p => {
                 if (p.y >= bottomCutoff) {
                     if (player.hasFirstJumped && !p.broken) {
-                        createParticles(p.x + p.width / 2, p.y, '#94a3b8', 4);
+                        createParticles(p.x + p.width / 2, p.y, '#ef4444', 6);
                     }
                     return false;
                 }
