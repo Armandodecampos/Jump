@@ -1539,20 +1539,6 @@
             ctx.restore();
 
             if (gameState === 'PLAYING') {
-                // Draw green boundary line where platforms start disappearing
-                if (player.hasFirstJumped) {
-                    ctx.save();
-                    ctx.strokeStyle = '#22c55e';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([8, 6]);
-                    const greenLineY = canvas.height - 60;
-                    ctx.beginPath();
-                    ctx.moveTo(0, greenLineY);
-                    ctx.lineTo(canvas.width, greenLineY);
-                    ctx.stroke();
-                    ctx.restore();
-                }
-
                 // HUD - Height
                 ctx.save();
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
