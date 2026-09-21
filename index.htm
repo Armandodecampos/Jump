@@ -1088,30 +1088,63 @@
             }
         }
 
+        // Helper to calculate next platform x position guaranteeing reachable horizontal distance
+        function calculateReachableX(prevX, prevWidth, nextWidth, dy) {
+            // Player jump physics: max horizontal jump distance is ~110-120px depending on dy
+            // Capped safe horizontal gap distance from edge to edge
+            const safeMaxReach = Math.min(85, Math.max(50, 115 - dy * 0.4));
+
+            const minXRaw = prevX - safeMaxReach - nextWidth + 10;
+            const maxXRaw = prevX + prevWidth + safeMaxReach - 10;
+            const rawX = minXRaw + Math.random() * (maxXRaw - minXRaw);
+
+            return ((rawX % canvas.width) + canvas.width) % canvas.width;
+        }
+
         function generateInitialPlatforms() {
             platforms = [];
             collectibles = [];
             
             const startY = canvas.height - 60;
             const groundWidth = Math.min(200, canvas.width * 0.4);
-            // Ground platform right under player
-            platforms.push(new Platform(canvas.width / 2 - groundWidth / 2, startY, groundWidth, 'normal'));
+            const groundPlatform = new Platform(canvas.width / 2 - groundWidth / 2, startY, groundWidth, 'normal');
+            platforms.push(groundPlatform);
 
-            let currentY = startY - 80;
+            let currentY = startY;
+            let prevPlatform = groundPlatform;
+            let consecutiveFragile = 0;
+
             const platformCount = Math.ceil(canvas.height / 50) + 10;
             for (let i = 0; i < platformCount; i++) {
-                currentY -= 65 + Math.random() * 25;
+                // Guaranteed jumpable height gap (55px - 85px)
+                const dy = 55 + Math.random() * 30;
+                currentY -= dy;
+
                 const width = Math.max(70, 120 - Math.floor(i * 2));
-                const x = Math.random() * (canvas.width - width);
+                const x = calculateReachableX(prevPlatform.x, prevPlatform.width, width, dy);
 
                 let type = 'normal';
-                const rand = Math.random();
-                if (rand < 0.25) type = 'moving';
-                else if (rand < 0.40) type = 'spring';
-                else if (rand < 0.55) type = 'fragile';
+                if (consecutiveFragile >= 1) {
+                    // Prevent back-to-back fragile platforms so player always has a reachable solid landing platform
+                    const rand = Math.random();
+                    if (rand < 0.45) type = 'normal';
+                    else if (rand < 0.75) type = 'moving';
+                    else type = 'spring';
+                    consecutiveFragile = 0;
+                } else {
+                    const rand = Math.random();
+                    if (rand < 0.30) type = 'normal';
+                    else if (rand < 0.55) type = 'moving';
+                    else if (rand < 0.75) type = 'spring';
+                    else {
+                        type = 'fragile';
+                        consecutiveFragile++;
+                    }
+                }
 
                 const platform = new Platform(x, currentY, width, type);
                 platforms.push(platform);
+                prevPlatform = platform;
 
                 // Very rare rocket / jetpack spawn rate (~3%)
                 if (Math.random() < 0.03 && type !== 'fragile') {
@@ -1125,18 +1158,39 @@
             
             if (highestPlatform.y > cameraY - 400) {
                 let currentY = highestPlatform.y;
+                let prevPlatform = highestPlatform;
+                let consecutiveFragile = prevPlatform.type === 'fragile' ? 1 : 0;
+
                 for (let i = 0; i < 5; i++) {
-                    currentY -= 65 + Math.random() * 30;
-                    const width = Math.max(65, 110 - Math.min(50, Math.floor(score / 50)));
-                    const x = Math.random() * (canvas.width - width);
+                    // Guaranteed jumpable height gap (55px - 85px)
+                    const dy = 55 + Math.random() * 30;
+                    currentY -= dy;
+
+                    const width = Math.max(65, 110 - Math.min(45, Math.floor(score / 50)));
+                    const x = calculateReachableX(prevPlatform.x, prevPlatform.width, width, dy);
 
                     let type = 'normal';
-                    const rand = Math.random();
-                    if (rand < 0.35) type = 'moving';
-                    else if (rand < 0.55) type = 'spring';
-                    else if (rand < 0.70) type = 'fragile';
+                    if (consecutiveFragile >= 1) {
+                        // Prevent back-to-back fragile platforms
+                        const rand = Math.random();
+                        if (rand < 0.35) type = 'normal';
+                        else if (rand < 0.70) type = 'moving';
+                        else type = 'spring';
+                        consecutiveFragile = 0;
+                    } else {
+                        const rand = Math.random();
+                        if (rand < 0.25) type = 'normal';
+                        else if (rand < 0.55) type = 'moving';
+                        else if (rand < 0.75) type = 'spring';
+                        else {
+                            type = 'fragile';
+                            consecutiveFragile++;
+                        }
+                    }
 
-                    platforms.push(new Platform(x, currentY, width, type));
+                    const platform = new Platform(x, currentY, width, type);
+                    platforms.push(platform);
+                    prevPlatform = platform;
 
                     // Very rare rocket / jetpack spawn rate (~3%)
                     if (Math.random() < 0.03 && type !== 'fragile') {
