@@ -159,6 +159,24 @@
                     </p>
                 </div>
 
+                <!-- Reset Progress Section -->
+                <div class="border-t border-slate-700/80 pt-3 text-left space-y-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">⚠️ Resetar Progresso</span>
+                    <div class="space-y-1.5 text-xs text-slate-300 font-sans">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="resetStoryCheck" checked class="w-4 h-4 accent-red-500 rounded border-slate-600 bg-slate-700">
+                            <span>Progresso da História (Fases)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="resetRecordCheck" checked class="w-4 h-4 accent-red-500 rounded border-slate-600 bg-slate-700">
+                            <span>Recorde do Modo Infinito</span>
+                        </label>
+                    </div>
+                    <button id="openResetConfirmBtn" class="w-full py-2 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white font-game text-xs rounded-xl shadow transition active:scale-95 border border-rose-800/60 flex items-center justify-center gap-1.5 mt-2">
+                        🗑️ Resetar Selecionado
+                    </button>
+                </div>
+
                 <!-- Return to Main Menu Button -->
                 <button id="goToMenuBtn" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-amber-300 font-game text-base rounded-xl shadow transition active:scale-95 border border-slate-600 flex items-center justify-center gap-2">
                     🏠 MENU INICIAL
@@ -167,6 +185,29 @@
                 <button id="doneOptionsBtn" class="w-full py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-game text-lg rounded-xl shadow transition active:scale-95">
                     VOLTAR AO JOGO
                 </button>
+            </div>
+        </div>
+
+        <!-- Reset Confirmation Modal -->
+        <div id="resetConfirmModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-50 hidden transition-opacity duration-300">
+            <div class="bg-slate-900/95 rounded-3xl p-6 border border-rose-600/60 w-full max-w-xs shadow-2xl space-y-4">
+                <div class="w-16 h-16 mx-auto bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+                    ⚠️
+                </div>
+                <h3 class="text-2xl font-game text-rose-300">
+                    Tem Certeza?
+                </h3>
+                <p class="text-slate-300 text-xs leading-relaxed">
+                    Esta ação irá apagar o progresso selecionado e não poderá ser desfeita!
+                </p>
+                <div class="space-y-2 pt-2">
+                    <button id="confirmResetBtn" class="w-full py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-game text-base rounded-xl shadow-lg shadow-rose-600/30 transition active:scale-95 border border-rose-400/40">
+                        SIM, RESETAR AGORA
+                    </button>
+                    <button id="cancelResetBtn" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-game text-sm rounded-xl shadow transition active:scale-95 border border-slate-700">
+                        CANCELAR
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1032,6 +1073,53 @@
                         unlockFeedbackMsg.classList.add('hidden');
                     }, 3000);
                 }
+            });
+        }
+
+        // Reset progress modal elements
+        const resetStoryCheck = document.getElementById('resetStoryCheck');
+        const resetRecordCheck = document.getElementById('resetRecordCheck');
+        const openResetConfirmBtn = document.getElementById('openResetConfirmBtn');
+        const resetConfirmModal = document.getElementById('resetConfirmModal');
+        const confirmResetBtn = document.getElementById('confirmResetBtn');
+        const cancelResetBtn = document.getElementById('cancelResetBtn');
+
+        if (openResetConfirmBtn) {
+            openResetConfirmBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                if (!resetStoryCheck.checked && !resetRecordCheck.checked) {
+                    alert('Selecione pelo menos uma opção para resetar!');
+                    return;
+                }
+                if (resetConfirmModal) resetConfirmModal.classList.remove('hidden');
+            });
+        }
+
+        if (cancelResetBtn) {
+            cancelResetBtn.addEventListener('click', () => {
+                if (resetConfirmModal) resetConfirmModal.classList.add('hidden');
+            });
+        }
+
+        if (confirmResetBtn) {
+            confirmResetBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                sound.playBreak();
+
+                if (resetStoryCheck && resetStoryCheck.checked) {
+                    unlockedStoryLevel = 1;
+                    localStorage.setItem('subida_nuvens_unlocked_level', '1');
+                    renderLevelSelectGrid();
+                }
+
+                if (resetRecordCheck && resetRecordCheck.checked) {
+                    highScore = 0;
+                    localStorage.setItem('subida_nuvens_highscore', '0');
+                    if (highScoreText) highScoreText.textContent = '0m';
+                }
+
+                if (resetConfirmModal) resetConfirmModal.classList.add('hidden');
+                closeOptionsModal();
             });
         }
 
