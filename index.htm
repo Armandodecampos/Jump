@@ -142,10 +142,10 @@
             </h2>
 
             <!-- Motivational Praise Card -->
-            <div id="motivationalCard" class="w-full max-w-xs mb-4 p-3.5 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-slate-900/80 border border-pink-500/40 rounded-2xl shadow-xl glow-card animate-float">
-                <p id="motivationalTitle" class="font-game text-amber-300 text-sm mb-1">🌟 Parabéns pelo esforço!</p>
-                <p id="motivationalMsg" class="text-xs sm:text-sm text-slate-200 leading-relaxed font-bold">
-                    Excelente subida!
+            <div id="motivationalCard" class="w-full max-w-xs mb-4 p-3 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-slate-900/80 border border-pink-500/40 rounded-2xl shadow-xl glow-card animate-float flex flex-col items-center justify-center">
+                <span class="text-xs text-amber-300 font-bold uppercase tracking-wider mb-0.5">Desempenho</span>
+                <p id="motivationalMsg" class="text-lg sm:text-xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-200">
+                    Continue tentando
                 </p>
             </div>
 
@@ -556,7 +556,6 @@
         const soundToggleOptionBtn = document.getElementById('soundToggleOptionBtn');
         const soundOptionText = document.getElementById('soundOptionText');
         const newRecordBadge = document.getElementById('newRecordBadge');
-        const motivationalTitle = document.getElementById('motivationalTitle');
         const motivationalMsg = document.getElementById('motivationalMsg');
 
         // Persistent High Score
@@ -1614,30 +1613,15 @@
 
         function getMotivationalMessage(height) {
             if (height < 50) {
-                return {
-                    title: "🌱 Bom começo!",
-                    msg: "Toda grande jornada começa com os primeiros passos. Continue praticando para ir cada vez mais alto!"
-                };
+                return "Continue tentando";
             } else if (height < 150) {
-                return {
-                    title: "🎈 Ótimo esforço!",
-                    msg: "Você já está pegando o jeito e subindo além das nuvens! Continue tentando!"
-                };
+                return "Bom!";
             } else if (height < 300) {
-                return {
-                    title: "🚀 Impressionante!",
-                    msg: "Que subida incrível! Suas habilidades estão afiadas, você está quase nas estrelas!"
-                };
+                return "Muito bom!";
             } else if (height < 500) {
-                return {
-                    title: "⭐ Fantástico!",
-                    msg: "Você alcançou as alturas estelares! Apenas os melhores saltadores chegam tão longe!"
-                };
+                return "Impressionante!";
             } else {
-                return {
-                    title: "👑 Lendário!",
-                    msg: "Extraordinário! Sua determinação é incomparável, você domina os céus!"
-                };
+                return "Espetacular!";
             }
         }
 
@@ -1657,9 +1641,7 @@
                 newRecordBadge.classList.add('hidden');
             }
 
-            const praise = getMotivationalMessage(score);
-            motivationalTitle.textContent = praise.title;
-            motivationalMsg.textContent = praise.msg;
+            motivationalMsg.textContent = getMotivationalMessage(score);
 
             finalScore.textContent = `${score}m`;
             bestScore.textContent = `${highScore}m`;
