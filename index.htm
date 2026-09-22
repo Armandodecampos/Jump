@@ -1845,7 +1845,9 @@
                 const dy = 55 + Math.random() * 30;
                 currentY -= dy;
 
-                const width = Math.max(70, 120 - Math.floor(i * 2));
+                const baseWidth = Math.max(70, 120 - Math.floor(i * 2));
+                const storyBonusWidth = gameMode === 'STORY' ? Math.round((21 - currentStoryLevel) * 2.25) : 0;
+                const width = baseWidth + storyBonusWidth;
                 const x = calculateReachableX(prevPlatform.x, prevPlatform.width, width, dy);
 
                 let type = 'normal';
@@ -1923,7 +1925,9 @@
                         break;
                     }
 
-                    const width = Math.max(65, 110 - Math.min(45, Math.floor(score / 50)));
+                    const baseWidth = Math.max(65, 110 - Math.min(45, Math.floor(score / 50)));
+                    const storyBonusWidth = gameMode === 'STORY' ? Math.round((21 - currentStoryLevel) * 2.25) : 0;
+                    const width = baseWidth + storyBonusWidth;
                     const x = calculateReachableX(prevPlatform.x, prevPlatform.width, width, dy);
 
                     let type = 'normal';
@@ -2022,7 +2026,8 @@
                             if (p.type === 'fragile') {
                                 if (!p.crumbling) {
                                     p.crumbling = true;
-                                    p.crumbleTimer = 24; // Crumble delay (~0.4s at 60fps)
+                                    const crumbleDelay = gameMode === 'STORY' ? 24 + Math.round((21 - currentStoryLevel) * 2.4) : 24;
+                                    p.crumbleTimer = crumbleDelay; // Crumble delay (~1.2s at Level 1, scaling to ~0.4s at Level 21 / Infinite)
                                 }
                             }
                         }
