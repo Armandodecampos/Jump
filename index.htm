@@ -72,16 +72,16 @@
         <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
         <!-- Menu Overlay (Start Screen) -->
-        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300">
+        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300 overflow-y-auto">
                 <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-4xl shadow-lg animate-bounce">
                     🚀
                 </div>
                 <h2 class="text-3xl sm:text-4xl font-game text-white mb-2 glow-title">Subida Nas Nuvens</h2>
-                <p class="text-slate-300 text-sm sm:text-base mb-6 max-w-xs">
-                    Pule nas plataformas para subir sem parar! A câmera começará a subir assim que você fizer seu primeiro pulo.
+                <p class="text-slate-300 text-sm sm:text-base mb-5 max-w-xs">
+                    Escolha o modo de jogo e divirta-se subindo até o topo!
                 </p>
 
-                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-4 text-left space-y-2 text-xs sm:text-sm">
+                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-5 text-left space-y-2 text-xs sm:text-sm">
                     <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
                     <p class="text-slate-300 leading-relaxed">
                         • <strong>Pular:</strong> Deslize o dedo/mouse para cima.<br>
@@ -90,11 +90,43 @@
                     </p>
                 </div>
 
+                <!-- Mode Selection Buttons -->
+                <div class="w-full max-w-xs space-y-3">
+                    <button id="infiniteModeBtn" class="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <span>♾️</span> MODO INFINITO
+                    </button>
+                    <button id="storyModeBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <span>📖</span> MODO HISTÓRIA
+                    </button>
+                </div>
+            </div>
 
-                <button id="startBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all">
-                    INICIAR JOGO
+        <!-- Level Select Overlay (Story Mode) -->
+        <div id="levelSelectMenu" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="w-full max-w-md my-auto bg-slate-900/90 p-5 sm:p-6 rounded-3xl border border-slate-700/80 shadow-2xl flex flex-col max-h-[85vh]">
+                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                    <h2 class="text-2xl sm:text-3xl font-game text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400 flex items-center gap-2">
+                        📖 Modo História
+                    </h2>
+                    <span id="unlockedCountBadge" class="text-xs font-bold text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-full border border-amber-500/30">
+                        1/21 Fases
+                    </span>
+                </div>
+
+                <p class="text-slate-300 text-xs sm:text-sm mb-4">
+                    Cada fase tem 2000m de subida e um cenário único! Escolha uma fase:
+                </p>
+
+                <!-- Grid container for 21 levels -->
+                <div id="levelGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 overflow-y-auto pr-1 mb-5 max-h-[50vh]">
+                    <!-- Level items rendered dynamically -->
+                </div>
+
+                <button id="backToMenuBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                    ⬅️ VOLTAR AO MENU
                 </button>
             </div>
+        </div>
 
         <!-- Options / Settings Modal Overlay -->
         <div id="optionsModal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40 hidden transition-opacity duration-300">
@@ -127,9 +159,43 @@
             </div>
         </div>
 
+        <!-- Level Complete Overlay (Victory Screen) -->
+        <div id="levelCompleteMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-emerald-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
+            <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-amber-400 to-emerald-400 rounded-2xl flex items-center justify-center text-4xl shadow-lg shadow-emerald-500/30 animate-bounce">
+                🏆
+            </div>
+
+            <h2 class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-300 mb-1 glow-title">
+                Fase Concluída!
+            </h2>
+            <p id="completedLevelTitle" class="text-amber-300 font-game text-lg mb-4">
+                Fase 1: Dia Ensolarado
+            </p>
+
+            <div class="bg-slate-800/90 rounded-2xl p-4 border border-emerald-500/40 w-full max-w-xs mb-5 space-y-2 text-center shadow-2xl relative overflow-hidden">
+                <div class="text-xs text-slate-400 uppercase tracking-wider font-bold">Meta Alcançada</div>
+                <div class="text-3xl font-game text-emerald-400 drop-shadow">🏁 2000m</div>
+                <p class="text-xs text-slate-300 pt-1 border-t border-slate-700">
+                    Você chegou ao topo e desbloqueou a próxima fase!
+                </p>
+            </div>
+
+            <div class="w-full max-w-xs space-y-2.5">
+                <button id="nextLevelBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-lg rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
+                    PRÓXIMA FASE ➔
+                </button>
+                <button id="replayLevelBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                    🔄 REFAZER FASE
+                </button>
+                <button id="levelSelectFromWinBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                    📖 SELEÇÃO DE FASES
+                </button>
+            </div>
+        </div>
+
         <!-- Game Over Overlay -->
         <div id="gameOverMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-purple-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
-            <!-- New Record Banner (Shown when high score is broken) -->
+            <!-- New Record Banner (Shown when high score is broken in infinite mode) -->
             <div id="newRecordBadge" class="hidden mb-3 px-4 py-2 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/40 animate-bounce border border-amber-300/60">
                 <span class="font-game text-white text-sm sm:text-base tracking-wide flex items-center gap-1.5">
                     🎉 ¡NOVO RECORDE! PARABÉNS! 🏆
@@ -137,9 +203,12 @@
             </div>
 
             <!-- Title with gradient text & glow -->
-            <h2 class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 mb-2 glow-title animate-pulse">
+            <h2 id="gameOverTitle" class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 mb-1 glow-title animate-pulse">
                 Fim de Jogo!
             </h2>
+            <p id="gameOverSubtitle" class="hidden text-amber-300 font-game text-base mb-3">
+                Fase 1
+            </p>
 
             <!-- Motivational Praise Card -->
             <div id="motivationalCard" class="w-full max-w-xs mb-4 p-3 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-slate-900/80 border border-pink-500/40 rounded-2xl shadow-xl glow-card animate-float flex flex-col items-center justify-center">
@@ -153,10 +222,10 @@
             <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700/80 w-full max-w-xs mb-5 space-y-3 text-center shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-transparent to-transparent pointer-events-none"></div>
                 <div>
-                    <div class="text-xs text-slate-400 uppercase tracking-wider font-bold">Altura Alcançada</div>
-                    <div id="finalScore" class="text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow">0m</div>
+                    <div id="scoreLabel" class="text-xs text-slate-400 uppercase tracking-wider font-bold">Altura Alcançada</div>
+                    <div id="finalScore" class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow">0m</div>
                 </div>
-                <div class="border-t border-slate-700/80 pt-2 flex justify-center text-xs">
+                <div id="recordContainer" class="border-t border-slate-700/80 pt-2 flex justify-center text-xs">
                     <div>
                         <span class="text-slate-400 block font-semibold">Seu Recorde:</span>
                         <span id="bestScore" class="font-bold text-emerald-400 text-base font-game">0m</span>
@@ -164,9 +233,14 @@
                 </div>
             </div>
 
-            <button id="restartBtn" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
-                JOGAR NOVAMENTE
-            </button>
+            <div class="w-full max-w-xs space-y-2.5">
+                <button id="restartBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
+                    TENTAR NOVAMENTE
+                </button>
+                <button id="levelSelectFromLossBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                    📖 SELEÇÃO DE FASES
+                </button>
+            </div>
         </div>
     </div>
 
@@ -542,9 +616,17 @@
 
         // UI elements
         const startMenu = document.getElementById('startMenu');
+        const levelSelectMenu = document.getElementById('levelSelectMenu');
+        const levelCompleteMenu = document.getElementById('levelCompleteMenu');
         const gameOverMenu = document.getElementById('gameOverMenu');
-        const startBtn = document.getElementById('startBtn');
+        const infiniteModeBtn = document.getElementById('infiniteModeBtn');
+        const storyModeBtn = document.getElementById('storyModeBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
         const restartBtn = document.getElementById('restartBtn');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        const replayLevelBtn = document.getElementById('replayLevelBtn');
+        const levelSelectFromWinBtn = document.getElementById('levelSelectFromWinBtn');
+        const levelSelectFromLossBtn = document.getElementById('levelSelectFromLossBtn');
         const highScoreText = document.getElementById('highScoreText');
         const finalScore = document.getElementById('finalScore');
         const bestScore = document.getElementById('bestScore');
@@ -558,9 +640,289 @@
         const newRecordBadge = document.getElementById('newRecordBadge');
         const motivationalMsg = document.getElementById('motivationalMsg');
 
-        // Persistent High Score
+        // Persistent High Score & Game Modes
         let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
         highScoreText.textContent = `${highScore}m`;
+
+        let gameMode = 'INFINITE'; // 'INFINITE' or 'STORY'
+        let currentStoryLevel = 1;
+        let unlockedStoryLevel = parseInt(localStorage.getItem('subida_nuvens_unlocked_level') || '1', 10);
+
+        const STORY_THEMES = [
+            {
+                id: 1,
+                name: 'Dia Ensolarado',
+                bgGradient: ['#0284c7', '#7dd3fc'],
+                elementType: 'clouds',
+                elementColor: 'rgba(255, 255, 255, 0.4)',
+                platformColors: {
+                    normal: ['#34d399', '#059669'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#a855f7', '#7e22ce'],
+                    fragile: ['#f87171', '#dc2626']
+                }
+            },
+            {
+                id: 2,
+                name: 'Pôr do Sol',
+                bgGradient: ['#581c87', '#f97316'],
+                elementType: 'clouds',
+                elementColor: 'rgba(254, 215, 170, 0.35)',
+                platformColors: {
+                    normal: ['#facc15', '#ca8a04'],
+                    moving: ['#ec4899', '#be185d'],
+                    spring: ['#8b5cf6', '#6d28d9'],
+                    fragile: ['#f43f5e', '#be123c']
+                }
+            },
+            {
+                id: 3,
+                name: 'Noite Estrelada',
+                bgGradient: ['#090d16', '#1e1b4b'],
+                elementType: 'stars',
+                elementColor: 'rgba(255, 255, 255, 0.5)',
+                platformColors: {
+                    normal: ['#818cf8', '#4338ca'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#ef4444', '#b91c1c']
+                }
+            },
+            {
+                id: 4,
+                name: 'Aurora Boreal',
+                bgGradient: ['#022c22', '#0f766e'],
+                elementType: 'stars',
+                elementColor: 'rgba(167, 243, 208, 0.5)',
+                platformColors: {
+                    normal: ['#2dd4bf', '#0d9488'],
+                    moving: ['#a7f3d0', '#059669'],
+                    spring: ['#38bdf8', '#0284c7'],
+                    fragile: ['#f87171', '#b91c1c']
+                }
+            },
+            {
+                id: 5,
+                name: 'Floresta Mística',
+                bgGradient: ['#052e16', '#14532d'],
+                elementType: 'spores',
+                elementColor: 'rgba(190, 242, 100, 0.4)',
+                platformColors: {
+                    normal: ['#a3e635', '#65a30d'],
+                    moving: ['#34d399', '#059669'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#fb923c', '#c2410c']
+                }
+            },
+            {
+                id: 6,
+                name: 'Deserto Dourado',
+                bgGradient: ['#78350f', '#f59e0b'],
+                elementType: 'spores',
+                elementColor: 'rgba(254, 240, 138, 0.35)',
+                platformColors: {
+                    normal: ['#fcd34d', '#d97706'],
+                    moving: ['#fb923c', '#ea580c'],
+                    spring: ['#c084fc', '#9333ea'],
+                    fragile: ['#ef4444', '#b91c1c']
+                }
+            },
+            {
+                id: 7,
+                name: 'Vulcano Lávico',
+                bgGradient: ['#18181b', '#7f1d1d'],
+                elementType: 'embers',
+                elementColor: 'rgba(249, 115, 22, 0.6)',
+                platformColors: {
+                    normal: ['#f97316', '#c2410c'],
+                    moving: ['#facc15', '#ca8a04'],
+                    spring: ['#e11d48', '#9f1239'],
+                    fragile: ['#ef4444', '#7f1d1d']
+                }
+            },
+            {
+                id: 8,
+                name: 'Neon Cyberpunk',
+                bgGradient: ['#18002a', '#701a75'],
+                elementType: 'stars',
+                elementColor: 'rgba(240, 171, 252, 0.6)',
+                platformColors: {
+                    normal: ['#f0abfc', '#c084fc'],
+                    moving: ['#22d3ee', '#0891b2'],
+                    spring: ['#facc15', '#eab308'],
+                    fragile: ['#f43f5e', '#be123c']
+                }
+            },
+            {
+                id: 9,
+                name: 'Oceano Profundo',
+                bgGradient: ['#082f49', '#0c4a6e'],
+                elementType: 'bubbles',
+                elementColor: 'rgba(186, 230, 253, 0.4)',
+                platformColors: {
+                    normal: ['#38bdf8', '#0284c7'],
+                    moving: ['#2dd4bf', '#0f766e'],
+                    spring: ['#e879f9', '#c084fc'],
+                    fragile: ['#f87171', '#dc2626']
+                }
+            },
+            {
+                id: 10,
+                name: 'Espaço Sideral',
+                bgGradient: ['#030712', '#1e1b4b'],
+                elementType: 'stars',
+                elementColor: 'rgba(255, 255, 255, 0.7)',
+                platformColors: {
+                    normal: ['#c084fc', '#7e22ce'],
+                    moving: ['#60a5fa', '#2563eb'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#f87171', '#dc2626']
+                }
+            },
+            {
+                id: 11,
+                name: 'Nuvens Rosadas',
+                bgGradient: ['#831843', '#f472b6'],
+                elementType: 'clouds',
+                elementColor: 'rgba(253, 242, 248, 0.5)',
+                platformColors: {
+                    normal: ['#fbcfe8', '#f43f5e'],
+                    moving: ['#c084fc', '#9333ea'],
+                    spring: ['#facc15', '#d97706'],
+                    fragile: ['#e11d48', '#9f1239']
+                }
+            },
+            {
+                id: 12,
+                name: 'Crepúsculo Violeta',
+                bgGradient: ['#2e1065', '#581c87'],
+                elementType: 'stars',
+                elementColor: 'rgba(233, 213, 255, 0.5)',
+                platformColors: {
+                    normal: ['#a855f7', '#6b21a8'],
+                    moving: ['#ec4899', '#be185d'],
+                    spring: ['#38bdf8', '#0369a1'],
+                    fragile: ['#f43f5e', '#9f1239']
+                }
+            },
+            {
+                id: 13,
+                name: 'Tempestade Elétrica',
+                bgGradient: ['#0f172a', '#1e293b'],
+                elementType: 'spores',
+                elementColor: 'rgba(250, 204, 21, 0.5)',
+                platformColors: {
+                    normal: ['#facc15', '#ca8a04'],
+                    moving: ['#60a5fa', '#1d4ed8'],
+                    spring: ['#c084fc', '#7e22ce'],
+                    fragile: ['#ef4444', '#b91c1c']
+                }
+            },
+            {
+                id: 14,
+                name: 'Inverno Congelado',
+                bgGradient: ['#164e63', '#a5f3fc'],
+                elementType: 'snow',
+                elementColor: 'rgba(255, 255, 255, 0.6)',
+                platformColors: {
+                    normal: ['#67e8f9', '#0891b2'],
+                    moving: ['#93c5fd', '#2563eb'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#f87171', '#dc2626']
+                }
+            },
+            {
+                id: 15,
+                name: 'Galáxia de Fuchsia',
+                bgGradient: ['#4a044e', '#a21caf'],
+                elementType: 'stars',
+                elementColor: 'rgba(240, 171, 252, 0.6)',
+                platformColors: {
+                    normal: ['#f0abfc', '#a21caf'],
+                    moving: ['#818cf8', '#4338ca'],
+                    spring: ['#fde047', '#ca8a04'],
+                    fragile: ['#f43f5e', '#9f1239']
+                }
+            },
+            {
+                id: 16,
+                name: 'Reino dos Sonhos',
+                bgGradient: ['#701a75', '#fbcfe8'],
+                elementType: 'clouds',
+                elementColor: 'rgba(255, 255, 255, 0.45)',
+                platformColors: {
+                    normal: ['#f472b6', '#ec4899'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#facc15', '#d97706'],
+                    fragile: ['#fb7185', '#e11d48']
+                }
+            },
+            {
+                id: 17,
+                name: 'Eclipse Solar',
+                bgGradient: ['#000000', '#451a03'],
+                elementType: 'embers',
+                elementColor: 'rgba(251, 146, 60, 0.5)',
+                platformColors: {
+                    normal: ['#f97316', '#9a3412'],
+                    moving: ['#facc15', '#b45309'],
+                    spring: ['#a855f7', '#6b21a8'],
+                    fragile: ['#dc2626', '#7f1d1d']
+                }
+            },
+            {
+                id: 18,
+                name: 'Vale Fluorescente',
+                bgGradient: ['#022c22', '#064e3b'],
+                elementType: 'spores',
+                elementColor: 'rgba(74, 222, 128, 0.6)',
+                platformColors: {
+                    normal: ['#4ade80', '#15803d'],
+                    moving: ['#22d3ee', '#0e7490'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#f43f5e', '#be123c']
+                }
+            },
+            {
+                id: 19,
+                name: 'Abismo Sombrio',
+                bgGradient: ['#09090b', '#27272a'],
+                elementType: 'stars',
+                elementColor: 'rgba(161, 161, 170, 0.4)',
+                platformColors: {
+                    normal: ['#a1a1aa', '#3f3f46'],
+                    moving: ['#c084fc', '#7e22ce'],
+                    spring: ['#38bdf8', '#0369a1'],
+                    fragile: ['#ef4444', '#991b1b']
+                }
+            },
+            {
+                id: 20,
+                name: 'Nébula de Cristal',
+                bgGradient: ['#1e1b4b', '#06b6d4'],
+                elementType: 'snow',
+                elementColor: 'rgba(165, 243, 252, 0.6)',
+                platformColors: {
+                    normal: ['#67e8f9', '#0e7490'],
+                    moving: ['#e879f9', '#a21caf'],
+                    spring: ['#fef08a', '#ca8a04'],
+                    fragile: ['#fb7185', '#be123c']
+                }
+            },
+            {
+                id: 21,
+                name: 'Cume Celestial',
+                bgGradient: ['#172554', '#fbbf24'],
+                elementType: 'clouds',
+                elementColor: 'rgba(254, 240, 138, 0.5)',
+                platformColors: {
+                    normal: ['#fef08a', '#d97706'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#f472b6', '#c084fc'],
+                    fragile: ['#ef4444', '#b91c1c']
+                }
+            }
+        ];
 
         function updateSoundUI() {
             soundOptionText.textContent = sound.muted ? '🔇 Muted' : '🔊 Som Ativado';
@@ -592,7 +954,46 @@
             sound.stopJetpackSound();
             closeOptionsModal();
             gameOverMenu.classList.add('hidden');
+            if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
+            if (levelSelectMenu) levelSelectMenu.classList.add('hidden');
             startMenu.classList.remove('hidden');
+        }
+
+        function renderLevelSelectGrid() {
+            const levelGrid = document.getElementById('levelGrid');
+            const unlockedCountBadge = document.getElementById('unlockedCountBadge');
+            if (!levelGrid) return;
+
+            unlockedCountBadge.textContent = `${unlockedStoryLevel}/21 Fases`;
+            levelGrid.innerHTML = '';
+
+            STORY_THEMES.forEach((theme) => {
+                const isUnlocked = theme.id <= unlockedStoryLevel;
+                const btn = document.createElement('button');
+                btn.className = `p-2.5 rounded-2xl font-game flex flex-col items-center justify-center border transition transform active:scale-95 relative overflow-hidden ${
+                    isUnlocked
+                        ? 'bg-gradient-to-br from-slate-800 to-purple-950/80 border-purple-500/50 hover:border-pink-400 text-white shadow-md cursor-pointer'
+                        : 'bg-slate-900/60 border-slate-800/80 text-slate-600 opacity-60 cursor-not-allowed'
+                }`;
+
+                if (isUnlocked) {
+                    btn.addEventListener('click', () => {
+                        sound.ensureContext();
+                        gameMode = 'STORY';
+                        currentStoryLevel = theme.id;
+                        levelSelectMenu.classList.add('hidden');
+                        startGame();
+                    });
+                }
+
+                btn.innerHTML = `
+                    <div class="text-xs uppercase font-bold ${isUnlocked ? 'text-amber-300' : 'text-slate-500'} mb-0.5">Fase ${theme.id}</div>
+                    <div class="text-[11px] font-sans truncate w-full px-1 ${isUnlocked ? 'text-slate-200' : 'text-slate-500'} leading-tight">${theme.name}</div>
+                    <div class="text-sm mt-1">${isUnlocked ? (theme.id < unlockedStoryLevel ? '✅' : '🚩') : '🔒'}</div>
+                `;
+
+                levelGrid.appendChild(btn);
+            });
         }
 
         closeOptionsBtn.addEventListener('click', () => closeOptionsModal());
@@ -617,7 +1018,7 @@
         let hasSwipedJumped = false;
 
         function isClickOnInteractiveUI(target) {
-            return target.closest('#startBtn') || target.closest('#restartBtn') || target.closest('#optionsBtn') || target.closest('#optionsModal');
+            return target.closest('button') || target.closest('#optionsModal') || target.closest('#startMenu') || target.closest('#levelSelectMenu') || target.closest('#gameOverMenu');
         }
 
         function handlePointerDown(clientX, clientY, target) {
@@ -1138,25 +1539,52 @@
                     offsetY = (Math.random() - 0.5) * 2;
                 }
 
-                // Render classic rectangular platform bar
-                let colorGradient;
-                if (this.type === 'normal') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#34d399'); // Emerald-400
-                    colorGradient.addColorStop(1, '#059669'); // Emerald-600
-                } else if (this.type === 'moving') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#38bdf8'); // Sky-400
-                    colorGradient.addColorStop(1, '#0284c7'); // Sky-600
-                } else if (this.type === 'spring') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#a855f7'); // Purple-500
-                    colorGradient.addColorStop(1, '#7e22ce'); // Purple-700
-                } else if (this.type === 'fragile') {
-                    colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
-                    colorGradient.addColorStop(0, '#f87171'); // Red-400
-                    colorGradient.addColorStop(1, '#dc2626'); // Red-600
+                if (this.type === 'finish') {
+                    // Golden Finish Platform at 2000m
+                    const grad = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                    grad.addColorStop(0, '#fef08a');
+                    grad.addColorStop(0.5, '#f59e0b');
+                    grad.addColorStop(1, '#b45309');
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(this.x + offsetX, screenY + offsetY, this.width, this.height, 8);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Finish Flag Banner
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = 'bold 16px "Fredoka One", cursive';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🏁 CHEGADA 2000m 🏁', this.x + this.width / 2 + offsetX, screenY - 12 + offsetY);
+                    ctx.textAlign = 'left';
+
+                    ctx.restore();
+                    return;
                 }
+
+                // Render classic rectangular platform bar using active scenario theme or default
+                let colorGradient;
+                let c1 = '#34d399', c2 = '#059669';
+
+                if (gameMode === 'STORY') {
+                    const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+                    const themeColors = theme.platformColors[this.type] || theme.platformColors.normal;
+                    c1 = themeColors[0];
+                    c2 = themeColors[1];
+                } else {
+                    if (this.type === 'normal') { c1 = '#34d399'; c2 = '#059669'; }
+                    else if (this.type === 'moving') { c1 = '#38bdf8'; c2 = '#0284c7'; }
+                    else if (this.type === 'spring') { c1 = '#a855f7'; c2 = '#7e22ce'; }
+                    else if (this.type === 'fragile') { c1 = '#f87171'; c2 = '#dc2626'; }
+                }
+
+                colorGradient = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
+                colorGradient.addColorStop(0, c1);
+                colorGradient.addColorStop(1, c2);
 
                 // Platform main bar
                 ctx.fillStyle = colorGradient;
@@ -1342,8 +1770,23 @@
 
         function generateHigherPlatforms() {
             const highestPlatform = platforms.reduce((min, p) => p.y < min.y ? p : min, platforms[0]);
+            const startY = canvas.height - 60;
             
             if (highestPlatform.y > cameraY - 400) {
+                // Check Story Mode finish line condition (2000m height)
+                if (gameMode === 'STORY') {
+                    const targetFinishY = startY - 20000;
+                    if (highestPlatform.y <= targetFinishY + 50) {
+                        const hasFinish = platforms.some(p => p.type === 'finish');
+                        if (!hasFinish) {
+                            const finishWidth = Math.min(260, canvas.width * 0.7);
+                            const finishX = (canvas.width - finishWidth) / 2;
+                            platforms.push(new Platform(finishX, targetFinishY, finishWidth, 'finish'));
+                        }
+                        return; // Stop spawning platforms above 2000m
+                    }
+                }
+
                 let currentY = highestPlatform.y;
                 let prevPlatform = highestPlatform;
                 let consecutiveFragile = prevPlatform.type === 'fragile' ? 1 : 0;
@@ -1352,6 +1795,16 @@
                     // Guaranteed jumpable height gap (55px - 85px)
                     const dy = 55 + Math.random() * 30;
                     currentY -= dy;
+
+                    if (gameMode === 'STORY' && currentY <= startY - 20000) {
+                        const hasFinish = platforms.some(p => p.type === 'finish');
+                        if (!hasFinish) {
+                            const finishWidth = Math.min(260, canvas.width * 0.7);
+                            const finishX = (canvas.width - finishWidth) / 2;
+                            platforms.push(new Platform(finishX, startY - 20000, finishWidth, 'finish'));
+                        }
+                        break;
+                    }
 
                     const width = Math.max(65, 110 - Math.min(45, Math.floor(score / 50)));
                     const x = calculateReachableX(prevPlatform.x, prevPlatform.width, width, dy);
@@ -1430,7 +1883,13 @@
                         player.y + player.height >= pScreenY &&
                         player.y + player.height <= pScreenY + p.height + player.vy
                     ) {
-                        if (p.hasSpring) {
+                        if (p.type === 'finish') {
+                            player.y = pScreenY - player.height;
+                            player.vy = 0;
+                            player.isGrounded = true;
+                            triggerLevelComplete();
+                            return;
+                        } else if (p.hasSpring) {
                             player.vy = -18; // Super Bounce!
                             p.springCompressed = true;
                             setTimeout(() => p.springCompressed = false, 200);
@@ -1508,31 +1967,89 @@
         }
 
         function drawBackground() {
-            // Gradient changes color as you climb higher into space!
-            const skyProgress = Math.min(1, score / 500);
+            ctx.save();
             const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            
-            if (skyProgress < 0.5) {
-                bgGradient.addColorStop(0, '#0f172a'); // Deep night sky
-                bgGradient.addColorStop(1, '#1e293b');
+
+            if (gameMode === 'STORY') {
+                const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+                bgGradient.addColorStop(0, theme.bgGradient[0]);
+                bgGradient.addColorStop(1, theme.bgGradient[1]);
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = theme.elementColor || 'rgba(255, 255, 255, 0.3)';
+
+                if (theme.elementType === 'clouds') {
+                    for (let i = 0; i < 12; i++) {
+                        const cloudX = (i * 127 + 20) % canvas.width;
+                        const cloudY = (i * 140 - cameraY * 0.15) % (canvas.height + 100) - 50;
+                        ctx.beginPath();
+                        ctx.ellipse(cloudX, cloudY, 40 + (i % 3) * 15, 20 + (i % 2) * 8, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (theme.elementType === 'bubbles') {
+                    for (let i = 0; i < 25; i++) {
+                        const bx = (i * 61 + 15) % canvas.width;
+                        const by = (i * 83 - cameraY * 0.3) % canvas.height;
+                        const adjustedY = by < 0 ? by + canvas.height : by;
+                        ctx.beginPath();
+                        ctx.arc(bx, adjustedY, (i % 4) + 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (theme.elementType === 'snow') {
+                    for (let i = 0; i < 35; i++) {
+                        const sx = (i * 47 + 10) % canvas.width;
+                        const sy = (i * 71 - cameraY * 0.25) % canvas.height;
+                        const adjustedY = sy < 0 ? sy + canvas.height : sy;
+                        ctx.beginPath();
+                        ctx.arc(sx, adjustedY, (i % 3) + 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (theme.elementType === 'embers' || theme.elementType === 'spores') {
+                    for (let i = 0; i < 30; i++) {
+                        const ex = (i * 89 + 5) % canvas.width;
+                        const ey = (i * 103 - cameraY * 0.35) % canvas.height;
+                        const adjustedY = ey < 0 ? ey + canvas.height : ey;
+                        ctx.beginPath();
+                        ctx.arc(ex, adjustedY, (i % 3) + 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else {
+                    // Default 'stars'
+                    for (let i = 0; i < 28; i++) {
+                        const starX = (i * 73 + 12) % canvas.width;
+                        const starY = (i * 97 - cameraY * 0.2) % canvas.height;
+                        const adjustedY = starY < 0 ? starY + canvas.height : starY;
+                        ctx.beginPath();
+                        ctx.arc(starX, adjustedY, (i % 3) + 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
             } else {
-                bgGradient.addColorStop(0, '#020617'); // Cosmic dark void
-                bgGradient.addColorStop(1, '#0f172a');
-            }
+                // Infinite Mode dynamic sky gradient
+                const skyProgress = Math.min(1, score / 500);
+                if (skyProgress < 0.5) {
+                    bgGradient.addColorStop(0, '#0f172a');
+                    bgGradient.addColorStop(1, '#1e293b');
+                } else {
+                    bgGradient.addColorStop(0, '#020617');
+                    bgGradient.addColorStop(1, '#0f172a');
+                }
 
-            ctx.fillStyle = bgGradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Subtle parallax background stars/clouds
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-            for (let i = 0; i < 25; i++) {
-                const starX = (i * 73 + 12) % canvas.width;
-                const starY = (i * 97 - cameraY * 0.2) % canvas.height;
-                const adjustedY = starY < 0 ? starY + canvas.height : starY;
-                ctx.beginPath();
-                ctx.arc(starX, adjustedY, (i % 3) + 1, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                for (let i = 0; i < 25; i++) {
+                    const starX = (i * 73 + 12) % canvas.width;
+                    const starY = (i * 97 - cameraY * 0.2) % canvas.height;
+                    const adjustedY = starY < 0 ? starY + canvas.height : starY;
+                    ctx.beginPath();
+                    ctx.arc(starX, adjustedY, (i % 3) + 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
+            ctx.restore();
         }
 
         function render() {
@@ -1568,16 +2085,39 @@
             ctx.restore();
 
             if (gameState === 'PLAYING') {
-                // HUD - Height
                 ctx.save();
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
-                ctx.beginPath();
-                ctx.roundRect(16, 70, 110, 40, 12);
-                ctx.fill();
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
 
-                ctx.font = 'bold 18px "Fredoka One", cursive';
-                ctx.fillStyle = '#facc15'; // Amber height text
-                ctx.fillText(`🚀 ${score}m`, 28, 96);
+                if (gameMode === 'STORY') {
+                    ctx.beginPath();
+                    ctx.roundRect(16, 70, 180, 50, 12);
+                    ctx.fill();
+
+                    const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+                    ctx.font = 'bold 12px "Nunito", sans-serif';
+                    ctx.fillStyle = '#f472b6';
+                    ctx.fillText(`📖 Fase ${currentStoryLevel}: ${theme.name}`, 26, 88);
+
+                    ctx.font = 'bold 15px "Fredoka One", cursive';
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillText(`🚀 ${score}m / 2000m`, 26, 107);
+
+                    // Mini Progress bar
+                    const barWidth = 150;
+                    const progress = Math.min(1, Math.max(0, score / 2000));
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fillRect(26, 111, barWidth, 3);
+                    ctx.fillStyle = '#34d399';
+                    ctx.fillRect(26, 111, barWidth * progress, 3);
+                } else {
+                    ctx.beginPath();
+                    ctx.roundRect(16, 70, 110, 40, 12);
+                    ctx.fill();
+
+                    ctx.font = 'bold 18px "Fredoka One", cursive';
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillText(`🚀 ${score}m`, 28, 96);
+                }
 
                 // Prompt before first jump
                 if (!player.hasFirstJumped) {
@@ -1608,7 +2148,51 @@
             generateInitialPlatforms();
 
             startMenu.classList.add('hidden');
+            if (levelSelectMenu) levelSelectMenu.classList.add('hidden');
+            if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
             gameOverMenu.classList.add('hidden');
+        }
+
+        function triggerLevelComplete() {
+            if (gameState === 'LEVEL_COMPLETE') return;
+            gameState = 'LEVEL_COMPLETE';
+            sound.stopJetpackSound();
+            sound.playSpring();
+
+            // Unlock next level in localStorage
+            if (currentStoryLevel < 21) {
+                if (unlockedStoryLevel < currentStoryLevel + 1) {
+                    unlockedStoryLevel = currentStoryLevel + 1;
+                    localStorage.setItem('subida_nuvens_unlocked_level', unlockedStoryLevel.toString());
+                }
+            }
+
+            const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+            const completedLevelTitle = document.getElementById('completedLevelTitle');
+            if (completedLevelTitle) {
+                completedLevelTitle.textContent = `Fase ${currentStoryLevel}: ${theme.name}`;
+            }
+
+            if (nextLevelBtn) {
+                if (currentStoryLevel < 21) {
+                    nextLevelBtn.textContent = 'PRÓXIMA FASE ➔';
+                } else {
+                    nextLevelBtn.textContent = 'PARABÉNS! JOGO CONCLUÍDO! 🎉';
+                }
+            }
+
+            // Victory particles
+            const colors = ['#34d399', '#facc15', '#f472b6', '#38bdf8', '#c084fc'];
+            for (let i = 0; i < 50; i++) {
+                createParticles(
+                    canvas.width / 2 + (Math.random() - 0.5) * canvas.width * 0.8,
+                    cameraY + canvas.height / 2 + (Math.random() - 0.5) * canvas.height * 0.8,
+                    colors[Math.floor(Math.random() * colors.length)],
+                    2
+                );
+            }
+
+            if (levelCompleteMenu) levelCompleteMenu.classList.remove('hidden');
         }
 
         function getMotivationalMessage(height) {
@@ -1630,21 +2214,43 @@
             sound.stopJetpackSound();
             sound.playGameOver();
 
-            const isNewRecord = score > highScore && score > 0;
+            const gameOverTitle = document.getElementById('gameOverTitle');
+            const gameOverSubtitle = document.getElementById('gameOverSubtitle');
+            const scoreLabel = document.getElementById('scoreLabel');
+            const recordContainer = document.getElementById('recordContainer');
 
-            if (isNewRecord) {
-                highScore = score;
-                localStorage.setItem('subida_nuvens_highscore', highScore.toString());
-                highScoreText.textContent = `${highScore}m`;
-                newRecordBadge.classList.remove('hidden');
-            } else {
+            if (gameMode === 'STORY') {
+                const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+                if (gameOverTitle) gameOverTitle.textContent = 'Fase Não Concluída!';
+                if (gameOverSubtitle) {
+                    gameOverSubtitle.textContent = `Fase ${currentStoryLevel}: ${theme.name}`;
+                    gameOverSubtitle.classList.remove('hidden');
+                }
+                if (scoreLabel) scoreLabel.textContent = 'Progresso na Fase';
+                finalScore.textContent = `${score}m / 2000m`;
+                if (recordContainer) recordContainer.classList.add('hidden');
                 newRecordBadge.classList.add('hidden');
+                motivationalMsg.textContent = `Faltaram ${Math.max(0, 2000 - score)}m para a chegada!`;
+            } else {
+                if (gameOverTitle) gameOverTitle.textContent = 'Fim de Jogo!';
+                if (gameOverSubtitle) gameOverSubtitle.classList.add('hidden');
+                if (scoreLabel) scoreLabel.textContent = 'Altura Alcançada';
+                if (recordContainer) recordContainer.classList.remove('hidden');
+
+                const isNewRecord = score > highScore && score > 0;
+                if (isNewRecord) {
+                    highScore = score;
+                    localStorage.setItem('subida_nuvens_highscore', highScore.toString());
+                    highScoreText.textContent = `${highScore}m`;
+                    newRecordBadge.classList.remove('hidden');
+                } else {
+                    newRecordBadge.classList.add('hidden');
+                }
+
+                motivationalMsg.textContent = getMotivationalMessage(score);
+                finalScore.textContent = `${score}m`;
+                bestScore.textContent = `${highScore}m`;
             }
-
-            motivationalMsg.textContent = getMotivationalMessage(score);
-
-            finalScore.textContent = `${score}m`;
-            bestScore.textContent = `${highScore}m`;
 
             // Spawn dynamic colorful celebratory/defeat particles in background
             const colors = ['#f472b6', '#c084fc', '#38bdf8', '#facc15', '#34d399', '#f87171'];
@@ -1660,10 +2266,66 @@
             gameOverMenu.classList.remove('hidden');
         }
 
-        startBtn.addEventListener('click', () => {
-            sound.ensureContext();
-            startGame();
-        });
+        if (infiniteModeBtn) {
+            infiniteModeBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                gameMode = 'INFINITE';
+                startGame();
+            });
+        }
+
+        if (storyModeBtn) {
+            storyModeBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                renderLevelSelectGrid();
+                startMenu.classList.add('hidden');
+                levelSelectMenu.classList.remove('hidden');
+            });
+        }
+
+        if (backToMenuBtn) {
+            backToMenuBtn.addEventListener('click', () => {
+                levelSelectMenu.classList.add('hidden');
+                startMenu.classList.remove('hidden');
+            });
+        }
+
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                if (currentStoryLevel < 21) {
+                    currentStoryLevel++;
+                    startGame();
+                } else {
+                    levelCompleteMenu.classList.add('hidden');
+                    renderLevelSelectGrid();
+                    levelSelectMenu.classList.remove('hidden');
+                }
+            });
+        }
+
+        if (replayLevelBtn) {
+            replayLevelBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                startGame();
+            });
+        }
+
+        if (levelSelectFromWinBtn) {
+            levelSelectFromWinBtn.addEventListener('click', () => {
+                levelCompleteMenu.classList.add('hidden');
+                renderLevelSelectGrid();
+                levelSelectMenu.classList.remove('hidden');
+            });
+        }
+
+        if (levelSelectFromLossBtn) {
+            levelSelectFromLossBtn.addEventListener('click', () => {
+                gameOverMenu.classList.add('hidden');
+                renderLevelSelectGrid();
+                levelSelectMenu.classList.remove('hidden');
+            });
+        }
 
         restartBtn.addEventListener('click', () => {
             sound.ensureContext();
