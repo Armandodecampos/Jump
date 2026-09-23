@@ -1990,6 +1990,18 @@
             // Generate platforms as we climb higher
             generateHigherPlatforms();
 
+            // Story Mode finish condition check (crossing the finish line height or reaching 2000m)
+            if (gameMode === 'STORY') {
+                const targetFinishY = (canvas.height - 60) - 20000;
+                const finishPlatform = platforms.find(p => p.type === 'finish');
+                const finishY = finishPlatform ? finishPlatform.y : targetFinishY;
+
+                if (player.y + player.height <= finishY + 16 || score >= 2000) {
+                    triggerLevelComplete();
+                    return;
+                }
+            }
+
             // Collision check with platforms (only when falling down)
             player.isGrounded = false;
             if (player.vy > 0) {
