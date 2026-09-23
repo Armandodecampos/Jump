@@ -652,6 +652,54 @@
                     this.stopJetpackSound();
                 }
             }
+
+            playFireworks() {
+                if (this.muted) return;
+                this.ensureContext();
+                if (!this.ctx) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+
+                    // Whistle / Whoosh
+                    const osc = this.ctx.createOscillator();
+                    const oscGain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300 + Math.random() * 200, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200 + Math.random() * 500, now + 0.12);
+                    oscGain.gain.setValueAtTime(0.2, now);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    osc.connect(oscGain);
+                    oscGain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+
+                    // Explosion Noise Burst / Pop
+                    const bufferSize = Math.floor(this.ctx.sampleRate * 0.35);
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.07));
+                    }
+
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800 + Math.random() * 600, now + 0.1);
+                    filter.frequency.exponentialRampToValueAtTime(100, now + 0.35);
+
+                    const noiseGain = this.ctx.createGain();
+                    noiseGain.gain.setValueAtTime(0.45, now + 0.1);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+                    noise.start(now + 0.1);
+                } catch (e) {}
+            }
         }
 
         const sound = new SoundEngine();
@@ -1777,6 +1825,8 @@
             }
         }
 
+        let victoryCelebrationTimer = 0;
+
         function createParticles(x, y, color, count = 6) {
             for (let i = 0; i < count; i++) {
                 particles.push({
@@ -1789,6 +1839,51 @@
                     alpha: 1,
                     life: 20 + Math.random() * 10
                 });
+            }
+        }
+
+        function createFireworksBurst(x, y) {
+            const colors = ['#fef08a', '#facc15', '#f472b6', '#ec4899', '#a855f7', '#38bdf8', '#34d399', '#ff4500'];
+            const particleCount = 28 + Math.floor(Math.random() * 16);
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6.5;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 3.5 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    life: 35 + Math.random() * 25
+                });
+            }
+        }
+
+        function startVictoryCelebration() {
+            if (gameState === 'VICTORY_CELEBRATION' || gameState === 'LEVEL_COMPLETE') return;
+            gameState = 'VICTORY_CELEBRATION';
+            victoryCelebrationTimer = 300; // 5 seconds at 60fps
+
+            sound.stopJetpackSound();
+            sound.playSpring();
+            sound.playFireworks();
+
+            // Unlock next level in localStorage immediately
+            if (currentStoryLevel < 21) {
+                if (unlockedStoryLevel < currentStoryLevel + 1) {
+                    unlockedStoryLevel = currentStoryLevel + 1;
+                    localStorage.setItem('subida_nuvens_unlocked_level', unlockedStoryLevel.toString());
+                }
+            }
+
+            // Initial fireworks bursts
+            for (let i = 0; i < 3; i++) {
+                createFireworksBurst(
+                    canvas.width * (0.2 + 0.6 * Math.random()),
+                    cameraY + canvas.height * (0.2 + 0.5 * Math.random())
+                );
             }
         }
 
@@ -1969,6 +2064,38 @@
         }
 
         function updateGame() {
+            if (gameState === 'VICTORY_CELEBRATION') {
+                victoryCelebrationTimer--;
+
+                // Keep soft floaty physics for player during celebration
+                player.update();
+                player.vy = Math.min(player.vy, 1.5);
+
+                // Update particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const pt = particles[i];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.alpha -= 0.02;
+                    if (pt.alpha <= 0) particles.splice(i, 1);
+                }
+
+                // Spawn periodic fireworks and play sound during celebration
+                if (victoryCelebrationTimer % 22 === 0) {
+                    createFireworksBurst(
+                        canvas.width * (0.15 + 0.7 * Math.random()),
+                        cameraY + canvas.height * (0.15 + 0.55 * Math.random())
+                    );
+                    sound.playFireworks();
+                }
+
+                // Transition to final level complete overlay after 5 seconds
+                if (victoryCelebrationTimer <= 0) {
+                    triggerLevelComplete();
+                }
+                return;
+            }
+
             if (gameState !== 'PLAYING') return;
 
             player.update();
@@ -1997,7 +2124,7 @@
                 const finishY = finishPlatform ? finishPlatform.y : targetFinishY;
 
                 if (player.y + player.height <= finishY + 16 || score >= 2000) {
-                    triggerLevelComplete();
+                    startVictoryCelebration();
                     return;
                 }
             }
@@ -2020,7 +2147,7 @@
                             player.y = pScreenY - player.height;
                             player.vy = 0;
                             player.isGrounded = true;
-                            triggerLevelComplete();
+                            startVictoryCelebration();
                             return;
                         } else if (p.hasSpring) {
                             player.vy = -18; // Super Bounce!
@@ -2217,6 +2344,58 @@
             player.draw();
 
             ctx.restore();
+
+            if (gameState === 'VICTORY_CELEBRATION') {
+                ctx.save();
+
+                // Pulsating scale animation
+                const pulseScale = 1.0 + 0.08 * Math.sin(Date.now() * 0.008);
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2 - 20;
+
+                ctx.translate(centerX, centerY);
+                ctx.scale(pulseScale, pulseScale);
+
+                // Backdrop dark semi-transparent pill card
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(-160, -85, 320, 150, 24);
+                ctx.fill();
+                ctx.stroke();
+
+                // Golden Glowing Text "VICTÓRIA!"
+                ctx.font = '900 42px "Fredoka One", cursive';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 25;
+
+                const textGrad = ctx.createLinearGradient(0, -40, 0, 10);
+                textGrad.addColorStop(0, '#ffffff');
+                textGrad.addColorStop(0.3, '#fef08a');
+                textGrad.addColorStop(0.7, '#f59e0b');
+                textGrad.addColorStop(1, '#d97706');
+
+                ctx.fillStyle = textGrad;
+                ctx.fillText('🎉 VICTÓRIA! 🏆', 0, -25);
+
+                // Subtitle: "FASE X CONCLUÍDA!"
+                ctx.shadowBlur = 0;
+                ctx.font = 'bold 17px "Fredoka One", cursive';
+                ctx.fillStyle = '#34d399';
+                ctx.fillText(`FASE ${currentStoryLevel} CONCLUÍDA!`, 0, 18);
+
+                // Countdown remaining seconds badge
+                const remainingSec = Math.max(1, Math.ceil(victoryCelebrationTimer / 60));
+                ctx.font = 'bold 13px "Nunito", sans-serif';
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fillText(`Avançando em ${remainingSec}s...`, 0, 43);
+
+                ctx.restore();
+            }
 
             if (gameState === 'PLAYING') {
                 ctx.save();
