@@ -2258,9 +2258,12 @@
                 platforms.push(platform);
                 prevPlatform = platform;
 
-                // Spawn enemies in Story Mode (~22% chance on non-fragile platforms)
-                if (gameMode === 'STORY' && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < 0.22) {
-                    const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                // Spawn enemies in Story Mode (~35% chance on non-fragile platforms, guaranteed on early platform i===1)
+                const shouldSpawnEnemy = gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && (
+                    i === 1 || Math.random() < 0.35
+                );
+                if (shouldSpawnEnemy) {
+                    const enemyType = (i === 1 || Math.random() < 0.5) ? 'shooter' : 'exploder';
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
@@ -2344,8 +2347,8 @@
                     platforms.push(platform);
                     prevPlatform = platform;
 
-                    // Spawn enemies in Story Mode (~22% chance on non-fragile platforms)
-                    if (gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && Math.random() < 0.22) {
+                    // Spawn enemies in Story Mode (~35% chance on non-fragile platforms)
+                    if (gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && Math.random() < 0.35) {
                         const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
                         enemies.push(new Enemy(platform, enemyType));
                     }
