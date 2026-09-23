@@ -426,6 +426,15 @@
                     this.springGain.connect(this.ctx.destination);
                     this.springOsc.start(0);
 
+                    // Pre-connect persistent heart oscillator
+                    this.heartOsc = this.ctx.createOscillator();
+                    this.heartGain = this.ctx.createGain();
+                    this.heartOsc.type = 'sine';
+                    this.heartGain.gain.setValueAtTime(0.00001, this.ctx.currentTime);
+                    this.heartOsc.connect(this.heartGain);
+                    this.heartGain.connect(this.ctx.destination);
+                    this.heartOsc.start(0);
+
                     this.unlocked = true;
                 } catch (e) {}
             }
@@ -503,6 +512,16 @@
                         data[i] = lastOut * 0.6;
                     }
                 });
+
+                // 6. High-pitched Heart Pickup Buffer
+                createBuf('heart', 0.15, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const freq = 880 + t * 12000;
+                        const env = Math.exp(-t * 20);
+                        data[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
+                    }
+                });
             }
 
             playPool(name) {
@@ -572,6 +591,26 @@
                     this.springGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
                 } else {
                     this.playBuffer('spring', 0.5);
+                }
+            }
+
+            playHeart() {
+                if (this.muted) return;
+                this.ensureContext();
+                if (!this.ctx) return;
+
+                if (this.heartOsc && this.heartGain) {
+                    const now = this.ctx.currentTime;
+                    this.heartOsc.frequency.cancelScheduledValues(now);
+                    this.heartGain.gain.cancelScheduledValues(now);
+
+                    this.heartOsc.frequency.setValueAtTime(880, now);
+                    this.heartOsc.frequency.exponentialRampToValueAtTime(2640, now + 0.15);
+
+                    this.heartGain.gain.setValueAtTime(0.5, now);
+                    this.heartGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
+                } else {
+                    this.playBuffer('heart', 0.5);
                 }
             }
 
@@ -1819,10 +1858,20 @@
                 this.fuseAnim = 0;
                 this.isGrounded = true;
                 this.standingPlatform = platform;
+                this.launched = false;
+                this.rotation = 0;
             }
 
             update() {
                 if (!this.alive) return;
+
+                if (this.launched) {
+                    this.vy += 0.42; // Gravity
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.rotation += 0.2;
+                    return;
+                }
 
                 // Vision check: Enemy spots player if player is at or above the horizontal line of the enemy / platform
                 if (!this.spotted) {
@@ -1986,6 +2035,10 @@
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, screenY + this.height / 2);
 
+                if (this.launched) {
+                    ctx.rotate(this.rotation);
+                }
+
                 if (this.type === 'shooter') {
                     ctx.scale(this.facingRight ? 1 : -1, 1);
 
@@ -2061,7 +2114,7 @@
                 ctx.restore();
 
                 // Spotted alert indicator ("!") above enemy
-                if (this.spotted) {
+                if (this.spotted && !this.launched) {
                     ctx.save();
                     ctx.fillStyle = '#ef4444';
                     ctx.font = '900 20px "Fredoka One", cursive';
@@ -2556,7 +2609,7 @@
                                 player.lives++;
                             }
                             createHeartParticle(c.x, c.y);
-                            sound.playSpring();
+                            sound.playHeart();
                             createParticles(c.x, c.y, '#f43f5e', 10);
                         } else {
                             coinCount++; // jetpack count
@@ -2602,7 +2655,7 @@
 
             // Player vs Enemies collisions
             enemies.forEach(e => {
-                if (!e.alive) return;
+                if (!e.alive || e.launched) return;
 
                 const overlapX = player.x + player.width > e.x && player.x < e.x + e.width;
                 const overlapY = player.y + player.height > e.y && player.y < e.y + e.height;
@@ -2612,6 +2665,9 @@
                     const feetY = player.y + player.height;
                     const prevFeetY = feetY - player.vy;
                     const isStomping = player.vy > 0 && prevFeetY <= e.y + e.height * 0.5;
+
+                    // Bump from below check: Player jumping upward into enemy
+                    const isBumpedFromBelow = player.vy < 0;
 
                     if (isStomping) {
                         e.alive = false;
@@ -2631,6 +2687,18 @@
                             e.y + e.height / 2,
                             e.type === 'shooter' ? '#a855f7' : '#ef4444',
                             16
+                        );
+                    } else if (isBumpedFromBelow) {
+                        e.launched = true;
+                        e.vy = -15; // Launch enemy upward
+                        const hitOffset = (e.x + e.width / 2) - (player.x + player.width / 2);
+                        e.vx = hitOffset * 0.1 + (Math.random() - 0.5) * 2;
+                        sound.playSpring();
+                        createParticles(
+                            e.x + e.width / 2,
+                            e.y + e.height,
+                            '#facc15',
+                            12
                         );
                     } else {
                         // Player hit by enemy body/side or exploder contact
