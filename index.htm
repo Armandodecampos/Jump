@@ -1632,6 +1632,8 @@
 
         let platforms = [];
         let collectibles = [];
+        let enemies = [];
+        let enemyProjectiles = [];
         let particles = [];
         let cameraY = 0;
         let highestY = 0;
@@ -1774,6 +1776,285 @@
                 }
 
                 ctx.restore();
+            }
+        }
+
+        class Enemy {
+            constructor(platform, type) {
+                this.platform = platform;
+                this.type = type; // 'shooter' or 'exploder'
+
+                if (type === 'shooter') {
+                    this.width = 34; // same size as character
+                    this.height = 38;
+                } else {
+                    this.width = 50; // large enemy
+                    this.height = 50;
+                }
+
+                this.x = platform.x + (platform.width - this.width) / 2;
+                this.y = platform.y - this.height;
+                this.vx = 0;
+                this.vy = 0;
+                this.spotted = false;
+                this.shootTimer = 0;
+                this.shootInterval = 100; // frames between shots
+                this.facingRight = true;
+                this.alive = true;
+                this.exploding = false;
+                this.fuseAnim = 0;
+                this.isGrounded = true;
+                this.standingPlatform = platform;
+            }
+
+            update() {
+                if (!this.alive) return;
+
+                // Vision check: Enemy spots player if player is at or above the horizontal line of the enemy / platform
+                if (!this.spotted) {
+                    if (player.y + player.height <= this.y + this.height) {
+                        this.spotted = true;
+                    }
+                }
+
+                if (this.type === 'shooter') {
+                    // Carry along if standing on moving platform
+                    if (this.standingPlatform && !this.standingPlatform.broken) {
+                        this.y = this.standingPlatform.y - this.height;
+                        if (this.standingPlatform.type === 'moving') {
+                            this.x += this.standingPlatform.moveSpeed;
+                        }
+                        if (this.x < this.standingPlatform.x) this.x = this.standingPlatform.x;
+                        if (this.x + this.width > this.standingPlatform.x + this.standingPlatform.width) {
+                            this.x = this.standingPlatform.x + this.standingPlatform.width - this.width;
+                        }
+                    } else if (this.standingPlatform && this.standingPlatform.broken) {
+                        this.y += 5; // fall if platform breaks
+                    }
+
+                    if (this.spotted) {
+                        this.facingRight = (player.x + player.width / 2) > (this.x + this.width / 2);
+                        this.shootTimer++;
+                        if (this.shootTimer >= this.shootInterval) {
+                            this.shootTimer = 0;
+                            this.shoot();
+                        }
+                    }
+                } else if (this.type === 'exploder') {
+                    this.fuseAnim += 0.1;
+
+                    if (this.spotted && !this.exploding) {
+                        // Follow player by moving and hopping across platforms
+                        const playerCenterX = player.x + player.width / 2;
+                        const enemyCenterX = this.x + this.width / 2;
+                        const dx = playerCenterX - enemyCenterX;
+
+                        this.facingRight = dx > 0;
+
+                        const moveSpeed = 1.8;
+                        if (Math.abs(dx) > 10) {
+                            this.vx = Math.sign(dx) * moveSpeed;
+                        } else {
+                            this.vx = 0;
+                        }
+
+                        // Hop/jump towards player if grounded
+                        if (this.isGrounded) {
+                            const dy = player.y - this.y;
+                            if (dy < 0 || Math.abs(dx) > 35 || Math.random() < 0.02) {
+                                this.vy = -10.5;
+                                this.isGrounded = false;
+                                this.standingPlatform = null;
+                                sound.playSpring();
+                            }
+                        }
+
+                        if (this.isGrounded && this.standingPlatform && !this.standingPlatform.broken) {
+                            if (this.standingPlatform.type === 'moving') {
+                                this.x += this.standingPlatform.moveSpeed;
+                            }
+                        }
+
+                        if (!this.isGrounded) {
+                            this.vy += 0.42; // Gravity
+                        }
+
+                        this.x += this.vx;
+                        this.y += this.vy;
+
+                        // Keep inside screen bounds
+                        if (this.x < 0) this.x = 0;
+                        if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+
+                        // Platform landing collision
+                        this.isGrounded = false;
+                        if (this.vy > 0) {
+                            platforms.forEach(p => {
+                                if (p.broken) return;
+                                if (
+                                    this.x + this.width > p.x &&
+                                    this.x < p.x + p.width &&
+                                    this.y + this.height >= p.y &&
+                                    this.y + this.height <= p.y + p.height + this.vy
+                                ) {
+                                    this.y = p.y - this.height;
+                                    this.vy = 0;
+                                    this.isGrounded = true;
+                                    this.standingPlatform = p;
+                                }
+                            });
+                        }
+
+                        // Proximity explosion check
+                        const distToPlayer = Math.hypot(
+                            (player.x + player.width / 2) - enemyCenterX,
+                            (player.y + player.height / 2) - (this.y + this.height / 2)
+                        );
+
+                        if (distToPlayer < 45) {
+                            this.explode();
+                        }
+                    } else if (!this.spotted) {
+                        if (this.standingPlatform && !this.standingPlatform.broken) {
+                            this.y = this.standingPlatform.y - this.height;
+                            if (this.standingPlatform.type === 'moving') {
+                                this.x += this.standingPlatform.moveSpeed;
+                            }
+                        }
+                    }
+                }
+            }
+
+            shoot() {
+                if (!this.alive) return;
+                const startX = this.x + this.width / 2;
+                const startY = this.y + this.height / 2;
+                const targetX = player.x + player.width / 2;
+                const targetY = player.y + player.height / 2;
+
+                const angle = Math.atan2(targetY - startY, targetX - startX);
+                const speed = 4.2;
+
+                enemyProjectiles.push({
+                    x: startX,
+                    y: startY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: 7,
+                    alive: true
+                });
+
+                sound.playSpring();
+            }
+
+            explode() {
+                if (!this.alive || this.exploding) return;
+                this.alive = false;
+                this.exploding = true;
+
+                sound.playFireworks();
+                createFireworksBurst(this.x + this.width / 2, this.y + this.height / 2);
+
+                const blastRadius = 75;
+                const dist = Math.hypot(
+                    (player.x + player.width / 2) - (this.x + this.width / 2),
+                    (player.y + player.height / 2) - (this.y + this.height / 2)
+                );
+
+                if (dist <= blastRadius) {
+                    triggerGameOver();
+                }
+            }
+
+            draw(screenY) {
+                if (!this.alive) return;
+
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, screenY + this.height / 2);
+
+                if (this.type === 'shooter') {
+                    ctx.scale(this.facingRight ? 1 : -1, 1);
+
+                    // Shooter Body (Character size 34x38)
+                    ctx.fillStyle = '#7e22ce'; // Purple
+                    ctx.beginPath();
+                    ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, [10]);
+                    ctx.fill();
+
+                    // Dark helmet visor
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.fillRect(-this.width / 2 + 4, -this.height / 2 + 6, this.width - 8, 12);
+
+                    // Visor eye light
+                    ctx.fillStyle = this.spotted ? '#ef4444' : '#facc15';
+                    ctx.fillRect(0, -this.height / 2 + 9, 10, 6);
+
+                    // Cannon nozzle
+                    ctx.fillStyle = '#4c1d95';
+                    ctx.fillRect(4, -2, 12, 8);
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.fillRect(14, -1, 4, 6);
+                } else if (this.type === 'exploder') {
+                    const pulse = 1 + 0.06 * Math.sin(this.fuseAnim * 3);
+                    ctx.scale(this.facingRight ? pulse : -pulse, pulse);
+
+                    // Big Round Bomb Body (50x50)
+                    ctx.fillStyle = this.spotted ? '#dc2626' : '#991b1b';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.width / 2 - 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Spikes
+                    ctx.fillStyle = '#7f1d1d';
+                    for (let i = 0; i < 8; i++) {
+                        const a = (i * Math.PI) / 4;
+                        const sx = Math.cos(a) * (this.width / 2 + 2);
+                        const sy = Math.sin(a) * (this.width / 2 + 2);
+                        ctx.beginPath();
+                        ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(6, -6, 7, 0, Math.PI * 2);
+                    ctx.arc(-8, -6, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(8, -6, 3, 0, Math.PI * 2);
+                    ctx.arc(-6, -6, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Fuse stem & spark
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.height / 2);
+                    ctx.quadraticCurveTo(8, -this.height / 2 - 12, 12, -this.height / 2 - 16);
+                    ctx.stroke();
+
+                    if (this.spotted || Math.random() < 0.5) {
+                        ctx.fillStyle = Math.random() < 0.5 ? '#fef08a' : '#ef4444';
+                        ctx.beginPath();
+                        ctx.arc(12, -this.height / 2 - 16, 4 + Math.random() * 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+
+                // Spotted alert indicator ("!") above enemy
+                if (this.spotted) {
+                    ctx.save();
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = '900 20px "Fredoka One", cursive';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('!', this.x + this.width / 2, screenY - 8);
+                    ctx.restore();
+                }
             }
         }
 
@@ -1924,6 +2205,8 @@
         function generateInitialPlatforms() {
             platforms = [];
             collectibles = [];
+            enemies = [];
+            enemyProjectiles = [];
             
             const startY = canvas.height - 60;
             const groundWidth = Math.min(200, canvas.width * 0.4);
@@ -1974,6 +2257,12 @@
 
                 platforms.push(platform);
                 prevPlatform = platform;
+
+                // Spawn enemies in Story Mode (~22% chance on non-fragile platforms)
+                if (gameMode === 'STORY' && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < 0.22) {
+                    const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                    enemies.push(new Enemy(platform, enemyType));
+                }
 
                 // Very rare rocket / jetpack spawn rate (~3%)
                 if (Math.random() < 0.03 && type !== 'fragile') {
@@ -2054,6 +2343,12 @@
 
                     platforms.push(platform);
                     prevPlatform = platform;
+
+                    // Spawn enemies in Story Mode (~22% chance on non-fragile platforms)
+                    if (gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && Math.random() < 0.22) {
+                        const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                        enemies.push(new Enemy(platform, enemyType));
+                    }
 
                     // Very rare rocket / jetpack spawn rate (~3%)
                     if (Math.random() < 0.03 && type !== 'fragile') {
@@ -2196,6 +2491,70 @@
             // Update collectibles
             collectibles.forEach(c => c.update());
 
+            // Update enemies
+            enemies.forEach(e => e.update());
+
+            // Update enemy projectiles
+            enemyProjectiles.forEach(p => {
+                if (!p.alive) return;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Projectile collision with player
+                const dx = (player.x + player.width / 2) - p.x;
+                const dy = (player.y + player.height / 2) - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.width / 2 + p.radius) {
+                    p.alive = false;
+                    createParticles(p.x, p.y, '#f43f5e', 8);
+                    triggerGameOver();
+                }
+
+                // Offscreen projectile cleanup
+                if (p.y > cameraY + canvas.height + 100 || p.y < cameraY - 200 || p.x < -50 || p.x > canvas.width + 50) {
+                    p.alive = false;
+                }
+            });
+            enemyProjectiles = enemyProjectiles.filter(p => p.alive);
+
+            // Player vs Enemies collisions
+            enemies.forEach(e => {
+                if (!e.alive) return;
+
+                const overlapX = player.x + player.width > e.x && player.x < e.x + e.width;
+                const overlapY = player.y + player.height > e.y && player.y < e.y + e.height;
+
+                if (overlapX && overlapY) {
+                    // Stomping check: Player falling downward onto top portion of enemy
+                    const feetY = player.y + player.height;
+                    const prevFeetY = feetY - player.vy;
+                    const isStomping = player.vy > 0 && prevFeetY <= e.y + e.height * 0.5;
+
+                    if (isStomping) {
+                        e.alive = false;
+                        player.vy = player.jumpForce; // Rebound bounce off enemy
+                        player.isGrounded = false;
+                        player.coyoteTime = 0;
+                        sound.playSpring();
+                        createParticles(
+                            e.x + e.width / 2,
+                            e.y + e.height / 2,
+                            e.type === 'shooter' ? '#a855f7' : '#ef4444',
+                            16
+                        );
+                    } else {
+                        // Player hit by enemy body/side or exploder contact
+                        if (e.type === 'exploder') {
+                            e.explode();
+                        }
+                        triggerGameOver();
+                    }
+                }
+            });
+
+            // Cleanup dead or far-below enemies
+            enemies = enemies.filter(e => e.alive && e.y < cameraY + canvas.height + 200);
+
             // Update particles
             for (let i = particles.length - 1; i >= 0; i--) {
                 const pt = particles[i];
@@ -2328,6 +2687,22 @@
 
             // Draw collectibles
             collectibles.forEach(c => c.draw(c.y));
+
+            // Draw enemies
+            enemies.forEach(e => e.draw(e.y));
+
+            // Draw enemy projectiles
+            enemyProjectiles.forEach(p => {
+                ctx.save();
+                ctx.fillStyle = '#f43f5e';
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
 
             // Draw particles
             particles.forEach(pt => {
