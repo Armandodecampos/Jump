@@ -2073,9 +2073,10 @@
         }
 
         class Collectible {
-            constructor(x, y) {
+            constructor(x, y, type = 'jetpack') {
                 this.x = x;
                 this.y = y;
+                this.type = type; // 'jetpack' or 'heart'
                 this.radius = 12;
                 this.collected = false;
                 this.angle = 0;
@@ -2093,28 +2094,40 @@
                 ctx.save();
                 ctx.translate(this.x, floatY);
 
-                // Jetpack body (Red & Silver rocket pack)
-                ctx.fillStyle = '#94a3b8'; // Metallic grey frame
-                ctx.beginPath();
-                ctx.roundRect(-8, -10, 16, 20, 4);
-                ctx.fill();
+                if (this.type === 'heart') {
+                    // Pulsating Collectible Heart
+                    const scale = 1 + 0.1 * Math.sin(this.angle * 2);
+                    ctx.scale(scale, scale);
 
-                // Twin Red Fuel Tanks
-                ctx.fillStyle = '#ef4444'; // Red-500
-                ctx.fillRect(-7, -8, 5, 14);
-                ctx.fillRect(2, -8, 5, 14);
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('❤️', 0, 0);
+                } else {
+                    // Jetpack body (Red & Silver rocket pack)
+                    ctx.fillStyle = '#94a3b8'; // Metallic grey frame
+                    ctx.beginPath();
+                    ctx.roundRect(-8, -10, 16, 20, 4);
+                    ctx.fill();
 
-                // Thruster Nozzles
-                ctx.fillStyle = '#334155';
-                ctx.fillRect(-6, 6, 3, 4);
-                ctx.fillRect(3, 6, 3, 4);
+                    // Twin Red Fuel Tanks
+                    ctx.fillStyle = '#ef4444'; // Red-500
+                    ctx.fillRect(-7, -8, 5, 14);
+                    ctx.fillRect(2, -8, 5, 14);
 
-                // Small idle thruster glow
-                ctx.fillStyle = '#f59e0b';
-                ctx.beginPath();
-                ctx.arc(-4.5, 10, 2, 0, Math.PI * 2);
-                ctx.arc(4.5, 10, 2, 0, Math.PI * 2);
-                ctx.fill();
+                    // Thruster Nozzles
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(-6, 6, 3, 4);
+                    ctx.fillRect(3, 6, 3, 4);
+
+                    // Small idle thruster glow
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(-4.5, 10, 2, 0, Math.PI * 2);
+                    ctx.arc(4.5, 10, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -2307,15 +2320,21 @@
                 platforms.push(platform);
                 prevPlatform = platform;
 
-                // Spawn enemies in Story Mode (~12% chance on non-fragile platforms)
-                if (gameMode === 'STORY' && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < 0.12) {
+                // Enemy spawn probability scales by level: Level 1 (~3%) up to Level 21 (~21%)
+                const enemySpawnChance = gameMode === 'STORY' ? (0.03 + (currentStoryLevel - 1) * (0.18 / 20)) : 0.08;
+                if (gameMode === 'STORY' && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
                     const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
-                // Very rare rocket / jetpack spawn rate (~3%)
-                if (Math.random() < 0.03 && type !== 'fragile') {
-                    collectibles.push(new Collectible(x + width / 2, currentY - 20));
+                // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
+                if (type !== 'fragile' && type !== 'finish') {
+                    const randCollect = Math.random();
+                    if (randCollect < 0.08) {
+                        collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
+                    } else if (randCollect < 0.11) {
+                        collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
+                    }
                 }
             }
         }
@@ -2393,15 +2412,21 @@
                     platforms.push(platform);
                     prevPlatform = platform;
 
-                    // Spawn enemies in Story Mode (~12% chance on non-fragile platforms)
-                    if (gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && Math.random() < 0.12) {
+                    // Enemy spawn probability scales by level: Level 1 (~3%) up to Level 21 (~21%)
+                    const enemySpawnChance = gameMode === 'STORY' ? (0.03 + (currentStoryLevel - 1) * (0.18 / 20)) : 0.08;
+                    if (gameMode === 'STORY' && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
                         const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
-                    // Very rare rocket / jetpack spawn rate (~3%)
-                    if (Math.random() < 0.03 && type !== 'fragile') {
-                        collectibles.push(new Collectible(x + width / 2, currentY - 20));
+                    // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
+                    if (type !== 'fragile' && type !== 'finish') {
+                        const randCollect = Math.random();
+                        if (randCollect < 0.08) {
+                            collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
+                        } else if (randCollect < 0.11) {
+                            collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
+                        }
                     }
                 }
             }
@@ -2518,7 +2543,7 @@
                 });
             }
 
-            // Collectible collisions (Jetpack pickup)
+            // Collectible collisions (Jetpack & Heart pickups)
             collectibles.forEach(c => {
                 if (!c.collected) {
                     const dx = (player.x + player.width / 2) - c.x;
@@ -2526,10 +2551,19 @@
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < player.width / 2 + c.radius) {
                         c.collected = true;
-                        coinCount++; // jetpack count
-                        player.activateJetpack(); // 70% chance non-failing (flying higher) / 30% failing
-                        sound.playSpring();
-                        createParticles(c.x, c.y, '#ff4500', 12);
+                        if (c.type === 'heart') {
+                            if (player.lives < player.maxLives) {
+                                player.lives++;
+                            }
+                            createHeartParticle(c.x, c.y);
+                            sound.playSpring();
+                            createParticles(c.x, c.y, '#f43f5e', 10);
+                        } else {
+                            coinCount++; // jetpack count
+                            player.activateJetpack(); // 70% chance non-failing (flying higher) / 30% failing
+                            sound.playSpring();
+                            createParticles(c.x, c.y, '#ff4500', 12);
+                        }
                     }
                 }
             });
