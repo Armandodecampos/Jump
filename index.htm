@@ -81,6 +81,20 @@
                     Escolha o modo de jogo e divirta-se subindo até o topo!
                 </p>
 
+                <!-- Character Selection Card -->
+                <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700/80 w-full max-w-xs mb-4 flex items-center justify-between text-left shadow-lg backdrop-blur">
+                    <div class="flex items-center gap-3">
+                        <canvas id="menuCharacterPreviewCanvas" width="44" height="48" class="bg-slate-900/90 rounded-xl border border-slate-700/70 p-1 flex-shrink-0"></canvas>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Personagem</span>
+                            <span id="selectedCharacterNameText" class="font-game text-sm text-pink-300">Alien Rosa</span>
+                        </div>
+                    </div>
+                    <button id="openCharacterModalBtn" class="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-game text-xs rounded-xl shadow transition active:scale-95 border border-pink-400/30 flex items-center gap-1">
+                        🎭 Trocar
+                    </button>
+                </div>
+
                 <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-5 text-left space-y-2 text-xs sm:text-sm">
                     <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
                     <p class="text-slate-300 leading-relaxed">
@@ -100,6 +114,33 @@
                     </button>
                 </div>
             </div>
+
+        <!-- Character Selection Modal Overlay -->
+        <div id="characterModal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="bg-slate-900/95 rounded-3xl p-5 sm:p-6 border border-purple-500/50 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh] my-auto">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+                    <h3 class="text-2xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 flex items-center gap-2">
+                        🎭 Escolher Personagem
+                    </h3>
+                    <button id="closeCharacterModalBtn" class="text-slate-400 hover:text-white text-2xl font-bold p-1 rounded-lg">
+                        ✕
+                    </button>
+                </div>
+
+                <p class="text-slate-300 text-xs sm:text-sm mb-4">
+                    Escolha o seu personagem favorito para subir nas nuvens!
+                </p>
+
+                <!-- Grid of Character Cards -->
+                <div id="characterGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-1 mb-4 max-h-[50vh]">
+                    <!-- Rendered dynamically -->
+                </div>
+
+                <button id="doneCharacterModalBtn" class="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-base sm:text-lg rounded-2xl shadow-lg transition active:scale-95 border border-pink-400/30">
+                    SELECIONAR
+                </button>
+            </div>
+        </div>
 
         <!-- Level Select Overlay (Story Mode) -->
         <div id="levelSelectMenu" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 hidden transition-opacity duration-300 overflow-y-auto">
@@ -765,6 +806,32 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
+        // Character Selection Modal UI elements
+        const openCharacterModalBtn = document.getElementById('openCharacterModalBtn');
+        const characterModal = document.getElementById('characterModal');
+        const closeCharacterModalBtn = document.getElementById('closeCharacterModalBtn');
+        const doneCharacterModalBtn = document.getElementById('doneCharacterModalBtn');
+
+        if (openCharacterModalBtn) {
+            openCharacterModalBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                characterModal.classList.remove('hidden');
+                updateCharacterUI();
+            });
+        }
+
+        if (closeCharacterModalBtn) {
+            closeCharacterModalBtn.addEventListener('click', () => {
+                characterModal.classList.add('hidden');
+            });
+        }
+
+        if (doneCharacterModalBtn) {
+            doneCharacterModalBtn.addEventListener('click', () => {
+                characterModal.classList.add('hidden');
+            });
+        }
+
         // UI elements
         const startMenu = document.getElementById('startMenu');
         const unlockAllLevelsBtn = document.getElementById('unlockAllLevelsBtn');
@@ -792,6 +859,359 @@
         const soundOptionText = document.getElementById('soundOptionText');
         const newRecordBadge = document.getElementById('newRecordBadge');
         const motivationalMsg = document.getElementById('motivationalMsg');
+
+        // Character Definitions & Selection State
+        const CHARACTERS = [
+            {
+                id: 'pink_alien',
+                name: 'Alien Rosa',
+                badge: '💖 Clássico',
+                description: 'O simpático alienígena rosa do espaço!'
+            },
+            {
+                id: 'bw_cat',
+                name: 'Gato P&B',
+                badge: '🐱 Tuxedo',
+                description: 'Um gatinho preto e branco super gracioso!'
+            },
+            {
+                id: 'frog',
+                name: 'Sapinho',
+                badge: '🐸 Saltador',
+                description: 'Mestre dos pulos na lagoa e nas nuvens!'
+            },
+            {
+                id: 'panda',
+                name: 'Panda',
+                badge: '🐼 Fofo',
+                description: 'Adora bambu e alcançar grandes alturas!'
+            },
+            {
+                id: 'bunny',
+                name: 'Coelhinho',
+                badge: '🐰 Veloz',
+                description: 'Com orelhas compridas e saltos incríveis!'
+            }
+        ];
+
+        let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'pink_alien';
+
+        function drawCharacterBody(targetCtx, charId, width, height, facingRight) {
+            targetCtx.save();
+            targetCtx.scale(facingRight ? 1 : -1, 1);
+
+            if (charId === 'bw_cat') {
+                // === GATO PRETO E BRANCO (Black & White Tuxedo Cat) ===
+                targetCtx.fillStyle = '#1e293b';
+
+                // Left ear
+                targetCtx.beginPath();
+                targetCtx.moveTo(-width / 2 + 2, -height / 2 + 2);
+                targetCtx.lineTo(-width / 2 + 10, -height / 2 + 2);
+                targetCtx.lineTo(-width / 2 + 3, -height / 2 - 10);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                // Right ear
+                targetCtx.beginPath();
+                targetCtx.moveTo(width / 2 - 10, -height / 2 + 2);
+                targetCtx.lineTo(width / 2 - 2, -height / 2 + 2);
+                targetCtx.lineTo(width / 2 - 3, -height / 2 - 10);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                // Inner ears (pink)
+                targetCtx.fillStyle = '#f472b6';
+                targetCtx.beginPath();
+                targetCtx.moveTo(-width / 2 + 4, -height / 2 + 2);
+                targetCtx.lineTo(-width / 2 + 8, -height / 2 + 2);
+                targetCtx.lineTo(-width / 2 + 4, -height / 2 - 6);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                targetCtx.beginPath();
+                targetCtx.moveTo(width / 2 - 8, -height / 2 + 2);
+                targetCtx.lineTo(width / 2 - 4, -height / 2 + 2);
+                targetCtx.lineTo(width / 2 - 4, -height / 2 - 6);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                // Black Body
+                targetCtx.fillStyle = '#1e293b';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
+                targetCtx.fill();
+
+                // White Tuxedo Chest / Belly Patch
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 7, 9, 11, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // White Muzzle / Nose Patch
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.ellipse(3, -2, 7, 5, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Emerald Green Cat Eyes
+                targetCtx.fillStyle = '#4ade80';
+                targetCtx.beginPath();
+                targetCtx.ellipse(5, -7, 4, 5, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Slit Pupil
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.ellipse(6, -7, 1.8, 4, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Pink Nose
+                targetCtx.fillStyle = '#f472b6';
+                targetCtx.beginPath();
+                targetCtx.moveTo(4, -4);
+                targetCtx.lineTo(7, -4);
+                targetCtx.lineTo(5.5, -2);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                // Whiskers
+                targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                targetCtx.lineWidth = 1;
+                targetCtx.beginPath();
+                targetCtx.moveTo(10, -3); targetCtx.lineTo(17, -5);
+                targetCtx.moveTo(10, -1); targetCtx.lineTo(17, 0);
+                targetCtx.stroke();
+
+            } else if (charId === 'frog') {
+                // === SAPINHO (Green Frog) ===
+                targetCtx.fillStyle = '#22c55e';
+                targetCtx.beginPath();
+                targetCtx.arc(-8, -height / 2, 7, 0, Math.PI * 2);
+                targetCtx.arc(8, -height / 2, 7, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(-8, -height / 2, 4.5, 0, Math.PI * 2);
+                targetCtx.arc(8, -height / 2, 4.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.arc(-6.5, -height / 2, 2.2, 0, Math.PI * 2);
+                targetCtx.arc(9.5, -height / 2, 2.2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#22c55e';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2 + 3, width, height - 3, [14]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#bef264';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 6, 11, 10, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = 'rgba(244, 114, 182, 0.6)';
+                targetCtx.beginPath();
+                targetCtx.arc(-9, -2, 3.5, 0, Math.PI * 2);
+                targetCtx.arc(9, -2, 3.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.strokeStyle = '#14532d';
+                targetCtx.lineWidth = 2;
+                targetCtx.beginPath();
+                targetCtx.arc(0, -3, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+                targetCtx.stroke();
+
+            } else if (charId === 'panda') {
+                // === PANDA ===
+                targetCtx.fillStyle = '#1e293b';
+                targetCtx.beginPath();
+                targetCtx.arc(-10, -height / 2 + 1, 6, 0, Math.PI * 2);
+                targetCtx.arc(10, -height / 2 + 1, 6, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#f8fafc';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#1e293b';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, 2, width, 14, [4]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#f8fafc';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 10, 9, 6, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#1e293b';
+                targetCtx.beginPath();
+                targetCtx.ellipse(5, -6, 5, 6, -0.2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(5, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.arc(5.5, -6, 1.2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.ellipse(2, -1, 2.5, 1.8, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+            } else if (charId === 'bunny') {
+                // === COELHINHO (Bunny) ===
+                targetCtx.fillStyle = '#cbd5e1';
+
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 + 2, -height / 2 - 14, 8, 16, [4]);
+                targetCtx.fill();
+
+                targetCtx.beginPath();
+                targetCtx.roundRect(width / 2 - 10, -height / 2 - 14, 8, 16, [4]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#f472b6';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 + 4, -height / 2 - 12, 4, 12, [2]);
+                targetCtx.roundRect(width / 2 - 8, -height / 2 - 12, 4, 12, [2]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#cbd5e1';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 5, 9, 11, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(4, -6, 5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.arc(5.5, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#f472b6';
+                targetCtx.beginPath();
+                targetCtx.arc(3, -1, 2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+            } else {
+                // === ALIEN ROSA (Default Pink Alien) ===
+                targetCtx.fillStyle = '#ec4899';
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#fbcfe8';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 4, 10, 12, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(4, -6, 5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.arc(6, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#c084fc';
+                targetCtx.beginPath();
+                targetCtx.arc(0, -height / 2 - 2, 4, 0, Math.PI * 2);
+                targetCtx.fill();
+            }
+
+            targetCtx.restore();
+        }
+
+        function renderCharacterSelectModalGrid() {
+            const grid = document.getElementById('characterGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const isSelected = char.id === selectedCharacterId;
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl font-game flex items-center justify-between border transition transform active:scale-95 cursor-pointer ${
+                    isSelected
+                        ? 'bg-gradient-to-r from-purple-900/90 to-pink-900/90 border-pink-400 shadow-lg shadow-pink-500/20'
+                        : 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300'
+                }`;
+
+                card.addEventListener('click', () => {
+                    sound.ensureContext();
+                    sound.playSpring();
+                    selectedCharacterId = char.id;
+                    localStorage.setItem('subida_nuvens_character', selectedCharacterId);
+                    updateCharacterUI();
+                });
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <canvas id="modalCharCanvas_${char.id}" width="40" height="44" class="bg-slate-950/80 rounded-xl border border-slate-700/80 p-1 flex-shrink-0"></canvas>
+                        <div class="text-left">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-sm font-bold text-white">${char.name}</span>
+                                <span class="text-[10px] bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-full border border-purple-500/40">${char.badge}</span>
+                            </div>
+                            <p class="text-[11px] font-sans text-slate-300 leading-tight mt-0.5">${char.description}</p>
+                        </div>
+                    </div>
+                    <div class="text-lg ml-2">${isSelected ? '✅' : '⚪'}</div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            // Draw previews on modal canvases
+            CHARACTERS.forEach(char => {
+                const cvs = document.getElementById(`modalCharCanvas_${char.id}`);
+                if (cvs) {
+                    const cctx = cvs.getContext('2d');
+                    cctx.clearRect(0, 0, cvs.width, cvs.height);
+                    cctx.save();
+                    cctx.translate(cvs.width / 2, cvs.height / 2 + 2);
+                    drawCharacterBody(cctx, char.id, 28, 32, true);
+                    cctx.restore();
+                }
+            });
+        }
+
+        function updateCharacterUI() {
+            const currentChar = CHARACTERS.find(c => c.id === selectedCharacterId) || CHARACTERS[0];
+            const selectedText = document.getElementById('selectedCharacterNameText');
+            if (selectedText) selectedText.textContent = currentChar.name;
+
+            const menuCvs = document.getElementById('menuCharacterPreviewCanvas');
+            if (menuCvs) {
+                const mctx = menuCvs.getContext('2d');
+                mctx.clearRect(0, 0, menuCvs.width, menuCvs.height);
+                mctx.save();
+                mctx.translate(menuCvs.width / 2, menuCvs.height / 2 + 2);
+                drawCharacterBody(mctx, selectedCharacterId, 30, 34, true);
+                mctx.restore();
+            }
+
+            renderCharacterSelectModalGrid();
+        }
 
         // Persistent High Score & Game Modes
         let highScore = parseInt(localStorage.getItem('subida_nuvens_highscore') || '0', 10);
@@ -1591,35 +2011,8 @@
 
                 ctx.scale(this.facingRight ? scaleX : -scaleX, scaleY);
 
-                // Body (Cute alien/robot character)
-                ctx.fillStyle = '#ec4899'; // Pink-500
-                ctx.beginPath();
-                ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, [12]);
-                ctx.fill();
-
-                // Inner belly pattern
-                ctx.fillStyle = '#fbcfe8';
-                ctx.beginPath();
-                ctx.ellipse(0, 4, 10, 12, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Eyes
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(4, -6, 5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Pupil
-                ctx.fillStyle = '#0f172a';
-                ctx.beginPath();
-                ctx.arc(6, -6, 2.5, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Antenna / Ears
-                ctx.fillStyle = '#c084fc';
-                ctx.beginPath();
-                ctx.arc(0, -this.height / 2 - 2, 4, 0, Math.PI * 2);
-                ctx.fill();
+                // Draw active character sprite
+                drawCharacterBody(ctx, selectedCharacterId, this.width, this.height, true);
 
                 // Draw Jetpack on Character's back when active or equipped
                 if (this.jetpackTimer > 0) {
@@ -3268,6 +3661,7 @@
 
         // Start animation loop on window load & handle initial sound unlock and buffer pre-baking
         window.onload = () => {
+            updateCharacterUI();
             generateInitialPlatforms();
             gameLoop();
 
