@@ -2808,8 +2808,11 @@
                 ctx.fillStyle = theme.elementColor || 'rgba(255, 255, 255, 0.3)';
 
                 if (theme.elementType === 'clouds') {
+                    const driftTime = Date.now() * 0.015;
                     for (let i = 0; i < 12; i++) {
-                        const cloudX = (i * 127 + 20) % canvas.width;
+                        const speed = 0.5 + (i % 3) * 0.3;
+                        const rawX = i * 127 + 20 + driftTime * speed;
+                        const cloudX = (rawX % (canvas.width + 160)) - 80;
                         const cloudY = (i * 140 - cameraY * 0.15) % (canvas.height + 100) - 50;
                         ctx.beginPath();
                         ctx.ellipse(cloudX, cloudY, 40 + (i % 3) * 15, 20 + (i % 2) * 8, 0, 0, Math.PI * 2);
