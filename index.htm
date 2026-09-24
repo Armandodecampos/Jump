@@ -1555,6 +1555,11 @@
             },
 
             draw() {
+                // Hide character when crossing finish line / victory celebration / level complete
+                if (gameState === 'VICTORY_CELEBRATION' || gameState === 'LEVEL_COMPLETE') {
+                    return;
+                }
+
                 // Flashing effect when invulnerable
                 if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer / 4) % 2 === 0) {
                     return;
