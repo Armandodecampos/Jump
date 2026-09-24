@@ -629,10 +629,22 @@
             playMenuMusic() {
                 if (this.muted) return;
                 this.ensureContext();
-                if (!this.ctx) return;
+                if (!this.bgMusicAudio) {
+                    this.bgMusicAudio = new Audio('musica_corrigida-menu.m4a');
+                    this.bgMusicAudio.loop = true;
+                    this.bgMusicAudio.volume = 0.5;
+                }
+                if (this.bgMusicAudio.paused) {
+                    this.bgMusicAudio.currentTime = 0;
+                    this.bgMusicAudio.play().catch(() => {});
+                }
             }
 
             stopMenuMusic() {
+                if (this.bgMusicAudio) {
+                    this.bgMusicAudio.pause();
+                    this.bgMusicAudio.currentTime = 0;
+                }
                 if (this.bgMusicSource) {
                     try { this.bgMusicSource.stop(); } catch (e) {}
                     this.bgMusicSource = null;
@@ -1093,6 +1105,7 @@
         function returnToMainMenu() {
             gameState = 'MENU';
             sound.stopJetpackSound();
+            sound.playMenuMusic();
             closeOptionsModal();
             gameOverMenu.classList.add('hidden');
             if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
@@ -3261,6 +3274,9 @@
             // Unlock and resume AudioContext synchronously inside first user interaction event
             const unlockAudio = () => {
                 sound.unlockHardware();
+                if (gameState === 'MENU') {
+                    sound.playMenuMusic();
+                }
                 window.removeEventListener('click', unlockAudio);
                 window.removeEventListener('touchstart', unlockAudio);
                 window.removeEventListener('pointerdown', unlockAudio);
