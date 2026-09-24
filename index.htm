@@ -948,43 +948,49 @@
                 targetCtx.ellipse(0, 7, 9, 11, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
-                // White Muzzle / Nose Patch
+                // White Muzzle / Nose Patch (centered)
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.beginPath();
-                targetCtx.ellipse(3, -2, 7, 5, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(0, -2, 8, 5, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
-                // Emerald Green Cat Eyes
+                // Both Emerald Green Cat Eyes (Left & Right)
                 targetCtx.fillStyle = '#4ade80';
                 targetCtx.beginPath();
-                targetCtx.ellipse(5, -7, 4, 5, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(-7, -7, 4, 5, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(7, -7, 4, 5, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
-                // Slit Pupil
+                // Slit Pupils looking outwards (Left eye pupil left, Right eye pupil right)
                 targetCtx.fillStyle = '#0f172a';
                 targetCtx.beginPath();
-                targetCtx.ellipse(6, -7, 1.8, 4, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(-8.5, -7, 1.8, 4, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(8.5, -7, 1.8, 4, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
-                // Pink Nose
+                // Pink Nose (centered)
                 targetCtx.fillStyle = '#f472b6';
                 targetCtx.beginPath();
-                targetCtx.moveTo(4, -4);
-                targetCtx.lineTo(7, -4);
-                targetCtx.lineTo(5.5, -2);
+                targetCtx.moveTo(-2, -4);
+                targetCtx.lineTo(2, -4);
+                targetCtx.lineTo(0, -2);
                 targetCtx.closePath();
                 targetCtx.fill();
 
-                // Whiskers
+                // Symmetrical Whiskers on both sides
                 targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
                 targetCtx.lineWidth = 1;
                 targetCtx.beginPath();
-                targetCtx.moveTo(10, -3); targetCtx.lineTo(17, -5);
-                targetCtx.moveTo(10, -1); targetCtx.lineTo(17, 0);
+                // Left whiskers
+                targetCtx.moveTo(-6, -3); targetCtx.lineTo(-14, -5);
+                targetCtx.moveTo(-6, -1); targetCtx.lineTo(-14, 0);
+                // Right whiskers
+                targetCtx.moveTo(6, -3); targetCtx.lineTo(14, -5);
+                targetCtx.moveTo(6, -1); targetCtx.lineTo(14, 0);
                 targetCtx.stroke();
 
             } else if (charId === 'frog') {
-                // === SAPINHO (Green Frog) ===
+                // === SAPINHO (Green Frog - UNCHANGED as requested!) ===
                 targetCtx.fillStyle = '#22c55e';
                 targetCtx.beginPath();
                 targetCtx.arc(-8, -height / 2, 7, 0, Math.PI * 2);
@@ -1048,67 +1054,84 @@
                 targetCtx.ellipse(0, 10, 9, 6, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Black Oval Eye Patches on Left and Right
                 targetCtx.fillStyle = '#1e293b';
                 targetCtx.beginPath();
-                targetCtx.ellipse(5, -6, 5, 6, -0.2, 0, Math.PI * 2);
+                targetCtx.ellipse(-7, -6, 5, 6, 0.2, 0, Math.PI * 2);
+                targetCtx.ellipse(7, -6, 5, 6, -0.2, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Both White Eye Balls inside Patches
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.beginPath();
-                targetCtx.arc(5, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.arc(-7, -6, 2.8, 0, Math.PI * 2);
+                targetCtx.arc(7, -6, 2.8, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Black Pupils looking outwards
                 targetCtx.fillStyle = '#0f172a';
                 targetCtx.beginPath();
-                targetCtx.arc(5.5, -6, 1.2, 0, Math.PI * 2);
+                targetCtx.arc(-8.2, -6, 1.4, 0, Math.PI * 2);
+                targetCtx.arc(8.2, -6, 1.4, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Centered Nose
                 targetCtx.fillStyle = '#0f172a';
                 targetCtx.beginPath();
-                targetCtx.ellipse(2, -1, 2.5, 1.8, 0, 0, Math.PI * 2);
+                targetCtx.ellipse(0, -1, 2.5, 1.8, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
             } else if (charId === 'bunny') {
                 // === COELHINHO (Bunny) ===
                 targetCtx.fillStyle = '#cbd5e1';
 
+                // Left ear
                 targetCtx.beginPath();
                 targetCtx.roundRect(-width / 2 + 2, -height / 2 - 14, 8, 16, [4]);
                 targetCtx.fill();
 
+                // Right ear
                 targetCtx.beginPath();
                 targetCtx.roundRect(width / 2 - 10, -height / 2 - 14, 8, 16, [4]);
                 targetCtx.fill();
 
+                // Inner ear pink
                 targetCtx.fillStyle = '#f472b6';
                 targetCtx.beginPath();
                 targetCtx.roundRect(-width / 2 + 4, -height / 2 - 12, 4, 12, [2]);
                 targetCtx.roundRect(width / 2 - 8, -height / 2 - 12, 4, 12, [2]);
                 targetCtx.fill();
 
+                // Body
                 targetCtx.fillStyle = '#cbd5e1';
                 targetCtx.beginPath();
                 targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
                 targetCtx.fill();
 
+                // White Belly
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.beginPath();
                 targetCtx.ellipse(0, 5, 9, 11, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Both White Eyes (Left & Right)
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.beginPath();
-                targetCtx.arc(4, -6, 5, 0, Math.PI * 2);
+                targetCtx.arc(-7, -6, 5, 0, Math.PI * 2);
+                targetCtx.arc(7, -6, 5, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Pupils looking outwards
                 targetCtx.fillStyle = '#0f172a';
                 targetCtx.beginPath();
-                targetCtx.arc(5.5, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.arc(-9, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.arc(9, -6, 2.5, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Pink Bunny Nose (centered)
                 targetCtx.fillStyle = '#f472b6';
                 targetCtx.beginPath();
-                targetCtx.arc(3, -1, 2, 0, Math.PI * 2);
+                targetCtx.arc(0, -1, 2, 0, Math.PI * 2);
                 targetCtx.fill();
 
             } else {
@@ -1118,21 +1141,27 @@
                 targetCtx.roundRect(-width / 2, -height / 2, width, height, [12]);
                 targetCtx.fill();
 
+                // Inner belly pattern
                 targetCtx.fillStyle = '#fbcfe8';
                 targetCtx.beginPath();
                 targetCtx.ellipse(0, 4, 10, 12, 0, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Both White Eyes (Left & Right)
                 targetCtx.fillStyle = '#ffffff';
                 targetCtx.beginPath();
-                targetCtx.arc(4, -6, 5, 0, Math.PI * 2);
+                targetCtx.arc(-7, -6, 5, 0, Math.PI * 2);
+                targetCtx.arc(7, -6, 5, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Pupils looking outwards
                 targetCtx.fillStyle = '#0f172a';
                 targetCtx.beginPath();
-                targetCtx.arc(6, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.arc(-9, -6, 2.5, 0, Math.PI * 2);
+                targetCtx.arc(9, -6, 2.5, 0, Math.PI * 2);
                 targetCtx.fill();
 
+                // Antenna / Ears (centered)
                 targetCtx.fillStyle = '#c084fc';
                 targetCtx.beginPath();
                 targetCtx.arc(0, -height / 2 - 2, 4, 0, Math.PI * 2);
