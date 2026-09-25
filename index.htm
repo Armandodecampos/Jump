@@ -1882,6 +1882,7 @@
             if (attractScreen) attractScreen.classList.remove('hidden');
 
             player.reset();
+            particles = [];
             generateInitialPlatforms();
             cameraY = 0;
             score = 0;
@@ -3206,6 +3207,15 @@
                     platforms.forEach(p => p.update());
                     collectibles.forEach(c => c.update());
 
+                    // Update particles
+                    for (let i = particles.length - 1; i >= 0; i--) {
+                        const pt = particles[i];
+                        pt.x += pt.vx;
+                        pt.y += pt.vy;
+                        pt.alpha -= 0.04;
+                        if (pt.alpha <= 0) particles.splice(i, 1);
+                    }
+
                     // Cleanup offscreen platforms & collectibles
                     const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 60 : cameraY + canvas.height + 100;
                     platforms = platforms.filter(p => p.y < platformBottomCutoff);
@@ -3214,6 +3224,7 @@
                     // Reset position if fallen off
                     if (player.y - cameraY > canvas.height * 1.5) {
                         player.reset();
+                        particles = [];
                         generateInitialPlatforms();
                         cameraY = 0;
                         score = 0;
@@ -3224,6 +3235,7 @@
 
                     if (elapsed < 20100) {
                         player.reset();
+                        particles = [];
                         generateInitialPlatforms();
                         cameraY = 0;
                         score = 0;
@@ -3765,6 +3777,7 @@
             score = 0;
             coinCount = 0;
             cameraY = 0;
+            particles = [];
             player.reset();
             generateInitialPlatforms();
 
