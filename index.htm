@@ -1723,6 +1723,7 @@
             sound.unlockHardware();
             sound.playMenuMusic();
             touchAxisX = 0;
+            particles = [];
         }
 
         function handlePointerDown(clientX, clientY, target) {
@@ -1937,6 +1938,7 @@
 
             if (player.y - cameraY > canvas.height * 1.2) {
                 player.reset();
+                particles = [];
                 generateInitialPlatforms();
                 cameraY = 0;
                 score = 0;
@@ -3120,7 +3122,22 @@
             }
         }
 
+        function updateParticles() {
+            const decay = (gameState === 'VICTORY_CELEBRATION') ? 0.02 : 0.04;
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= decay;
+                if (pt.alpha <= 0 || isNaN(pt.alpha)) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
         function updateGame() {
+            updateParticles();
+
             if (gameState === 'MENU') {
                 if (Date.now() - lastMenuInteractionTime >= 20000) {
                     enterAttractMode();
@@ -3207,15 +3224,6 @@
                     platforms.forEach(p => p.update());
                     collectibles.forEach(c => c.update());
 
-                    // Update particles
-                    for (let i = particles.length - 1; i >= 0; i--) {
-                        const pt = particles[i];
-                        pt.x += pt.vx;
-                        pt.y += pt.vy;
-                        pt.alpha -= 0.04;
-                        if (pt.alpha <= 0) particles.splice(i, 1);
-                    }
-
                     // Cleanup offscreen platforms & collectibles
                     const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 60 : cameraY + canvas.height + 100;
                     platforms = platforms.filter(p => p.y < platformBottomCutoff);
@@ -3250,15 +3258,6 @@
                 // Keep soft floaty physics for player during celebration
                 player.update();
                 player.vy = Math.min(player.vy, 1.5);
-
-                // Update particles
-                for (let i = particles.length - 1; i >= 0; i--) {
-                    const pt = particles[i];
-                    pt.x += pt.vx;
-                    pt.y += pt.vy;
-                    pt.alpha -= 0.02;
-                    if (pt.alpha <= 0) particles.splice(i, 1);
-                }
 
                 // Spawn periodic fireworks and play sound during celebration
                 if (victoryCelebrationTimer % 22 === 0) {
@@ -3474,15 +3473,6 @@
 
             // Cleanup dead or far-below enemies
             enemies = enemies.filter(e => e.alive && e.y < cameraY + canvas.height + 200);
-
-            // Update particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const pt = particles[i];
-                pt.x += pt.vx;
-                pt.y += pt.vy;
-                pt.alpha -= 0.04;
-                if (pt.alpha <= 0) particles.splice(i, 1);
-            }
 
             // Cleanup platforms that reach the green line near the bottom edge of the screen
             const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 60 : cameraY + canvas.height + 100;
