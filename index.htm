@@ -2040,29 +2040,26 @@
 
                 ctx.scale(this.facingRight ? scaleX : -scaleX, scaleY);
 
-                // Draw active character sprite
-                drawCharacterBody(ctx, selectedCharacterId, this.width, this.height, true);
-
-                // Draw Jetpack on Character's back when active or equipped
+                // Draw Jetpack/Rocket on Character's back BEFORE drawing character body (so it's positioned behind the character)
                 if (this.jetpackTimer > 0) {
-                    let jpX = -this.width / 2 - 6;
-                    let jpY = -6;
+                    let jpX = -this.width / 2 - 8;
+                    let jpY = -12;
 
                     // Slight visual vibration/shudder of jetpack tank when failing
                     if (this.jetpackSputtering) {
-                        jpX += (Math.random() - 0.5) * 2;
-                        jpY += (Math.random() - 0.5) * 2;
+                        jpX += (Math.random() - 0.5) * 3;
+                        jpY += (Math.random() - 0.5) * 3;
                     }
 
-                    // Metallic Thruster Tanks
+                    // Metallic Thruster Tanks (Double size)
                     ctx.fillStyle = '#64748b';
-                    ctx.fillRect(jpX, jpY, 8, 18);
+                    ctx.fillRect(jpX, jpY, 16, 36);
                     ctx.fillStyle = '#ef4444';
-                    ctx.fillRect(jpX + 1, jpY + 2, 6, 14);
+                    ctx.fillRect(jpX + 2, jpY + 4, 12, 28);
 
-                    // Nozzle
+                    // Nozzles (Double size)
                     ctx.fillStyle = '#1e293b';
-                    ctx.fillRect(jpX + 1, jpY + 18, 6, 4);
+                    ctx.fillRect(jpX + 2, jpY + 36, 12, 8);
 
                     // Draw flame only when engine thruster is currently firing
                     if (this.isJetpackFiring) {
@@ -2072,52 +2069,55 @@
                         } else if (!this.willFail && this.jetpackTimer <= 80) {
                             sputterScale = 0.3 + 0.7 * (this.jetpackTimer / 80);
                         }
-                        const flameHeight = (16 + Math.random() * 14) * sputterScale;
-                        const flameWidth = (10 + Math.random() * 4) * sputterScale;
+                        const flameHeight = (32 + Math.random() * 28) * sputterScale;
+                        const flameWidth = (20 + Math.random() * 8) * sputterScale;
 
                         // Outer Red/Orange Flame plume
-                        const outerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight);
+                        const outerGradient = ctx.createLinearGradient(jpX + 8, jpY + 44, jpX + 8, jpY + 44 + flameHeight);
                         outerGradient.addColorStop(0, '#ff4500'); // OrangeRed
                         outerGradient.addColorStop(0.5, '#f97316'); // Orange-500
                         outerGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
                         ctx.fillStyle = outerGradient;
                         ctx.beginPath();
-                        ctx.moveTo(jpX + 4 - flameWidth / 2, jpY + 22);
+                        ctx.moveTo(jpX + 8 - flameWidth / 2, jpY + 44);
                         ctx.quadraticCurveTo(
-                            jpX + 4 + (Math.random() - 0.5) * 8,
-                            jpY + 22 + flameHeight * 0.6,
-                            jpX + 4,
-                            jpY + 22 + flameHeight
+                            jpX + 8 + (Math.random() - 0.5) * 16,
+                            jpY + 44 + flameHeight * 0.6,
+                            jpX + 8,
+                            jpY + 44 + flameHeight
                         );
                         ctx.quadraticCurveTo(
-                            jpX + 4 + (Math.random() - 0.5) * 8,
-                            jpY + 22 + flameHeight * 0.6,
-                            jpX + 4 + flameWidth / 2,
-                            jpY + 22
+                            jpX + 8 + (Math.random() - 0.5) * 16,
+                            jpY + 44 + flameHeight * 0.6,
+                            jpX + 8 + flameWidth / 2,
+                            jpY + 44
                         );
                         ctx.fill();
 
                         // Inner Intense Yellow Flame Core
-                        const innerGradient = ctx.createLinearGradient(jpX + 4, jpY + 22, jpX + 4, jpY + 22 + flameHeight * 0.6);
+                        const innerGradient = ctx.createLinearGradient(jpX + 8, jpY + 44, jpX + 8, jpY + 44 + flameHeight * 0.6);
                         innerGradient.addColorStop(0, '#ffffff'); // White hot base
                         innerGradient.addColorStop(0.4, '#facc15'); // Yellow
                         innerGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
 
                         ctx.fillStyle = innerGradient;
                         ctx.beginPath();
-                        ctx.moveTo(jpX + 4 - flameWidth / 3, jpY + 22);
-                        ctx.lineTo(jpX + 4, jpY + 22 + flameHeight * 0.65);
-                        ctx.lineTo(jpX + 4 + flameWidth / 3, jpY + 22);
+                        ctx.moveTo(jpX + 8 - flameWidth / 3, jpY + 44);
+                        ctx.lineTo(jpX + 8, jpY + 44 + flameHeight * 0.65);
+                        ctx.lineTo(jpX + 8 + flameWidth / 3, jpY + 44);
                         ctx.fill();
                     } else if (this.jetpackSputtering) {
                         // Small smoke puff coming directly out of nozzle when thruster cuts out
                         ctx.fillStyle = 'rgba(100, 116, 139, 0.6)';
                         ctx.beginPath();
-                        ctx.arc(jpX + 4 + (Math.random() - 0.5) * 3, jpY + 24 + Math.random() * 4, 3 + Math.random() * 2, 0, Math.PI * 2);
+                        ctx.arc(jpX + 8 + (Math.random() - 0.5) * 6, jpY + 48 + Math.random() * 8, 6 + Math.random() * 4, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
+
+                // Draw active character sprite (drawn on top of the jetpack)
+                drawCharacterBody(ctx, selectedCharacterId, this.width, this.height, true);
 
                 ctx.restore();
             }
@@ -2611,7 +2611,7 @@
                 this.x = x;
                 this.y = y;
                 this.type = type; // 'jetpack' or 'heart'
-                this.radius = 12;
+                this.radius = type === 'jetpack' ? 24 : 12;
                 this.collected = false;
                 this.angle = 0;
             }
@@ -2639,7 +2639,9 @@
                     ctx.textBaseline = 'middle';
                     ctx.fillText('❤️', 0, 0);
                 } else {
-                    // Jetpack body (Red & Silver rocket pack)
+                    // Jetpack/Rocket body (Red & Silver rocket pack) - DOUBLE SIZE (scale x 2)
+                    ctx.scale(2, 2);
+
                     ctx.fillStyle = '#94a3b8'; // Metallic grey frame
                     ctx.beginPath();
                     ctx.roundRect(-8, -10, 16, 20, 4);
@@ -3392,7 +3394,7 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // Golden Glowing Text "VICTÓRIA!"
+                // Golden Glowing Text "VITÓRIA!"
                 ctx.font = '900 42px "Fredoka One", cursive';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -3407,7 +3409,7 @@
                 textGrad.addColorStop(1, '#d97706');
 
                 ctx.fillStyle = textGrad;
-                ctx.fillText('🎉 VICTÓRIA! 🏆', 0, -25);
+                ctx.fillText('🎉 VITÓRIA! 🏆', 0, -25);
 
                 // Subtitle: "FASE X CONCLUÍDA!"
                 ctx.shadowBlur = 0;
