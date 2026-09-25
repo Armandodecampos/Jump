@@ -1725,7 +1725,9 @@
 
         function handlePointerDown(clientX, clientY, target) {
             if (gameState === 'ATTRACT') {
-                exitAttractMode();
+                if (target.closest('#attractScreen') || target === document.body || target === canvas) {
+                    exitAttractMode();
+                }
                 return;
             }
             if (isClickOnInteractiveUI(target)) return;
@@ -1838,6 +1840,8 @@
 
         function updateDemoAI() {
             if (gameState !== 'ATTRACT') return;
+
+            player.hasFirstJumped = true;
 
             // Auto Jump when grounded or in coyote time
             if (player.isGrounded || player.coyoteTime > 0) {
@@ -3894,22 +3898,29 @@
 
         // Start animation loop on window load & handle initial sound unlock and buffer pre-baking
         window.onload = () => {
+            gameState = 'ATTRACT';
+            demoStartTime = Date.now();
             updateCharacterUI();
+            player.reset();
             generateInitialPlatforms();
             gameLoop();
 
             const attractScreen = document.getElementById('attractScreen');
             if (attractScreen) {
-                attractScreen.addEventListener('click', () => exitAttractMode());
-                attractScreen.addEventListener('touchstart', () => exitAttractMode(), { passive: true });
+                attractScreen.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    exitAttractMode();
+                });
+                attractScreen.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    exitAttractMode();
+                }, { passive: true });
             }
 
             // Unlock and resume AudioContext synchronously inside first user interaction event
             const unlockAudio = () => {
                 sound.unlockHardware();
-                if (gameState === 'ATTRACT') {
-                    exitAttractMode();
-                } else if (gameState === 'MENU') {
+                if (gameState === 'MENU') {
                     sound.playMenuMusic();
                 }
                 window.removeEventListener('click', unlockAudio);
