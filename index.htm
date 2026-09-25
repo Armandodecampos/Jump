@@ -71,8 +71,29 @@
         <!-- Canvas -->
         <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
+        <!-- Attract / Splash Screen Overlay (Initial Screen with "Clique em algum lugar") -->
+        <div id="attractScreen" class="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center cursor-pointer select-none">
+            <!-- Dark overlay element for the 10s dark phase -->
+            <div id="attractDarkOverlay" class="absolute inset-0 bg-slate-950 transition-opacity duration-1000 opacity-0 pointer-events-none z-0"></div>
+
+            <!-- Foreground Content Container -->
+            <div class="relative z-10 flex flex-col items-center justify-center space-y-4 pointer-events-none">
+                <div class="w-20 h-20 bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 rounded-3xl flex items-center justify-center text-4xl shadow-2xl border border-pink-400/40 animate-bounce">
+                    🚀
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-game text-white glow-title">
+                    Subida Nas Nuvens
+                </h1>
+                <div class="mt-8 px-6 py-3.5 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-pink-500/40 shadow-2xl animate-pulse">
+                    <p class="text-xl sm:text-2xl font-game text-amber-300 tracking-wide flex items-center justify-center gap-2">
+                        <span>👆</span> Clique em algum lugar
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Menu Overlay (Start Screen) -->
-        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300 overflow-y-auto">
+        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300 overflow-y-auto hidden">
                 <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-4xl shadow-lg animate-bounce">
                     🚀
                 </div>
@@ -584,7 +605,7 @@
             }
 
             playBuffer(name, volume = 1) {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx || !this.buffers[name]) return;
 
@@ -599,7 +620,7 @@
             }
 
             playJump() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx) return;
 
@@ -619,7 +640,7 @@
             }
 
             playSpring() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx) return;
 
@@ -636,7 +657,7 @@
             }
 
             playHeart() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx) return;
 
@@ -668,7 +689,7 @@
             }
 
             playMenuMusic() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.bgMusicAudio) {
                     this.bgMusicAudio = new Audio('musica_corrigida-menu.m4a');
@@ -703,7 +724,7 @@
             }
 
             startJetpackSound() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx || !this.buffers['jetpack']) return;
 
@@ -746,7 +767,7 @@
             }
 
             playFireworks() {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
                 if (!this.ctx) return;
 
@@ -1687,7 +1708,26 @@
             return target.closest('button') || target.closest('#optionsModal') || target.closest('#startMenu') || target.closest('#levelSelectMenu') || target.closest('#gameOverMenu');
         }
 
+        function exitAttractMode() {
+            if (gameState !== 'ATTRACT') return;
+            gameState = 'MENU';
+
+            const attractScreen = document.getElementById('attractScreen');
+            if (attractScreen) attractScreen.classList.add('hidden');
+
+            const startMenu = document.getElementById('startMenu');
+            if (startMenu) startMenu.classList.remove('hidden');
+
+            sound.unlockHardware();
+            sound.playMenuMusic();
+            touchAxisX = 0;
+        }
+
         function handlePointerDown(clientX, clientY, target) {
+            if (gameState === 'ATTRACT') {
+                exitAttractMode();
+                return;
+            }
             if (isClickOnInteractiveUI(target)) return;
 
             sound.unlockHardware();
@@ -1765,6 +1805,10 @@
         let isJumpPressed = false;
 
         window.addEventListener('keydown', (e) => {
+            if (gameState === 'ATTRACT') {
+                exitAttractMode();
+                return;
+            }
             sound.ensureContext();
             if (e.code === 'Escape') {
                 toggleOptionsModal();
@@ -1789,7 +1833,60 @@
 
 
         // Game States
-        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+        let gameState = 'ATTRACT'; // ATTRACT, MENU, PLAYING, GAMEOVER, VICTORY_CELEBRATION, LEVEL_COMPLETE
+        let demoStartTime = Date.now();
+
+        function updateDemoAI() {
+            if (gameState !== 'ATTRACT') return;
+
+            // Auto Jump when grounded or in coyote time
+            if (player.isGrounded || player.coyoteTime > 0) {
+                player.tryJump();
+            }
+
+            // Find target platform
+            let bestPlatform = null;
+            let minDistance = Infinity;
+
+            for (let p of platforms) {
+                if (p.broken) continue;
+
+                const pCenterX = p.x + p.width / 2;
+                const playerCenterX = player.x + player.width / 2;
+                const dy = p.y - player.y;
+
+                if (dy > -220 && dy < 120) {
+                    const dx = Math.abs(pCenterX - playerCenterX);
+                    const score = dx + (dy < 0 ? dy * 1.5 : dy * 3);
+                    if (score < minDistance) {
+                        minDistance = score;
+                        bestPlatform = p;
+                    }
+                }
+            }
+
+            if (bestPlatform) {
+                const targetX = bestPlatform.x + bestPlatform.width / 2 - player.width / 2;
+                const diffX = targetX - player.x;
+
+                if (Math.abs(diffX) > 4) {
+                    touchAxisX = Math.sign(diffX) * Math.min(1, Math.abs(diffX) / 25);
+                } else {
+                    touchAxisX = 0;
+                }
+            } else {
+                const centerX = canvas.width / 2 - player.width / 2;
+                const diffX = centerX - player.x;
+                touchAxisX = Math.sign(diffX) * 0.5;
+            }
+
+            if (player.y - cameraY > canvas.height * 1.2) {
+                player.reset();
+                generateInitialPlatforms();
+                cameraY = 0;
+                score = 0;
+            }
+        }
 
         // Player configuration with adjusted slower, floatier physics
         const player = {
@@ -2969,6 +3066,111 @@
         }
 
         function updateGame() {
+            if (gameState === 'ATTRACT') {
+                const elapsed = (Date.now() - demoStartTime) % 30000;
+                const attractDarkOverlay = document.getElementById('attractDarkOverlay');
+
+                if (elapsed < 20000) {
+                    // 20s active Infinite Mode demo phase
+                    if (attractDarkOverlay) attractDarkOverlay.style.opacity = '0';
+                    updateDemoAI();
+                    player.update();
+
+                    if (player.hasFirstJumped) {
+                        const targetCameraY = player.y - canvas.height * 0.55;
+                        if (targetCameraY < cameraY) {
+                            cameraY += (targetCameraY - cameraY) * 0.1;
+                        }
+                    }
+
+                    const currentMeter = Math.max(0, Math.floor((500 - player.y) / 10));
+                    if (currentMeter > score) score = currentMeter;
+
+                    generateHigherPlatforms();
+
+                    // Platform collisions
+                    player.isGrounded = false;
+                    if (player.vy > 0) {
+                        platforms.forEach(p => {
+                            if (p.broken) return;
+                            const pScreenY = p.y;
+                            if (
+                                player.x + player.width > p.x &&
+                                player.x < p.x + p.width &&
+                                player.y + player.height >= pScreenY &&
+                                player.y + player.height <= pScreenY + p.height + player.vy
+                            ) {
+                                if (p.hasSpring || p.type === 'spring') {
+                                    player.vy = -18;
+                                    p.triggerBend();
+                                    createParticles(player.x + player.width / 2, pScreenY, '#c084fc', 12);
+                                } else {
+                                    player.y = pScreenY - player.height;
+                                    player.vy = 0;
+                                    player.isGrounded = true;
+                                    player.standingPlatform = p;
+                                    player.coyoteTime = 6;
+
+                                    if (p.type === 'fragile') {
+                                        if (!p.crumbling) {
+                                            p.crumbling = true;
+                                            p.crumbleTimer = 24;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Collectibles
+                    collectibles.forEach(c => {
+                        if (!c.collected) {
+                            const dx = (player.x + player.width / 2) - c.x;
+                            const dy = (player.y + player.height / 2) - c.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < player.width / 2 + c.radius) {
+                                c.collected = true;
+                                if (c.type === 'heart') {
+                                    if (player.lives < player.maxLives) player.lives++;
+                                    createHeartParticle(c.x, c.y);
+                                    createParticles(c.x, c.y, '#f43f5e', 10);
+                                } else {
+                                    player.activateJetpack();
+                                    createParticles(c.x, c.y, '#ff4500', 12);
+                                }
+                            }
+                        }
+                    });
+
+                    platforms.forEach(p => p.update());
+                    collectibles.forEach(c => c.update());
+
+                    // Cleanup offscreen platforms & collectibles
+                    const platformBottomCutoff = player.hasFirstJumped ? cameraY + canvas.height - 60 : cameraY + canvas.height + 100;
+                    platforms = platforms.filter(p => p.y < platformBottomCutoff);
+                    collectibles = collectibles.filter(c => c.y < cameraY + canvas.height * 2);
+
+                    // Reset position if fallen off
+                    if (player.y - cameraY > canvas.height * 1.5) {
+                        player.reset();
+                        generateInitialPlatforms();
+                        cameraY = 0;
+                        score = 0;
+                    }
+                } else {
+                    // 10s darkened screen phase
+                    if (attractDarkOverlay) attractDarkOverlay.style.opacity = '1';
+
+                    if (elapsed < 20100) {
+                        player.reset();
+                        generateInitialPlatforms();
+                        cameraY = 0;
+                        score = 0;
+                    }
+                }
+                return;
+            }
+
             if (gameState === 'VICTORY_CELEBRATION') {
                 victoryCelebrationTimer--;
 
@@ -3696,10 +3898,18 @@
             generateInitialPlatforms();
             gameLoop();
 
+            const attractScreen = document.getElementById('attractScreen');
+            if (attractScreen) {
+                attractScreen.addEventListener('click', () => exitAttractMode());
+                attractScreen.addEventListener('touchstart', () => exitAttractMode(), { passive: true });
+            }
+
             // Unlock and resume AudioContext synchronously inside first user interaction event
             const unlockAudio = () => {
                 sound.unlockHardware();
-                if (gameState === 'MENU') {
+                if (gameState === 'ATTRACT') {
+                    exitAttractMode();
+                } else if (gameState === 'MENU') {
                     sound.playMenuMusic();
                 }
                 window.removeEventListener('click', unlockAudio);
