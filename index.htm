@@ -1895,22 +1895,23 @@
                 player.tryJump();
             }
 
-            // Find target platform
+            // Find target platform directly above or near player
             let bestPlatform = null;
-            let minDistance = Infinity;
+            let minScore = Infinity;
 
             for (let p of platforms) {
                 if (p.broken) continue;
 
                 const pCenterX = p.x + p.width / 2;
                 const playerCenterX = player.x + player.width / 2;
-                const dy = p.y - player.y;
+                const dy = player.y - p.y; // Positive if platform is above player
 
-                if (dy > -220 && dy < 120) {
+                if (dy > -40 && dy < 220) {
                     const dx = Math.abs(pCenterX - playerCenterX);
-                    const score = dx + (dy < 0 ? dy * 1.5 : dy * 3);
-                    if (score < minDistance) {
-                        minDistance = score;
+                    // Prioritize platforms above player with reasonable horizontal offset
+                    const score = dx + (dy > 0 ? (220 - dy) * 0.5 : 300);
+                    if (score < minScore) {
+                        minScore = score;
                         bestPlatform = p;
                     }
                 }
@@ -1967,10 +1968,10 @@
 
             reset() {
                 this.x = (canvas.width || 480) / 2 - this.width / 2;
-                this.y = (canvas.height || 600) - 120;
+                this.y = (canvas.height || 600) - 60 - this.height;
                 this.vx = 0;
                 this.vy = 0;
-                this.isGrounded = false;
+                this.isGrounded = true;
                 this.coyoteTime = 0;
                 this.facingRight = true;
                 this.hasFirstJumped = false;
