@@ -587,7 +587,7 @@
             }
 
             playPool(name) {
-                if (this.muted) return;
+                if (this.muted || gameState === 'ATTRACT') return;
                 const poolObj = this.audioPool[name];
                 if (poolObj && poolObj.pool.length > 0) {
                     try {
@@ -752,7 +752,7 @@
             }
 
             updateJetpack(isActive, volume = 0.2) {
-                if (isActive && !this.muted) {
+                if (isActive && !this.muted && gameState !== 'ATTRACT') {
                     if (!this.jetpackSource) {
                         this.startJetpackSound();
                     }
@@ -1724,6 +1724,9 @@
         }
 
         function handlePointerDown(clientX, clientY, target) {
+            if (gameState === 'MENU') {
+                resetMenuInactivityTimer();
+            }
             if (gameState === 'ATTRACT') {
                 if (target.closest('#attractScreen') || target === document.body || target === canvas) {
                     exitAttractMode();
@@ -1741,6 +1744,9 @@
         }
 
         function handlePointerMove(clientX, clientY) {
+            if (gameState === 'MENU') {
+                resetMenuInactivityTimer();
+            }
             if (!isTouchingScreen) return;
 
             const deltaX = clientX - touchStartX;
@@ -1807,6 +1813,9 @@
         let isJumpPressed = false;
 
         window.addEventListener('keydown', (e) => {
+            if (gameState === 'MENU') {
+                resetMenuInactivityTimer();
+            }
             if (gameState === 'ATTRACT') {
                 exitAttractMode();
                 return;
@@ -1837,6 +1846,44 @@
         // Game States
         let gameState = 'ATTRACT'; // ATTRACT, MENU, PLAYING, GAMEOVER, VICTORY_CELEBRATION, LEVEL_COMPLETE
         let demoStartTime = Date.now();
+        let lastMenuInteractionTime = Date.now();
+
+        function resetMenuInactivityTimer() {
+            lastMenuInteractionTime = Date.now();
+        }
+
+        function enterAttractMode() {
+            gameState = 'ATTRACT';
+            demoStartTime = Date.now();
+            sound.stopMenuMusic();
+            sound.stopJetpackSound();
+
+            const startMenu = document.getElementById('startMenu');
+            if (startMenu) startMenu.classList.add('hidden');
+
+            const levelSelectMenu = document.getElementById('levelSelectMenu');
+            if (levelSelectMenu) levelSelectMenu.classList.add('hidden');
+
+            const optionsModal = document.getElementById('optionsModal');
+            if (optionsModal) optionsModal.classList.add('hidden');
+
+            const characterModal = document.getElementById('characterModal');
+            if (characterModal) characterModal.classList.add('hidden');
+
+            const gameOverMenu = document.getElementById('gameOverMenu');
+            if (gameOverMenu) gameOverMenu.classList.add('hidden');
+
+            const levelCompleteMenu = document.getElementById('levelCompleteMenu');
+            if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
+
+            const attractScreen = document.getElementById('attractScreen');
+            if (attractScreen) attractScreen.classList.remove('hidden');
+
+            player.reset();
+            generateInitialPlatforms();
+            cameraY = 0;
+            score = 0;
+        }
 
         function updateDemoAI() {
             if (gameState !== 'ATTRACT') return;
@@ -3070,6 +3117,13 @@
         }
 
         function updateGame() {
+            if (gameState === 'MENU') {
+                if (Date.now() - lastMenuInteractionTime >= 20000) {
+                    enterAttractMode();
+                    return;
+                }
+            }
+
             if (gameState === 'ATTRACT') {
                 const elapsed = (Date.now() - demoStartTime) % 30000;
                 const attractDarkOverlay = document.getElementById('attractDarkOverlay');
