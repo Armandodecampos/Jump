@@ -1574,6 +1574,7 @@
 
         function returnToMainMenu() {
             gameState = 'MENU';
+            resetMenuInactivityTimer();
             sound.stopJetpackSound();
             sound.playMenuMusic();
             closeOptionsModal();
@@ -1711,6 +1712,7 @@
         function exitAttractMode() {
             if (gameState !== 'ATTRACT') return;
             gameState = 'MENU';
+            resetMenuInactivityTimer();
 
             const attractScreen = document.getElementById('attractScreen');
             if (attractScreen) attractScreen.classList.add('hidden');
