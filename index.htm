@@ -898,47 +898,98 @@
 
         let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'pink_alien';
 
-        function drawRocketPack(targetCtx, x, y, isSputtering = false, showIdleGlow = false) {
+        function drawRocketSprite(targetCtx, x, y, options = {}) {
+            const isSputtering = options.isSputtering || false;
+            const showIdleFlame = options.showIdleFlame || false;
+            const idleAngle = options.idleAngle || 0;
+
             targetCtx.save();
 
             let rx = x;
             let ry = y;
 
-            // Slight visual vibration/shudder of jetpack tank when failing
             if (isSputtering) {
                 rx += (Math.random() - 0.5) * 3;
                 ry += (Math.random() - 0.5) * 3;
             }
 
-            // 1. Metallic Grey Frame / Backing Plate
-            targetCtx.fillStyle = '#94a3b8';
+            // 1. Red Nose Cone (Top Pointed Tip)
+            targetCtx.fillStyle = '#ef4444'; // Red-500
             targetCtx.beginPath();
-            targetCtx.roundRect(rx - 8, ry, 16, 32, 4);
+            targetCtx.moveTo(rx, ry - 18);
+            targetCtx.quadraticCurveTo(rx + 6, ry - 10, rx + 6, ry - 6);
+            targetCtx.lineTo(rx - 6, ry - 6);
+            targetCtx.quadraticCurveTo(rx - 6, ry - 10, rx, ry - 18);
+            targetCtx.closePath();
             targetCtx.fill();
 
-            // 2. Twin Red Fuel Tanks
+            // 2. White Rocket Body Cylinder
+            targetCtx.fillStyle = '#f8fafc'; // White/Slate-50
+            targetCtx.beginPath();
+            targetCtx.roundRect(rx - 6, ry - 6, 12, 22, 2);
+            targetCtx.fill();
+
+            // Red stripe across middle of body
             targetCtx.fillStyle = '#ef4444';
+            targetCtx.fillRect(rx - 6, ry + 2, 12, 4);
+
+            // Circular Glass Porthole Window
+            targetCtx.fillStyle = '#64748b'; // Outer metallic frame
             targetCtx.beginPath();
-            targetCtx.roundRect(rx - 7, ry + 2, 5, 24, 2);
-            targetCtx.roundRect(rx + 2, ry + 2, 5, 24, 2);
+            targetCtx.arc(rx, ry - 1, 3.5, 0, Math.PI * 2);
             targetCtx.fill();
 
-            // Highlight shine on fuel tanks
-            targetCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            targetCtx.fillRect(rx - 6, ry + 4, 1.5, 18);
-            targetCtx.fillRect(rx + 3, ry + 4, 1.5, 18);
+            targetCtx.fillStyle = '#38bdf8'; // Cyan glass
+            targetCtx.beginPath();
+            targetCtx.arc(rx, ry - 1, 2.5, 0, Math.PI * 2);
+            targetCtx.fill();
 
-            // 3. Thruster Nozzles
+            targetCtx.fillStyle = '#ffffff'; // Shine reflection
+            targetCtx.beginPath();
+            targetCtx.arc(rx - 0.8, ry - 2, 0.8, 0, Math.PI * 2);
+            targetCtx.fill();
+
+            // 3. Red Side Fins / Stabilizers
+            targetCtx.fillStyle = '#dc2626'; // Darker red
+            // Left Fin
+            targetCtx.beginPath();
+            targetCtx.moveTo(rx - 6, ry + 8);
+            targetCtx.lineTo(rx - 11, ry + 17);
+            targetCtx.lineTo(rx - 6, ry + 15);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // Right Fin
+            targetCtx.beginPath();
+            targetCtx.moveTo(rx + 6, ry + 8);
+            targetCtx.lineTo(rx + 11, ry + 17);
+            targetCtx.lineTo(rx + 6, ry + 15);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 4. Dark Thruster Nozzle
             targetCtx.fillStyle = '#1e293b';
-            targetCtx.fillRect(rx - 6, ry + 32, 4, 6);
-            targetCtx.fillRect(rx + 2, ry + 32, 4, 6);
+            targetCtx.fillRect(rx - 4, ry + 16, 8, 4);
 
-            if (showIdleGlow) {
-                // Small idle thruster glow for collectible item on platform
-                targetCtx.fillStyle = '#f59e0b';
+            // 5. Idle Flame (for collectible item on platform)
+            if (showIdleFlame) {
+                const pulse = Math.sin(idleAngle * 3) * 2;
+                // Outer Flame
+                targetCtx.fillStyle = '#f97316';
                 targetCtx.beginPath();
-                targetCtx.arc(rx - 4, ry + 40, 2, 0, Math.PI * 2);
-                targetCtx.arc(rx + 4, ry + 40, 2, 0, Math.PI * 2);
+                targetCtx.moveTo(rx - 4, ry + 20);
+                targetCtx.lineTo(rx, ry + 27 + pulse);
+                targetCtx.lineTo(rx + 4, ry + 20);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                // Inner Flame Core
+                targetCtx.fillStyle = '#facc15';
+                targetCtx.beginPath();
+                targetCtx.moveTo(rx - 2, ry + 20);
+                targetCtx.lineTo(rx, ry + 24 + pulse * 0.5);
+                targetCtx.lineTo(rx + 2, ry + 20);
+                targetCtx.closePath();
                 targetCtx.fill();
             }
 
@@ -2225,9 +2276,9 @@
                 // Draw Jetpack/Rocket on Character's back BEFORE drawing character body (so it's positioned behind the character)
                 if (this.jetpackTimer > 0) {
                     let jpX = 0;
-                    let jpY = -12;
+                    let jpY = 0;
 
-                    drawRocketPack(ctx, jpX, jpY, this.jetpackSputtering, false);
+                    drawRocketSprite(ctx, jpX, jpY, { isSputtering: this.jetpackSputtering, showIdleFlame: false });
 
                     // Draw flame only when engine thruster is currently firing
                     if (this.isJetpackFiring) {
@@ -2239,7 +2290,7 @@
                         }
                         const flameHeight = (32 + Math.random() * 28) * sputterScale;
                         const flameWidth = (20 + Math.random() * 8) * sputterScale;
-                        const flameY = jpY + 38;
+                        const flameY = jpY + 20;
 
                         // Outer Red/Orange Flame plume
                         const outerGradient = ctx.createLinearGradient(jpX, flameY, jpX, flameY + flameHeight);
@@ -2280,7 +2331,7 @@
                         // Small smoke puff coming directly out of nozzle when thruster cuts out
                         ctx.fillStyle = 'rgba(100, 116, 139, 0.6)';
                         ctx.beginPath();
-                        ctx.arc(jpX + (Math.random() - 0.5) * 6, jpY + 42 + Math.random() * 8, 6 + Math.random() * 4, 0, Math.PI * 2);
+                        ctx.arc(jpX + (Math.random() - 0.5) * 6, jpY + 24 + Math.random() * 8, 6 + Math.random() * 4, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
@@ -2808,8 +2859,8 @@
                     ctx.textBaseline = 'middle';
                     ctx.fillText('❤️', 0, 0);
                 } else {
-                    // Jetpack/Rocket item on platform - draw same rocket pack
-                    drawRocketPack(ctx, 0, -18, false, true);
+                    // Jetpack/Rocket item on platform - draw same rocket sprite
+                    drawRocketSprite(ctx, 0, -4, { showIdleFlame: true, idleAngle: this.angle });
                 }
 
                 ctx.restore();
