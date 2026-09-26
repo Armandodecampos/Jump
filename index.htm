@@ -41,6 +41,100 @@
         canvas {
             image-rendering: pixelated;
         }
+
+        /* Responsive Landscape & Low-Height Viewport Styles */
+        @media (max-height: 520px) {
+            /* Level Select Menu - 7 columns for 21 levels without scrolling or clipping */
+            #levelSelectMenu > div {
+                max-width: 42rem !important;
+                max-height: 94vh !important;
+                padding: 0.6rem 1rem !important;
+            }
+            #levelGrid {
+                grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+                gap: 0.35rem !important;
+                max-height: 64vh !important;
+                margin-bottom: 0.4rem !important;
+            }
+            #levelGrid button {
+                padding: 0.25rem 0.1rem !important;
+                border-radius: 0.75rem !important;
+            }
+            #levelGrid button .text-xs {
+                font-size: 0.65rem !important;
+                line-height: 0.8rem !important;
+                margin-bottom: 0px !important;
+            }
+            #levelGrid button .text-\[11px\] {
+                font-size: 0.6rem !important;
+                line-height: 0.75rem !important;
+            }
+            #levelGrid button .text-sm {
+                font-size: 0.75rem !important;
+                margin-top: 0.1rem !important;
+            }
+
+            /* Start Menu Landscape Layout */
+            #startMenu {
+                padding: 0.5rem 1rem !important;
+            }
+            #startMenuWrapper {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 1rem !important;
+                max-width: 42rem !important;
+                width: 100% !important;
+                margin: auto !important;
+            }
+            #startMenuWrapper .start-col {
+                flex: 1 1 50% !important;
+                width: 50% !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Character Modal */
+            #characterModal > div {
+                max-width: 36rem !important;
+                max-height: 92vh !important;
+                padding: 0.6rem 1rem !important;
+            }
+            #characterGrid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                max-height: 58vh !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Options Modal */
+            #optionsModal > div {
+                max-width: 36rem !important;
+                padding: 0.75rem 1.25rem !important;
+            }
+            #optionsModalGrid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 0.75rem !important;
+                text-align: left !important;
+            }
+
+            /* Game Over & Level Complete Side-by-Side */
+            #gameOverMenuWrapper, #levelCompleteMenuWrapper {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 1.25rem !important;
+                max-width: 42rem !important;
+                width: 100% !important;
+                margin: auto !important;
+            }
+            #gameOverMenuWrapper .menu-col, #levelCompleteMenuWrapper .menu-col {
+                flex: 1 1 50% !important;
+                width: 50% !important;
+                margin-bottom: 0 !important;
+            }
+        }
     </style>
 </head>
 <body class="w-screen h-screen overflow-hidden m-0 p-0 bg-slate-950 text-slate-100 select-none">
@@ -81,51 +175,55 @@
         </div>
 
         <!-- Menu Overlay (Start Screen) -->
-        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 transition-opacity duration-300 overflow-y-auto hidden">
-                <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-4xl shadow-lg animate-bounce">
-                    🚀
-                </div>
-                <h2 class="text-3xl sm:text-4xl font-game text-white mb-2 glow-title">Subida Nas Nuvens</h2>
-                <p class="text-slate-300 text-sm sm:text-base mb-5 max-w-xs">
-                    Escolha o modo de jogo e divirta-se subindo até o topo!
-                </p>
-
-                <!-- Character Selection Card -->
-                <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700/80 w-full max-w-xs mb-4 flex items-center justify-between text-left shadow-lg backdrop-blur">
-                    <div class="flex items-center gap-3">
-                        <canvas id="menuCharacterPreviewCanvas" width="44" height="48" class="bg-slate-900/90 rounded-xl border border-slate-700/70 p-1 flex-shrink-0"></canvas>
-                        <div>
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Personagem</span>
-                            <span id="selectedCharacterNameText" class="font-game text-sm text-pink-300">Alien Rosa</span>
-                        </div>
+        <div id="startMenu" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 transition-opacity duration-300 overflow-y-auto hidden">
+            <div id="startMenuWrapper" class="flex flex-col items-center justify-center my-auto w-full max-w-xs space-y-3">
+                <div class="start-col flex flex-col items-center w-full">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 mb-2 bg-gradient-to-tr from-pink-500 to-purple-500 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-lg animate-bounce">
+                        🚀
                     </div>
-                    <button id="openCharacterModalBtn" class="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-game text-xs rounded-xl shadow transition active:scale-95 border border-pink-400/30 flex items-center gap-1">
-                        🎭 Trocar
-                    </button>
-                </div>
-
-                <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 w-full max-w-xs mb-5 text-left space-y-2 text-xs sm:text-sm">
-                    <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-2">🎮 Controles do Jogo:</p>
-                    <p class="text-slate-300 leading-relaxed">
-                        • <strong>Pular:</strong> Deslize o dedo/mouse para cima.<br>
-                        • <strong>Mover:</strong> Deslize o dedo/mouse para os lados.<br>
-                        • <strong>Teclado:</strong> A / D ou Setas para mover, ESPAÇO para pular.
+                    <h2 class="text-2xl sm:text-4xl font-game text-white mb-1 glow-title">Subida Nas Nuvens</h2>
+                    <p class="text-slate-300 text-xs sm:text-base mb-3 max-w-xs">
+                        Escolha o modo de jogo e divirta-se subindo até o topo!
                     </p>
+
+                    <!-- Character Selection Card -->
+                    <div class="bg-slate-800/90 rounded-2xl p-2.5 sm:p-3 border border-slate-700/80 w-full max-w-xs mb-3 flex items-center justify-between text-left shadow-lg backdrop-blur">
+                        <div class="flex items-center gap-3">
+                            <canvas id="menuCharacterPreviewCanvas" width="44" height="48" class="bg-slate-900/90 rounded-xl border border-slate-700/70 p-1 flex-shrink-0"></canvas>
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Personagem</span>
+                                <span id="selectedCharacterNameText" class="font-game text-sm text-pink-300">Alien Rosa</span>
+                            </div>
+                        </div>
+                        <button id="openCharacterModalBtn" class="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-game text-xs rounded-xl shadow transition active:scale-95 border border-pink-400/30 flex items-center gap-1">
+                            🎭 Trocar
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 w-full max-w-xs text-left space-y-1 text-xs sm:text-sm">
+                        <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-1">🎮 Controles do Jogo:</p>
+                        <p class="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
+                            • <strong>Pular:</strong> Deslize para cima.<br>
+                            • <strong>Mover:</strong> Deslize para os lados.<br>
+                            • <strong>Teclado:</strong> Setas / A D / ESPAÇO.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Mode Selection Buttons & Settings -->
-                <div class="w-full max-w-xs space-y-3">
-                    <button id="infiniteModeBtn" class="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                <div class="start-col w-full max-w-xs space-y-2.5">
+                    <button id="infiniteModeBtn" class="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-base sm:text-xl rounded-2xl shadow-lg shadow-purple-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
                         <span>♾️</span> MODO INFINITO
                     </button>
-                    <button id="storyModeBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <button id="storyModeBtn" class="w-full py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-base sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transform active:scale-95 transition-all flex items-center justify-center gap-2">
                         <span>📖</span> MODO HISTÓRIA
                     </button>
-                    <button id="optionsBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                    <button id="optionsBtn" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-sm sm:text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
                         <span>⚙️</span> OPÇÕES
                     </button>
                 </div>
             </div>
+        </div>
 
         <!-- Character Selection Modal Overlay -->
         <div id="characterModal" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
@@ -265,86 +363,93 @@
         </div>
 
         <!-- Level Complete Overlay (Victory Screen) -->
-        <div id="levelCompleteMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-emerald-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
-            <div class="w-20 h-20 mb-3 bg-gradient-to-tr from-amber-400 to-emerald-400 rounded-2xl flex items-center justify-center text-4xl shadow-lg shadow-emerald-500/30 animate-bounce">
-                🏆
-            </div>
+        <div id="levelCompleteMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-emerald-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
+            <div id="levelCompleteMenuWrapper" class="flex flex-col items-center justify-center my-auto w-full max-w-xs space-y-3">
+                <div class="menu-col flex flex-col items-center w-full">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 mb-2 bg-gradient-to-tr from-amber-400 to-emerald-400 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-lg shadow-emerald-500/30 animate-bounce">
+                        🏆
+                    </div>
 
-            <h2 class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-300 mb-1 glow-title">
-                Fase Concluída!
-            </h2>
-            <p id="completedLevelTitle" class="text-amber-300 font-game text-lg mb-4">
-                Fase 1: Dia Ensolarado
-            </p>
+                    <h2 class="text-2xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-300 mb-1 glow-title">
+                        Fase Concluída!
+                    </h2>
+                    <p id="completedLevelTitle" class="text-amber-300 font-game text-base sm:text-lg mb-3">
+                        Fase 1: Dia Ensolarado
+                    </p>
 
-            <div class="bg-slate-800/90 rounded-2xl p-4 border border-emerald-500/40 w-full max-w-xs mb-5 space-y-2 text-center shadow-2xl relative overflow-hidden">
-                <div class="text-xs text-slate-400 uppercase tracking-wider font-bold">Meta Alcançada</div>
-                <div class="text-3xl font-game text-emerald-400 drop-shadow">🏁 2000m</div>
-                <p class="text-xs text-slate-300 pt-1 border-t border-slate-700">
-                    Você chegou ao topo e desbloqueou a próxima fase!
-                </p>
-            </div>
+                    <div class="bg-slate-800/90 rounded-2xl p-3 border border-emerald-500/40 w-full max-w-xs space-y-1 text-center shadow-2xl relative overflow-hidden">
+                        <div class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Meta Alcançada</div>
+                        <div class="text-2xl sm:text-3xl font-game text-emerald-400 drop-shadow">🏁 2000m</div>
+                        <p class="text-xs text-slate-300 pt-1 border-t border-slate-700">
+                            Você chegou ao topo e desbloqueou a próxima fase!
+                        </p>
+                    </div>
+                </div>
 
-            <div class="w-full max-w-xs space-y-2.5">
-                <button id="nextLevelBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-lg rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
-                    PRÓXIMA FASE ➔
-                </button>
-                <button id="replayLevelBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
-                    🔄 REFAZER FASE
-                </button>
-                <button id="levelSelectFromWinBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
-                    📖 SELEÇÃO DE FASES
-                </button>
+                <div class="menu-col w-full max-w-xs space-y-2.5">
+                    <button id="nextLevelBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-lg rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
+                        PRÓXIMA FASE ➔
+                    </button>
+                    <button id="replayLevelBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                        🔄 REFAZER FASE
+                    </button>
+                    <button id="levelSelectFromWinBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                        📖 SELEÇÃO DE FASES
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Game Over Overlay -->
-        <div id="gameOverMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-purple-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
-            <!-- New Record Banner (Shown when high score is broken in infinite mode) -->
-            <div id="newRecordBadge" class="hidden mb-3 px-4 py-2 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/40 animate-bounce border border-amber-300/60">
-                <span class="font-game text-white text-sm sm:text-base tracking-wide flex items-center gap-1.5">
-                    🎉 ¡NOVO RECORDE! PARABÉNS! 🏆
-                </span>
-            </div>
+        <div id="gameOverMenu" class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-purple-950/80 to-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 hidden transition-all duration-300 overflow-y-auto">
+            <div id="gameOverMenuWrapper" class="flex flex-col items-center justify-center my-auto w-full max-w-xs space-y-3">
+                <div class="menu-col flex flex-col items-center w-full">
+                    <!-- New Record Banner -->
+                    <div id="newRecordBadge" class="hidden mb-2 px-4 py-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/40 animate-bounce border border-amber-300/60">
+                        <span class="font-game text-white text-xs sm:text-sm tracking-wide flex items-center gap-1.5">
+                            🎉 ¡NOVO RECORDE! 🏆
+                        </span>
+                    </div>
 
-            <!-- Title with gradient text & glow -->
-            <h2 id="gameOverTitle" class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 mb-1 glow-title animate-pulse">
-                Fim de Jogo!
-            </h2>
-            <p id="gameOverSubtitle" class="hidden text-amber-300 font-game text-base mb-3">
-                Fase 1
-            </p>
+                    <h2 id="gameOverTitle" class="text-2xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 mb-1 glow-title animate-pulse">
+                        Fim de Jogo!
+                    </h2>
+                    <p id="gameOverSubtitle" class="hidden text-amber-300 font-game text-sm sm:text-base mb-2">
+                        Fase 1
+                    </p>
 
-            <!-- Motivational Praise Card -->
-            <div id="motivationalCard" class="w-full max-w-xs mb-4 p-3 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-slate-900/80 border border-pink-500/40 rounded-2xl shadow-xl glow-card animate-float flex flex-col items-center justify-center">
-                <span class="text-xs text-amber-300 font-bold uppercase tracking-wider mb-0.5">Desempenho</span>
-                <p id="motivationalMsg" class="text-lg sm:text-xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-200">
-                    Continue tentando
-                </p>
-            </div>
+                    <!-- Motivational Praise Card -->
+                    <div id="motivationalCard" class="w-full max-w-xs mb-3 p-2.5 bg-gradient-to-br from-purple-900/70 via-pink-900/60 to-slate-900/80 border border-pink-500/40 rounded-2xl shadow-xl glow-card flex flex-col items-center justify-center">
+                        <span class="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Desempenho</span>
+                        <p id="motivationalMsg" class="text-base sm:text-lg font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-200">
+                            Continue tentando
+                        </p>
+                    </div>
 
-            <!-- Stats Card -->
-            <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700/80 w-full max-w-xs mb-5 space-y-3 text-center shadow-2xl relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-transparent to-transparent pointer-events-none"></div>
-                <div>
-                    <div id="scoreLabel" class="text-xs text-slate-400 uppercase tracking-wider font-bold">Altura Alcançada</div>
-                    <div id="finalScore" class="text-3xl sm:text-4xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow">0m</div>
-                </div>
-                <div id="recordContainer" class="border-t border-slate-700/80 pt-2 flex justify-center text-xs">
-                    <div>
-                        <span class="text-slate-400 block font-semibold">Seu Recorde:</span>
-                        <span id="bestScore" class="font-bold text-emerald-400 text-base font-game">0m</span>
+                    <!-- Stats Card -->
+                    <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700/80 w-full max-w-xs space-y-2 text-center shadow-2xl relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-b from-purple-500/10 via-transparent to-transparent pointer-events-none"></div>
+                        <div>
+                            <div id="scoreLabel" class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Altura Alcançada</div>
+                            <div id="finalScore" class="text-2xl sm:text-3xl font-game text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 drop-shadow">0m</div>
+                        </div>
+                        <div id="recordContainer" class="border-t border-slate-700/80 pt-1.5 flex justify-center text-xs">
+                            <div>
+                                <span class="text-slate-400 block font-semibold text-[11px]">Seu Recorde:</span>
+                                <span id="bestScore" class="font-bold text-emerald-400 text-sm font-game">0m</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="w-full max-w-xs space-y-2.5">
-                <button id="restartBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-xl rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
-                    TENTAR NOVAMENTE
-                </button>
-                <button id="levelSelectFromLossBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
-                    📖 SELEÇÃO DE FASES
-                </button>
+                <div class="menu-col w-full max-w-xs space-y-2.5">
+                    <button id="restartBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-emerald-500/30 transform active:scale-95 transition-all border border-emerald-300/40">
+                        TENTAR NOVAMENTE
+                    </button>
+                    <button id="levelSelectFromLossBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-game text-base rounded-2xl shadow transition active:scale-95 border border-slate-700 flex items-center justify-center gap-2">
+                        📖 SELEÇÃO DE FASES
+                    </button>
+                </div>
             </div>
         </div>
     </div>
