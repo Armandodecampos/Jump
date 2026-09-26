@@ -2059,7 +2059,7 @@
 
                             const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
                             createParticles(
-                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.x + this.width / 2,
                                 this.y + this.height - 2,
                                 fireColor,
                                 2
@@ -2080,7 +2080,7 @@
 
                                 const fireColor = Math.random() < 0.6 ? '#ff4500' : '#ffff00';
                                 createParticles(
-                                    this.x + (this.facingRight ? 4 : this.width - 4),
+                                    this.x + this.width / 2,
                                     this.y + this.height - 2,
                                     fireColor,
                                     1
@@ -2092,7 +2092,7 @@
 
                                 const smokeColor = Math.random() < 0.5 ? '#64748b' : '#334155';
                                 createParticles(
-                                    this.x + (this.facingRight ? 4 : this.width - 4),
+                                    this.x + this.width / 2,
                                     this.y + this.height - 2,
                                     smokeColor,
                                     2
@@ -2111,7 +2111,7 @@
 
                             const fireColor = Math.random() < 0.5 ? '#ff4500' : (Math.random() < 0.5 ? '#ffa500' : '#ffff00');
                             createParticles(
-                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.x + this.width / 2,
                                 this.y + this.height - 2,
                                 fireColor,
                                 2
@@ -2128,7 +2128,7 @@
 
                             const fireColor = Math.random() < 0.5 ? '#ff4500' : '#ffa500';
                             createParticles(
-                                this.x + (this.facingRight ? 4 : this.width - 4),
+                                this.x + this.width / 2,
                                 this.y + this.height - 2,
                                 fireColor,
                                 1
@@ -2177,7 +2177,7 @@
 
                 // Draw Jetpack/Rocket on Character's back BEFORE drawing character body (so it's positioned behind the character)
                 if (this.jetpackTimer > 0) {
-                    let jpX = -this.width / 2 - 8;
+                    let jpX = -8;
                     let jpY = -12;
 
                     // Slight visual vibration/shudder of jetpack tank when failing
