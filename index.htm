@@ -49,6 +49,16 @@
         <!-- Canvas -->
         <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
+        <!-- In-Game Settings Button Container -->
+        <div id="inGameOptionsContainer" class="absolute top-4 right-4 z-20 flex flex-col items-center cursor-pointer select-none hidden">
+            <button id="inGameOptionsBtn" class="w-11 h-11 sm:w-12 sm:h-12 bg-slate-900/80 hover:bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-2xl shadow-lg backdrop-blur flex items-center justify-center text-xl sm:text-2xl transition active:scale-95 cursor-pointer focus:outline-none" title="Configurações (Esc)">
+                ⚙️
+            </button>
+            <span id="inGameEscLabel" class="hidden sm:block text-[11px] font-game text-slate-300 mt-1 bg-slate-900/80 px-2 py-0.5 rounded-md border border-slate-700/60 shadow-md select-none tracking-wide">
+                Esc
+            </span>
+        </div>
+
         <!-- Attract / Splash Screen Overlay (Initial Screen with "Clique em algum lugar") -->
         <div id="attractScreen" class="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center cursor-pointer select-none">
             <!-- Dark overlay element for the 10s dark phase -->
@@ -854,6 +864,16 @@
         const bestScore = document.getElementById('bestScore');
         const optionsBtn = document.getElementById('optionsBtn');
         const optionsModal = document.getElementById('optionsModal');
+        const inGameOptionsContainer = document.getElementById('inGameOptionsContainer');
+        const inGameOptionsBtn = document.getElementById('inGameOptionsBtn');
+
+        if (inGameOptionsContainer) {
+            inGameOptionsContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sound.ensureContext();
+                openOptionsModal();
+            });
+        }
         const closeOptionsBtn = document.getElementById('closeOptionsBtn');
         const doneOptionsBtn = document.getElementById('doneOptionsBtn');
         const goToMenuBtn = document.getElementById('goToMenuBtn');
@@ -1785,7 +1805,7 @@
         let hasSwipedJumped = false;
 
         function isClickOnInteractiveUI(target) {
-            return target.closest('button') || target.closest('#optionsModal') || target.closest('#startMenu') || target.closest('#levelSelectMenu') || target.closest('#gameOverMenu');
+            return target.closest('button') || target.closest('#optionsModal') || target.closest('#startMenu') || target.closest('#levelSelectMenu') || target.closest('#gameOverMenu') || target.closest('#inGameOptionsContainer');
         }
 
         function exitAttractMode() {
@@ -3733,6 +3753,14 @@
                 ctx.fillText(`Avançando em ${remainingSec}s...`, 0, 43);
 
                 ctx.restore();
+            }
+
+            if (inGameOptionsContainer) {
+                if (gameState === 'PLAYING' && optionsModal.classList.contains('hidden')) {
+                    inGameOptionsContainer.classList.remove('hidden');
+                } else {
+                    inGameOptionsContainer.classList.add('hidden');
+                }
             }
 
             if (gameState === 'PLAYING') {
