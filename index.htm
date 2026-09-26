@@ -898,6 +898,53 @@
 
         let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'pink_alien';
 
+        function drawRocketPack(targetCtx, x, y, isSputtering = false, showIdleGlow = false) {
+            targetCtx.save();
+
+            let rx = x;
+            let ry = y;
+
+            // Slight visual vibration/shudder of jetpack tank when failing
+            if (isSputtering) {
+                rx += (Math.random() - 0.5) * 3;
+                ry += (Math.random() - 0.5) * 3;
+            }
+
+            // 1. Metallic Grey Frame / Backing Plate
+            targetCtx.fillStyle = '#94a3b8';
+            targetCtx.beginPath();
+            targetCtx.roundRect(rx - 8, ry, 16, 32, 4);
+            targetCtx.fill();
+
+            // 2. Twin Red Fuel Tanks
+            targetCtx.fillStyle = '#ef4444';
+            targetCtx.beginPath();
+            targetCtx.roundRect(rx - 7, ry + 2, 5, 24, 2);
+            targetCtx.roundRect(rx + 2, ry + 2, 5, 24, 2);
+            targetCtx.fill();
+
+            // Highlight shine on fuel tanks
+            targetCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            targetCtx.fillRect(rx - 6, ry + 4, 1.5, 18);
+            targetCtx.fillRect(rx + 3, ry + 4, 1.5, 18);
+
+            // 3. Thruster Nozzles
+            targetCtx.fillStyle = '#1e293b';
+            targetCtx.fillRect(rx - 6, ry + 32, 4, 6);
+            targetCtx.fillRect(rx + 2, ry + 32, 4, 6);
+
+            if (showIdleGlow) {
+                // Small idle thruster glow for collectible item on platform
+                targetCtx.fillStyle = '#f59e0b';
+                targetCtx.beginPath();
+                targetCtx.arc(rx - 4, ry + 40, 2, 0, Math.PI * 2);
+                targetCtx.arc(rx + 4, ry + 40, 2, 0, Math.PI * 2);
+                targetCtx.fill();
+            }
+
+            targetCtx.restore();
+        }
+
         function drawCharacterBody(targetCtx, charId, width, height, facingRight) {
             targetCtx.save();
             targetCtx.scale(facingRight ? 1 : -1, 1);
@@ -2177,24 +2224,10 @@
 
                 // Draw Jetpack/Rocket on Character's back BEFORE drawing character body (so it's positioned behind the character)
                 if (this.jetpackTimer > 0) {
-                    let jpX = -8;
+                    let jpX = 0;
                     let jpY = -12;
 
-                    // Slight visual vibration/shudder of jetpack tank when failing
-                    if (this.jetpackSputtering) {
-                        jpX += (Math.random() - 0.5) * 3;
-                        jpY += (Math.random() - 0.5) * 3;
-                    }
-
-                    // Metallic Thruster Tanks (Double size)
-                    ctx.fillStyle = '#64748b';
-                    ctx.fillRect(jpX, jpY, 16, 36);
-                    ctx.fillStyle = '#ef4444';
-                    ctx.fillRect(jpX + 2, jpY + 4, 12, 28);
-
-                    // Nozzles (Double size)
-                    ctx.fillStyle = '#1e293b';
-                    ctx.fillRect(jpX + 2, jpY + 36, 12, 8);
+                    drawRocketPack(ctx, jpX, jpY, this.jetpackSputtering, false);
 
                     // Draw flame only when engine thruster is currently firing
                     if (this.isJetpackFiring) {
@@ -2206,47 +2239,48 @@
                         }
                         const flameHeight = (32 + Math.random() * 28) * sputterScale;
                         const flameWidth = (20 + Math.random() * 8) * sputterScale;
+                        const flameY = jpY + 38;
 
                         // Outer Red/Orange Flame plume
-                        const outerGradient = ctx.createLinearGradient(jpX + 8, jpY + 44, jpX + 8, jpY + 44 + flameHeight);
+                        const outerGradient = ctx.createLinearGradient(jpX, flameY, jpX, flameY + flameHeight);
                         outerGradient.addColorStop(0, '#ff4500'); // OrangeRed
                         outerGradient.addColorStop(0.5, '#f97316'); // Orange-500
                         outerGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
                         ctx.fillStyle = outerGradient;
                         ctx.beginPath();
-                        ctx.moveTo(jpX + 8 - flameWidth / 2, jpY + 44);
+                        ctx.moveTo(jpX - flameWidth / 2, flameY);
                         ctx.quadraticCurveTo(
-                            jpX + 8 + (Math.random() - 0.5) * 16,
-                            jpY + 44 + flameHeight * 0.6,
-                            jpX + 8,
-                            jpY + 44 + flameHeight
+                            jpX + (Math.random() - 0.5) * 16,
+                            flameY + flameHeight * 0.6,
+                            jpX,
+                            flameY + flameHeight
                         );
                         ctx.quadraticCurveTo(
-                            jpX + 8 + (Math.random() - 0.5) * 16,
-                            jpY + 44 + flameHeight * 0.6,
-                            jpX + 8 + flameWidth / 2,
-                            jpY + 44
+                            jpX + (Math.random() - 0.5) * 16,
+                            flameY + flameHeight * 0.6,
+                            jpX + flameWidth / 2,
+                            flameY
                         );
                         ctx.fill();
 
                         // Inner Intense Yellow Flame Core
-                        const innerGradient = ctx.createLinearGradient(jpX + 8, jpY + 44, jpX + 8, jpY + 44 + flameHeight * 0.6);
+                        const innerGradient = ctx.createLinearGradient(jpX, flameY, jpX, flameY + flameHeight * 0.6);
                         innerGradient.addColorStop(0, '#ffffff'); // White hot base
                         innerGradient.addColorStop(0.4, '#facc15'); // Yellow
                         innerGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
 
                         ctx.fillStyle = innerGradient;
                         ctx.beginPath();
-                        ctx.moveTo(jpX + 8 - flameWidth / 3, jpY + 44);
-                        ctx.lineTo(jpX + 8, jpY + 44 + flameHeight * 0.65);
-                        ctx.lineTo(jpX + 8 + flameWidth / 3, jpY + 44);
+                        ctx.moveTo(jpX - flameWidth / 3, flameY);
+                        ctx.lineTo(jpX, flameY + flameHeight * 0.65);
+                        ctx.lineTo(jpX + flameWidth / 3, flameY);
                         ctx.fill();
                     } else if (this.jetpackSputtering) {
                         // Small smoke puff coming directly out of nozzle when thruster cuts out
                         ctx.fillStyle = 'rgba(100, 116, 139, 0.6)';
                         ctx.beginPath();
-                        ctx.arc(jpX + 8 + (Math.random() - 0.5) * 6, jpY + 48 + Math.random() * 8, 6 + Math.random() * 4, 0, Math.PI * 2);
+                        ctx.arc(jpX + (Math.random() - 0.5) * 6, jpY + 42 + Math.random() * 8, 6 + Math.random() * 4, 0, Math.PI * 2);
                         ctx.fill();
                     }
                 }
@@ -2774,30 +2808,8 @@
                     ctx.textBaseline = 'middle';
                     ctx.fillText('❤️', 0, 0);
                 } else {
-                    // Jetpack/Rocket body (Red & Silver rocket pack) - DOUBLE SIZE (scale x 2)
-                    ctx.scale(2, 2);
-
-                    ctx.fillStyle = '#94a3b8'; // Metallic grey frame
-                    ctx.beginPath();
-                    ctx.roundRect(-8, -10, 16, 20, 4);
-                    ctx.fill();
-
-                    // Twin Red Fuel Tanks
-                    ctx.fillStyle = '#ef4444'; // Red-500
-                    ctx.fillRect(-7, -8, 5, 14);
-                    ctx.fillRect(2, -8, 5, 14);
-
-                    // Thruster Nozzles
-                    ctx.fillStyle = '#334155';
-                    ctx.fillRect(-6, 6, 3, 4);
-                    ctx.fillRect(3, 6, 3, 4);
-
-                    // Small idle thruster glow
-                    ctx.fillStyle = '#f59e0b';
-                    ctx.beginPath();
-                    ctx.arc(-4.5, 10, 2, 0, Math.PI * 2);
-                    ctx.arc(4.5, 10, 2, 0, Math.PI * 2);
-                    ctx.fill();
+                    // Jetpack/Rocket item on platform - draw same rocket pack
+                    drawRocketPack(ctx, 0, -18, false, true);
                 }
 
                 ctx.restore();
