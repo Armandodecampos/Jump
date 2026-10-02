@@ -186,21 +186,7 @@
                         Escolha o modo de jogo e divirta-se subindo até o topo!
                     </p>
 
-                    <!-- Character Selection Card -->
-                    <div class="bg-slate-800/90 rounded-2xl p-2.5 sm:p-3 border border-slate-700/80 w-full max-w-xs mb-3 flex items-center justify-between text-left shadow-lg backdrop-blur">
-                        <div class="flex items-center gap-3">
-                            <canvas id="menuCharacterPreviewCanvas" width="44" height="48" class="bg-slate-900/90 rounded-xl border border-slate-700/70 p-1 flex-shrink-0"></canvas>
-                            <div>
-                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Personagem</span>
-                                <span id="selectedCharacterNameText" class="font-game text-sm text-pink-300">Alien Rosa</span>
-                            </div>
-                        </div>
-                        <button id="openCharacterModalBtn" class="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-game text-xs rounded-xl shadow transition active:scale-95 border border-pink-400/30 flex items-center gap-1">
-                            🎭 Trocar
-                        </button>
-                    </div>
-
-                    <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 w-full max-w-xs text-left space-y-1 text-xs sm:text-sm">
+                    <div class="bg-slate-800/90 rounded-2xl p-3 border border-slate-700 w-full max-w-xs text-left space-y-1 text-xs sm:text-sm mb-3">
                         <p class="font-bold text-purple-300 border-b border-slate-700 pb-1 mb-1">🎮 Controles do Jogo:</p>
                         <p class="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
                             • <strong>Pular:</strong> Deslize para cima.<br>
@@ -253,7 +239,7 @@
                 </div>
 
                 <button id="doneCharacterModalBtn" class="w-full py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-game text-base sm:text-lg rounded-2xl shadow-lg transition active:scale-95 border border-pink-400/30">
-                    SELECIONAR
+                    INICIAR JOGO 🚀
                 </button>
             </div>
         </div>
@@ -1097,12 +1083,14 @@
         if (closeCharacterModalBtn) {
             closeCharacterModalBtn.addEventListener('click', () => {
                 characterModal.classList.add('hidden');
+                startMenu.classList.remove('hidden');
             });
         }
 
         if (doneCharacterModalBtn) {
             doneCharacterModalBtn.addEventListener('click', () => {
                 characterModal.classList.add('hidden');
+                startGame();
             });
         }
 
@@ -4666,9 +4654,10 @@
         if (infiniteModeBtn) {
             infiniteModeBtn.addEventListener('click', () => {
                 sound.ensureContext();
-                sound.stopMenuMusic();
                 gameMode = 'INFINITE';
-                startGame();
+                startMenu.classList.add('hidden');
+                characterModal.classList.remove('hidden');
+                updateCharacterUI();
             });
         }
 
