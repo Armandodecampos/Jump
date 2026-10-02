@@ -291,37 +291,42 @@
             </div>
         </div>
 
-        <!-- In-Game Level Dialogue Card Banner -->
-        <div id="levelDialogueCard" class="absolute top-16 left-4 right-4 z-20 hidden transition-all duration-300 pointer-events-auto">
-            <div class="bg-slate-900/90 backdrop-blur-md border border-amber-500/50 rounded-2xl p-3 shadow-2xl flex flex-col space-y-2 max-w-md mx-auto">
-                <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
-                    <span id="dialogueLevelBadge" class="text-[11px] font-game text-amber-300 tracking-wide uppercase">
+        <!-- Story Level Pre-Start Sequential Dialogue Modal -->
+        <div id="levelDialogueModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="bg-slate-900/95 rounded-3xl p-5 sm:p-6 border border-purple-500/50 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh] my-auto">
+                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                    <span id="modalDialogueLevelBadge" class="text-xs font-game text-amber-300 tracking-wide uppercase">
                         📡 COMUNICAÇÃO DE RÁDIO • FASE 1
                     </span>
-                    <button id="closeDialogueCardBtn" class="text-xs font-bold text-slate-400 hover:text-white bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">
+                    <button id="skipDialogueBtn" class="text-xs font-bold text-slate-400 hover:text-white bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700">
                         Pular ✕
                     </button>
                 </div>
 
-                <div class="space-y-1.5 text-xs text-slate-100">
-                    <!-- Bleep Speaking Line -->
-                    <div id="bleepSpeechBox" class="flex items-start gap-2 bg-slate-800/80 p-2 rounded-xl border border-purple-500/30">
-                        <span class="text-xl flex-shrink-0">🤖</span>
-                        <div>
-                            <span class="font-game text-purple-300 text-[11px] block">Bleep (rádio):</span>
-                            <p id="bleepText" class="text-slate-200 leading-snug">"..."</p>
-                        </div>
+                <!-- Dialogue Stage Content -->
+                <div id="dialogueContentArea" class="flex flex-col items-center justify-center space-y-4 my-auto py-2">
+                    <!-- Dynamic Speaker Avatar -->
+                    <div id="speakerAvatar" class="w-20 h-20 bg-slate-800 border-2 border-purple-400 rounded-2xl flex items-center justify-center text-4xl shadow-xl animate-bounce">
+                        🤖
                     </div>
 
-                    <!-- Jogador Speaking Line -->
-                    <div id="playerSpeechBox" class="flex items-start gap-2 bg-slate-800/80 p-2 rounded-xl border border-amber-500/30">
-                        <span class="text-xl flex-shrink-0">👷</span>
-                        <div>
-                            <span class="font-game text-amber-300 text-[11px] block">Jogador (Minerador):</span>
-                            <p id="playerText" class="text-slate-200 leading-snug">"..."</p>
-                        </div>
+                    <!-- Speaker Name -->
+                    <div id="speakerName" class="font-game text-lg text-purple-300">
+                        Bleep (rádio)
+                    </div>
+
+                    <!-- Speech Box -->
+                    <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 w-full text-center shadow-inner">
+                        <p id="speakerDialogueText" class="text-sm sm:text-base text-slate-100 font-sans leading-relaxed">
+                            "..."
+                        </p>
                     </div>
                 </div>
+
+                <!-- Action Button (CONTINUAR or INICIAR FASE) -->
+                <button id="nextDialogueBtn" class="w-full mt-4 py-3.5 bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 hover:from-purple-600 hover:to-amber-600 text-white font-game text-lg rounded-2xl shadow-lg transition active:scale-95 border border-pink-400/30">
+                    CONTINUAR ➔
+                </button>
             </div>
         </div>
 
@@ -2164,9 +2169,8 @@
                     btn.addEventListener('click', () => {
                         sound.ensureContext();
                         gameMode = 'STORY';
-                        currentStoryLevel = theme.id;
                         levelSelectMenu.classList.add('hidden');
-                        startGame();
+                        openPreLevelDialogue(theme.id);
                     });
                 }
 
@@ -4328,29 +4332,51 @@
             requestAnimationFrame(gameLoop);
         }
 
-        function showLevelDialogue() {
-            if (gameMode !== 'STORY') return;
+        let currentDialogueStep = 0; // 0 for Bleep, 1 for Jogador
+
+        function openPreLevelDialogue(levelId) {
+            currentStoryLevel = levelId;
+            currentDialogueStep = 0;
 
             const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
-            const dialogueCard = document.getElementById('levelDialogueCard');
-            const dialogueLevelBadge = document.getElementById('dialogueLevelBadge');
-            const bleepText = document.getElementById('bleepText');
-            const playerText = document.getElementById('playerText');
+            const modal = document.getElementById('levelDialogueModal');
+            const badge = document.getElementById('modalDialogueLevelBadge');
 
-            if (dialogueCard && theme.dialogue) {
-                if (dialogueLevelBadge) {
-                    dialogueLevelBadge.textContent = `📡 COMUNICAÇÃO DE RÁDIO • FASE ${currentStoryLevel}: ${theme.name.toUpperCase()}`;
+            if (badge) {
+                badge.textContent = `📡 COMUNICAÇÃO DE RÁDIO • FASE ${currentStoryLevel}: ${theme.name.toUpperCase()}`;
+            }
+
+            updateDialogueStepUI();
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function updateDialogueStepUI() {
+            const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+            const avatar = document.getElementById('speakerAvatar');
+            const name = document.getElementById('speakerName');
+            const text = document.getElementById('speakerDialogueText');
+            const btn = document.getElementById('nextDialogueBtn');
+
+            if (!theme.dialogue) return;
+
+            if (currentDialogueStep === 0) {
+                // Step 1: Bleep
+                if (avatar) avatar.textContent = '🤖';
+                if (name) {
+                    name.textContent = 'Bleep (rádio)';
+                    name.className = 'font-game text-lg text-purple-300';
                 }
-                if (bleepText) bleepText.textContent = `"${theme.dialogue.bleep}"`;
-                if (playerText) playerText.textContent = `"${theme.dialogue.player}"`;
-
-                dialogueCard.classList.remove('hidden');
-
-                // Automatically hide dialogue banner after 8 seconds
-                if (window.dialogueCardTimeout) clearTimeout(window.dialogueCardTimeout);
-                window.dialogueCardTimeout = setTimeout(() => {
-                    dialogueCard.classList.add('hidden');
-                }, 8000);
+                if (text) text.textContent = `"${theme.dialogue.bleep}"`;
+                if (btn) btn.textContent = 'CONTINUAR ➔';
+            } else {
+                // Step 2: Jogador (Minerador)
+                if (avatar) avatar.textContent = '👷';
+                if (name) {
+                    name.textContent = 'Jogador (Minerador)';
+                    name.className = 'font-game text-lg text-amber-300';
+                }
+                if (text) text.textContent = `"${theme.dialogue.player}"`;
+                if (btn) btn.textContent = 'INICIAR FASE 🚀';
             }
         }
 
@@ -4372,12 +4398,8 @@
             const storyPrologueModal = document.getElementById('storyPrologueModal');
             if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
 
-            if (gameMode === 'STORY') {
-                showLevelDialogue();
-            } else {
-                const dialogueCard = document.getElementById('levelDialogueCard');
-                if (dialogueCard) dialogueCard.classList.add('hidden');
-            }
+            const levelDialogueModal = document.getElementById('levelDialogueModal');
+            if (levelDialogueModal) levelDialogueModal.classList.add('hidden');
         }
 
         function triggerLevelComplete() {
@@ -4538,13 +4560,37 @@
             });
         }
 
+        const levelDialogueModal = document.getElementById('levelDialogueModal');
+        const skipDialogueBtn = document.getElementById('skipDialogueBtn');
+        const nextDialogueBtn = document.getElementById('nextDialogueBtn');
+
+        if (skipDialogueBtn) {
+            skipDialogueBtn.addEventListener('click', () => {
+                if (levelDialogueModal) levelDialogueModal.classList.add('hidden');
+                startGame();
+            });
+        }
+
+        if (nextDialogueBtn) {
+            nextDialogueBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                sound.playSpring();
+                if (currentDialogueStep === 0) {
+                    currentDialogueStep = 1;
+                    updateDialogueStepUI();
+                } else {
+                    if (levelDialogueModal) levelDialogueModal.classList.add('hidden');
+                    startGame();
+                }
+            });
+        }
+
         if (startStoryPrologueBtn) {
             startStoryPrologueBtn.addEventListener('click', () => {
                 sound.ensureContext();
                 if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
                 gameMode = 'STORY';
-                currentStoryLevel = 1;
-                startGame();
+                openPreLevelDialogue(1);
             });
         }
 
@@ -4573,11 +4619,10 @@
         if (nextLevelBtn) {
             nextLevelBtn.addEventListener('click', () => {
                 sound.ensureContext();
+                if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
                 if (currentStoryLevel < 21) {
-                    currentStoryLevel++;
-                    startGame();
+                    openPreLevelDialogue(currentStoryLevel + 1);
                 } else {
-                    levelCompleteMenu.classList.add('hidden');
                     renderLevelSelectGrid();
                     levelSelectMenu.classList.remove('hidden');
                 }
