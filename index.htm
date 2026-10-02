@@ -1337,19 +1337,6 @@
                 targetCtx.arc(0, -height / 2, 3, 0, Math.PI * 2);
                 targetCtx.fill();
 
-                // Headlamp Light Beam Projection
-                const lightGrad = targetCtx.createLinearGradient(0, -height / 2, 20, -height / 2 + 6);
-                lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
-                lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-                targetCtx.fillStyle = lightGrad;
-                targetCtx.beginPath();
-                targetCtx.moveTo(0, -height / 2 - 2);
-                targetCtx.lineTo(20, -height / 2 - 12);
-                targetCtx.lineTo(24, -height / 2 + 10);
-                targetCtx.lineTo(0, -height / 2 + 2);
-                targetCtx.closePath();
-                targetCtx.fill();
-
             } else if (charId === 'bw_cat') {
                 // === GATO PRETO E BRANCO (Black & White Tuxedo Cat) ===
                 targetCtx.fillStyle = '#1e293b';
