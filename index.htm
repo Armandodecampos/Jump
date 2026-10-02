@@ -3702,7 +3702,10 @@
             updateParticles();
 
             if (gameState === 'MENU') {
-                if (Date.now() - lastMenuInteractionTime >= 20000) {
+                const startMenu = document.getElementById('startMenu');
+                const isStartMenuVisible = startMenu && !startMenu.classList.contains('hidden');
+
+                if (isStartMenuVisible && (Date.now() - lastMenuInteractionTime >= 20000)) {
                     enterAttractMode();
                     return;
                 }
