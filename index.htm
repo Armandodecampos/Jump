@@ -466,7 +466,7 @@
                     </div>
 
                     <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
-                        <span class="font-game text-amber-300 block text-[11px]">👷 Jogador:</span>
+                        <span class="font-game text-amber-300 block text-[11px]">👷 Pip:</span>
                         <p class="text-slate-100 font-sans">"Eu disse que não deixaria você para trás. Agora vamos voltar antes que o vulcão esfrie!"</p>
                     </div>
 
@@ -476,7 +476,7 @@
                     </div>
 
                     <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
-                        <span class="font-game text-amber-300 block text-[11px]">👷 Jogador:</span>
+                        <span class="font-game text-amber-300 block text-[11px]">👷 Pip:</span>
                         <p class="text-slate-100 font-sans">"Ótimo! A subida foi incrível, mas a descida vai ser bem mais rápida!"</p>
                     </div>
 
@@ -1130,7 +1130,7 @@
         const CHARACTERS = [
             {
                 id: 'miner',
-                name: 'Minerador',
+                name: 'Pip',
                 badge: '⛏️ Herói',
                 description: 'Destemido minerador em busca do seu robô Bleep!'
             },
@@ -1328,25 +1328,25 @@
                 targetCtx.fillStyle = '#ca8a04'; // Yellow-600 brim
                 targetCtx.fillRect(-width / 2 - 3, -height / 2 + 1, width + 6, 4);
 
-                // Headlamp Body on Front
+                // Headlamp Body Centered on Helmet
                 targetCtx.fillStyle = '#334155'; // Dark metallic casing
-                targetCtx.fillRect(width / 2 - 4, -height / 2 - 3, 6, 6);
+                targetCtx.fillRect(-3, -height / 2 - 3, 6, 6);
 
                 targetCtx.fillStyle = '#fef08a'; // Glowing lamp lens
                 targetCtx.beginPath();
-                targetCtx.arc(width / 2 + 2, -height / 2, 3, 0, Math.PI * 2);
+                targetCtx.arc(0, -height / 2, 3, 0, Math.PI * 2);
                 targetCtx.fill();
 
                 // Headlamp Light Beam Projection
-                const lightGrad = targetCtx.createLinearGradient(width / 2 + 2, -height / 2, width / 2 + 22, -height / 2 + 6);
+                const lightGrad = targetCtx.createLinearGradient(0, -height / 2, 20, -height / 2 + 6);
                 lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
                 lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
                 targetCtx.fillStyle = lightGrad;
                 targetCtx.beginPath();
-                targetCtx.moveTo(width / 2 + 2, -height / 2 - 2);
-                targetCtx.lineTo(width / 2 + 22, -height / 2 - 12);
-                targetCtx.lineTo(width / 2 + 26, -height / 2 + 10);
-                targetCtx.lineTo(width / 2 + 2, -height / 2 + 2);
+                targetCtx.moveTo(0, -height / 2 - 2);
+                targetCtx.lineTo(20, -height / 2 - 12);
+                targetCtx.lineTo(24, -height / 2 + 10);
+                targetCtx.lineTo(0, -height / 2 + 2);
                 targetCtx.closePath();
                 targetCtx.fill();
 
@@ -4335,7 +4335,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        let currentDialogueStep = 0; // 0 for Bleep, 1 for Jogador
+        let currentDialogueStep = 0; // 0 for Bleep, 1 for Pip
 
         function openPreLevelDialogue(levelId) {
             currentStoryLevel = levelId;
@@ -4372,10 +4372,10 @@
                 if (text) text.textContent = `"${theme.dialogue.bleep}"`;
                 if (btn) btn.textContent = 'CONTINUAR ➔';
             } else {
-                // Step 2: Jogador (Minerador)
+                // Step 2: Pip
                 if (avatar) avatar.textContent = '👷';
                 if (name) {
-                    name.textContent = 'Jogador (Minerador)';
+                    name.textContent = 'Pip';
                     name.className = 'font-game text-lg text-amber-300';
                 }
                 if (text) text.textContent = `"${theme.dialogue.player}"`;
