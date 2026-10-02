@@ -252,6 +252,79 @@
             </div>
         </div>
 
+        <!-- Story Mode Prologue Modal -->
+        <div id="storyPrologueModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="bg-slate-900/95 rounded-3xl p-5 sm:p-6 border border-amber-500/50 w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] my-auto">
+                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-3">
+                    <h3 class="text-xl sm:text-2xl font-game text-amber-300 flex items-center gap-2">
+                        🌌 Perseguição nas Dobras do Espaço
+                    </h3>
+                    <button id="closePrologueBtn" class="text-slate-400 hover:text-white text-2xl font-bold p-1">✕</button>
+                </div>
+
+                <div class="text-left space-y-3 overflow-y-auto text-xs sm:text-sm text-slate-200 leading-relaxed pr-1 mb-4">
+                    <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3">
+                        <span class="text-3xl">⛏️🤖</span>
+                        <div>
+                            <span class="font-bold text-amber-300 block">O Prólogo</span>
+                            <span class="text-[11px] text-slate-300">Laboratório subterrâneo de mineração no ponto mais fundo da Terra.</span>
+                        </div>
+                    </div>
+
+                    <p>
+                        Você e seu fiel robô assistente, <strong>Bleep</strong>, trabalham lado a lado perto de rios de magma no núcleo terrestre. Repentinamente, uma nave alienígena em pane atravessa a crosta terrestre e faz um pouso forçado catastrófico na estação!
+                    </p>
+                    <p>
+                        Com o impacto, o compartimento da nave se rompe. Em pânico com o magma subindo, os alienígenas ativam o raio-trator para recolher suas ferramentas — e <strong>sugam o Bleep por engano</strong> para o compartimento de carga!
+                    </p>
+                    <p>
+                        Para piorar, o <strong>Motor de Dobra Espacial</strong> da nave foi danificado. A cada trecho que avança em direção ao espaço, a nave dispara portais hiperespaciais descontrolados, saltando por diferentes biomas do planeta.
+                    </p>
+                    <p class="font-bold text-amber-300 text-center text-sm pt-1">
+                        🚀 Você precisa escalar cada ambiente e saltar pelos portais para resgatar o Bleep!
+                    </p>
+                </div>
+
+                <button id="startStoryPrologueBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40">
+                    INICIAR PERSEGUIÇÃO ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- In-Game Level Dialogue Card Banner -->
+        <div id="levelDialogueCard" class="absolute top-16 left-4 right-4 z-20 hidden transition-all duration-300 pointer-events-auto">
+            <div class="bg-slate-900/90 backdrop-blur-md border border-amber-500/50 rounded-2xl p-3 shadow-2xl flex flex-col space-y-2 max-w-md mx-auto">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+                    <span id="dialogueLevelBadge" class="text-[11px] font-game text-amber-300 tracking-wide uppercase">
+                        📡 COMUNICAÇÃO DE RÁDIO • FASE 1
+                    </span>
+                    <button id="closeDialogueCardBtn" class="text-xs font-bold text-slate-400 hover:text-white bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">
+                        Pular ✕
+                    </button>
+                </div>
+
+                <div class="space-y-1.5 text-xs text-slate-100">
+                    <!-- Bleep Speaking Line -->
+                    <div id="bleepSpeechBox" class="flex items-start gap-2 bg-slate-800/80 p-2 rounded-xl border border-purple-500/30">
+                        <span class="text-xl flex-shrink-0">🤖</span>
+                        <div>
+                            <span class="font-game text-purple-300 text-[11px] block">Bleep (rádio):</span>
+                            <p id="bleepText" class="text-slate-200 leading-snug">"..."</p>
+                        </div>
+                    </div>
+
+                    <!-- Jogador Speaking Line -->
+                    <div id="playerSpeechBox" class="flex items-start gap-2 bg-slate-800/80 p-2 rounded-xl border border-amber-500/30">
+                        <span class="text-xl flex-shrink-0">👷</span>
+                        <div>
+                            <span class="font-game text-amber-300 text-[11px] block">Jogador (Minerador):</span>
+                            <p id="playerText" class="text-slate-200 leading-snug">"..."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Level Select Overlay (Story Mode) -->
         <div id="levelSelectMenu" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-30 hidden transition-opacity duration-300 overflow-y-auto">
             <div class="w-full max-w-md my-auto bg-slate-900/90 p-5 sm:p-6 rounded-3xl border border-slate-700/80 shadow-2xl flex flex-col max-h-[85vh]">
@@ -359,6 +432,57 @@
                         CANCELAR
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Final Story Ending / Cutscene Modal (Level 21 Win) -->
+        <div id="storyEndingModal" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-50 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="bg-slate-900/95 rounded-3xl p-5 sm:p-6 border border-amber-400/60 w-full max-w-md shadow-2xl flex flex-col max-h-[92vh] my-auto">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-2 bg-gradient-to-tr from-amber-400 via-orange-500 to-pink-500 rounded-3xl flex items-center justify-center text-3xl sm:text-4xl shadow-xl shadow-amber-500/30 animate-bounce">
+                    🚀🤖
+                </div>
+
+                <h2 class="text-2xl sm:text-3xl font-game text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-purple-300 mb-1 glow-title">
+                    O RESGATE FINAL!
+                </h2>
+                <p class="text-amber-300 font-game text-xs sm:text-sm mb-3">
+                    Compartimento de Carga • Nave-Mãe Alienígena
+                </p>
+
+                <!-- Final Dialogue Exchange Box -->
+                <div class="space-y-2 text-left bg-slate-800/80 p-3 rounded-2xl border border-slate-700 max-h-[42vh] overflow-y-auto text-xs sm:text-sm leading-relaxed mb-4">
+                    <p class="text-slate-300 italic border-b border-slate-700 pb-2 mb-2">
+                        O jogador desativa a trava de segurança no hangar da nave. Bleep é libertado da gaiola magnética. Os pequenos alienígenas pedem desculpas gesticulando e oferecem uma cápsula de fuga para o retorno!
+                    </p>
+
+                    <div class="p-2 bg-purple-950/60 rounded-xl border border-purple-500/40">
+                        <span class="font-game text-purple-300 block text-[11px]">🤖 Bleep:</span>
+                        <p class="text-slate-100 font-sans">"Você conseguiu! Cruzou o planeta inteiro e subiu até o espaço por mim!"</p>
+                    </div>
+
+                    <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
+                        <span class="font-game text-amber-300 block text-[11px]">👷 Jogador:</span>
+                        <p class="text-slate-100 font-sans">"Eu disse que não deixaria você para trás. Agora vamos voltar antes que o vulcão esfrie!"</p>
+                    </div>
+
+                    <div class="p-2 bg-purple-950/60 rounded-xl border border-purple-500/40">
+                        <span class="font-game text-purple-300 block text-[11px]">🤖 Bleep:</span>
+                        <p class="text-slate-100 font-sans">"Os alienígenas pediram desculpas pelo mal-entendido e prepararam uma cápsula de transporte direto para a Terra!"</p>
+                    </div>
+
+                    <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
+                        <span class="font-game text-amber-300 block text-[11px]">👷 Jogador:</span>
+                        <p class="text-slate-100 font-sans">"Ótimo! A subida foi incrível, mas a descida vai ser bem mais rápida!"</p>
+                    </div>
+
+                    <p class="text-emerald-300 font-bold text-center text-xs pt-1">
+                        🌍 (A cápsula de fuga dispara em direção à Terra ao som de uma trilha triunfante!)
+                    </p>
+                </div>
+
+                <button id="closeEndingModalBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-game text-lg rounded-2xl shadow-lg transition active:scale-95 border border-emerald-300/40">
+                    🏆 CONCLUIR HISTÓRIA
+                </button>
             </div>
         </div>
 
@@ -1000,6 +1124,12 @@
         // Character Definitions & Selection State
         const CHARACTERS = [
             {
+                id: 'miner',
+                name: 'Minerador',
+                badge: '⛏️ Herói',
+                description: 'Destemido minerador em busca do seu robô Bleep!'
+            },
+            {
                 id: 'pink_alien',
                 name: 'Alien Rosa',
                 badge: '💖 Clássico',
@@ -1031,7 +1161,7 @@
             }
         ];
 
-        let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'pink_alien';
+        let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'miner';
 
         function drawRocketSprite(targetCtx, x, y, options = {}) {
             const isSputtering = options.isSputtering || false;
@@ -1135,7 +1265,87 @@
             targetCtx.save();
             targetCtx.scale(facingRight ? 1 : -1, 1);
 
-            if (charId === 'bw_cat') {
+            if (charId === 'miner') {
+                // === MINERADOR (Miner Character) ===
+                // 1. Blue Denim Overalls Body
+                targetCtx.fillStyle = '#2563eb'; // Blue overalls
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2 + 10, width, height - 10, [8]);
+                targetCtx.fill();
+
+                // Shirt under overalls (Red Flannel)
+                targetCtx.fillStyle = '#dc2626';
+                targetCtx.fillRect(-width / 2 + 3, -height / 2 + 8, width - 6, 8);
+
+                // Overall Straps & Buttons
+                targetCtx.fillStyle = '#1d4ed8';
+                targetCtx.fillRect(-width / 2 + 4, -height / 2 + 10, 5, 14);
+                targetCtx.fillRect(width / 2 - 9, -height / 2 + 10, 5, 14);
+
+                targetCtx.fillStyle = '#facc15'; // Yellow metal buttons
+                targetCtx.beginPath();
+                targetCtx.arc(-width / 2 + 6.5, -height / 2 + 22, 2, 0, Math.PI * 2);
+                targetCtx.arc(width / 2 - 6.5, -height / 2 + 22, 2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Face / Skin Tone
+                targetCtx.fillStyle = '#fdba74'; // Skin tone
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 + 3, -height / 2 + 2, width - 6, 12, [4]);
+                targetCtx.fill();
+
+                // Eyes looking in facing direction
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(-5, -height / 2 + 7, 3.5, 0, Math.PI * 2);
+                targetCtx.arc(5, -height / 2 + 7, 3.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#0f172a';
+                targetCtx.beginPath();
+                targetCtx.arc(-3.5, -height / 2 + 7, 1.8, 0, Math.PI * 2);
+                targetCtx.arc(6.5, -height / 2 + 7, 1.8, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Smudge / Dirt on cheek
+                targetCtx.fillStyle = 'rgba(120, 53, 15, 0.4)';
+                targetCtx.beginPath();
+                targetCtx.arc(-7, -height / 2 + 10, 2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // 2. Bright Yellow Hard Hat Helmet
+                targetCtx.fillStyle = '#eab308'; // Yellow-500
+                targetCtx.beginPath();
+                targetCtx.arc(0, -height / 2 + 2, width / 2 + 2, Math.PI, 0);
+                targetCtx.fill();
+
+                // Helmet Rim / Brim
+                targetCtx.fillStyle = '#ca8a04'; // Yellow-600 brim
+                targetCtx.fillRect(-width / 2 - 3, -height / 2 + 1, width + 6, 4);
+
+                // Headlamp Body on Front
+                targetCtx.fillStyle = '#334155'; // Dark metallic casing
+                targetCtx.fillRect(width / 2 - 4, -height / 2 - 3, 6, 6);
+
+                targetCtx.fillStyle = '#fef08a'; // Glowing lamp lens
+                targetCtx.beginPath();
+                targetCtx.arc(width / 2 + 2, -height / 2, 3, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Headlamp Light Beam Projection
+                const lightGrad = targetCtx.createLinearGradient(width / 2 + 2, -height / 2, width / 2 + 22, -height / 2 + 6);
+                lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
+                lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+                targetCtx.fillStyle = lightGrad;
+                targetCtx.beginPath();
+                targetCtx.moveTo(width / 2 + 2, -height / 2 - 2);
+                targetCtx.lineTo(width / 2 + 22, -height / 2 - 12);
+                targetCtx.lineTo(width / 2 + 26, -height / 2 + 10);
+                targetCtx.lineTo(width / 2 + 2, -height / 2 + 2);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+            } else if (charId === 'bw_cat') {
                 // === GATO PRETO E BRANCO (Black & White Tuxedo Cat) ===
                 targetCtx.fillStyle = '#1e293b';
 
@@ -1486,87 +1696,12 @@
         let unlockedStoryLevel = parseInt(localStorage.getItem('subida_nuvens_unlocked_level') || '1', 10);
 
         const STORY_THEMES = [
+            // Ato 1: A Fuga das Profundezas
             {
                 id: 1,
-                name: 'Dia Ensolarado',
-                bgGradient: ['#0284c7', '#7dd3fc'],
-                elementType: 'clouds',
-                elementColor: 'rgba(255, 255, 255, 0.4)',
-                platformColors: {
-                    normal: ['#34d399', '#059669'],
-                    moving: ['#38bdf8', '#0284c7'],
-                    spring: ['#a855f7', '#7e22ce'],
-                    fragile: ['#f87171', '#dc2626']
-                }
-            },
-            {
-                id: 2,
-                name: 'Pôr do Sol',
-                bgGradient: ['#581c87', '#f97316'],
-                elementType: 'clouds',
-                elementColor: 'rgba(254, 215, 170, 0.35)',
-                platformColors: {
-                    normal: ['#facc15', '#ca8a04'],
-                    moving: ['#ec4899', '#be185d'],
-                    spring: ['#8b5cf6', '#6d28d9'],
-                    fragile: ['#f43f5e', '#be123c']
-                }
-            },
-            {
-                id: 3,
-                name: 'Noite Estrelada',
-                bgGradient: ['#090d16', '#1e1b4b'],
-                elementType: 'stars',
-                elementColor: 'rgba(255, 255, 255, 0.5)',
-                platformColors: {
-                    normal: ['#818cf8', '#4338ca'],
-                    moving: ['#38bdf8', '#0284c7'],
-                    spring: ['#f472b6', '#db2777'],
-                    fragile: ['#ef4444', '#b91c1c']
-                }
-            },
-            {
-                id: 4,
-                name: 'Aurora Boreal',
-                bgGradient: ['#022c22', '#0f766e'],
-                elementType: 'stars',
-                elementColor: 'rgba(167, 243, 208, 0.5)',
-                platformColors: {
-                    normal: ['#2dd4bf', '#0d9488'],
-                    moving: ['#a7f3d0', '#059669'],
-                    spring: ['#38bdf8', '#0284c7'],
-                    fragile: ['#f87171', '#b91c1c']
-                }
-            },
-            {
-                id: 5,
-                name: 'Floresta Mística',
-                bgGradient: ['#052e16', '#14532d'],
-                elementType: 'spores',
-                elementColor: 'rgba(190, 242, 100, 0.4)',
-                platformColors: {
-                    normal: ['#a3e635', '#65a30d'],
-                    moving: ['#34d399', '#059669'],
-                    spring: ['#facc15', '#ca8a04'],
-                    fragile: ['#fb923c', '#c2410c']
-                }
-            },
-            {
-                id: 6,
-                name: 'Deserto Dourado',
-                bgGradient: ['#78350f', '#f59e0b'],
-                elementType: 'spores',
-                elementColor: 'rgba(254, 240, 138, 0.35)',
-                platformColors: {
-                    normal: ['#fcd34d', '#d97706'],
-                    moving: ['#fb923c', '#ea580c'],
-                    spring: ['#c084fc', '#9333ea'],
-                    fragile: ['#ef4444', '#b91c1c']
-                }
-            },
-            {
-                id: 7,
-                name: 'Vulcano Lávico',
+                actTitle: 'Ato 1: A Fuga das Profundezas',
+                name: 'Caverna do Vulcão',
+                subtitle: 'O Início',
                 bgGradient: ['#18181b', '#7f1d1d'],
                 elementType: 'embers',
                 elementColor: 'rgba(249, 115, 22, 0.6)',
@@ -1575,11 +1710,173 @@
                     moving: ['#facc15', '#ca8a04'],
                     spring: ['#e11d48', '#9f1239'],
                     fragile: ['#ef4444', '#7f1d1d']
+                },
+                dialogue: {
+                    bleep: 'O raio me puxou para o compartimento de carga! O motor deles está avariado e criando portais!',
+                    player: 'Segure-se, Bleep! Vou usar esses escombros para subir e entrar no portal!'
+                }
+            },
+            {
+                id: 2,
+                actTitle: 'Ato 1: A Fuga das Profundezas',
+                name: 'Grotas de Cristal',
+                subtitle: 'Minerais Brilhantes',
+                bgGradient: ['#2e1065', '#581c87'],
+                elementType: 'stars',
+                elementColor: 'rgba(233, 213, 255, 0.6)',
+                platformColors: {
+                    normal: ['#c084fc', '#7e22ce'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'O portal me jogou numa caverna de minerais! Eles estão tentando estabilizar a velocidade!',
+                    player: 'Que cristais luminosos incríveis! Vou me concentrar na escalada!'
+                }
+            },
+            {
+                id: 3,
+                actTitle: 'Ato 1: A Fuga das Profundezas',
+                name: 'Cachoeira Subterrânea',
+                subtitle: 'Chaminé d\'Água',
+                bgGradient: ['#082f49', '#0c4a6e'],
+                elementType: 'bubbles',
+                elementColor: 'rgba(186, 230, 253, 0.5)',
+                platformColors: {
+                    normal: ['#38bdf8', '#0284c7'],
+                    moving: ['#2dd4bf', '#0f766e'],
+                    spring: ['#a855f7', '#7e22ce'],
+                    fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'A correnteza está forte aqui! O vapor está impulsionando as correntes!',
+                    player: 'A água está escorregadia, mas vejo o brilho do próximo portal acima da cachoeira!'
+                }
+            },
+            {
+                id: 4,
+                actTitle: 'Ato 1: A Fuga das Profundezas',
+                name: 'Raízes da Floresta',
+                subtitle: 'Base da Mata',
+                bgGradient: ['#052e16', '#14532d'],
+                elementType: 'spores',
+                elementColor: 'rgba(190, 242, 100, 0.4)',
+                platformColors: {
+                    normal: ['#a3e635', '#65a30d'],
+                    moving: ['#34d399', '#059669'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#fb923c', '#c2410c']
+                },
+                dialogue: {
+                    bleep: 'Consigo ver vegetação pelas frestas da nave! Estamos nos aproximando do ar livre!',
+                    player: 'Essas raízes gigantes formam uma base sólida! O caminho para o ar livre é por aqui!'
+                }
+            },
+
+            // Ato 2: A Superfície e a Natureza
+            {
+                id: 5,
+                actTitle: 'Ato 2: A Superfície e a Natureza',
+                name: 'Mata Fechada',
+                subtitle: 'Copa das Árvores',
+                bgGradient: ['#0284c7', '#34d399'],
+                elementType: 'clouds',
+                elementColor: 'rgba(255, 255, 255, 0.4)',
+                platformColors: {
+                    normal: ['#34d399', '#059669'],
+                    moving: ['#38bdf8', '#0284c7'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'Saímos do subsolo! Cuidado com os insetos defendendo a área!',
+                    player: 'Os galhos estão balançando, mas a nave acabou de passar por cima das árvores!'
+                }
+            },
+            {
+                id: 6,
+                actTitle: 'Ato 2: A Superfície e a Natureza',
+                name: 'Pântano dos Cogumelos',
+                subtitle: 'Impulso Natural',
+                bgGradient: ['#4c1d95', '#a21caf'],
+                elementType: 'spores',
+                elementColor: 'rgba(244, 114, 182, 0.5)',
+                platformColors: {
+                    normal: ['#f472b6', '#db2777'],
+                    moving: ['#a855f7', '#7e22ce'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#fb923c', '#c2410c']
+                },
+                dialogue: {
+                    bleep: 'Eles tentaram pousar aqui, mas o chão era muito macio. Abriram outro portal!',
+                    player: 'Esses cogumelos gigantes dão um ótimo impulso para alcançar alturas maiores!'
+                }
+            },
+            {
+                id: 7,
+                actTitle: 'Ato 2: A Superfície e a Natureza',
+                name: 'Cachoeira do Vale',
+                subtitle: 'Ar Livre',
+                bgGradient: ['#0284c7', '#7dd3fc'],
+                elementType: 'bubbles',
+                elementColor: 'rgba(255, 255, 255, 0.6)',
+                platformColors: {
+                    normal: ['#38bdf8', '#0284c7'],
+                    moving: ['#34d399', '#059669'],
+                    spring: ['#c084fc', '#9333ea'],
+                    fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'Escale rápido! As correntes do vale estão empurrando a névoa para cima!',
+                    player: 'A névoa está densa, mas o sinal do rádio do Bleep está ficando mais forte!'
                 }
             },
             {
                 id: 8,
-                name: 'Neon Cyberpunk',
+                actTitle: 'Ato 2: A Superfície e a Natureza',
+                name: 'Campo Florido',
+                subtitle: 'Vale Ensolarado',
+                bgGradient: ['#78350f', '#f59e0b'],
+                elementType: 'spores',
+                elementColor: 'rgba(254, 240, 138, 0.5)',
+                platformColors: {
+                    normal: ['#fcd34d', '#d97706'],
+                    moving: ['#fb923c', '#ea580c'],
+                    spring: ['#ec4899', '#be185d'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'Eles estão ficando desorientados com a nave descontrolada! O próximo salto vai ser longo!',
+                    player: 'Tempestades de pólen por todo lado! Vou saltar firme pelas pedras flutuantes!'
+                }
+            },
+
+            // Ato 3: Construções e Fantasia
+            {
+                id: 9,
+                actTitle: 'Ato 3: Construções e Fantasia',
+                name: 'Muralhas do Castelo Antigo',
+                subtitle: 'Ruínas Milenares',
+                bgGradient: ['#1e1b4b', '#312e81'],
+                elementType: 'stars',
+                elementColor: 'rgba(199, 210, 254, 0.5)',
+                platformColors: {
+                    normal: ['#818cf8', '#4338ca'],
+                    moving: ['#facc15', '#ca8a04'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'O portal nos projetou para uma fortaleza de pedra antiga!',
+                    player: 'Subindo pelas torres do castelo! Onde esses portais vão nos levar em seguida?'
+                }
+            },
+            {
+                id: 10,
+                actTitle: 'Ato 3: Construções e Fantasia',
+                name: 'Cidade Neon',
+                subtitle: 'Telhados',
                 bgGradient: ['#18002a', '#701a75'],
                 elementType: 'stars',
                 elementColor: 'rgba(240, 171, 252, 0.6)',
@@ -1588,175 +1885,223 @@
                     moving: ['#22d3ee', '#0891b2'],
                     spring: ['#facc15', '#eab308'],
                     fragile: ['#f43f5e', '#be123c']
-                }
-            },
-            {
-                id: 9,
-                name: 'Oceano Profundo',
-                bgGradient: ['#082f49', '#0c4a6e'],
-                elementType: 'bubbles',
-                elementColor: 'rgba(186, 230, 253, 0.4)',
-                platformColors: {
-                    normal: ['#38bdf8', '#0284c7'],
-                    moving: ['#2dd4bf', '#0f766e'],
-                    spring: ['#e879f9', '#c084fc'],
-                    fragile: ['#f87171', '#dc2626']
-                }
-            },
-            {
-                id: 10,
-                name: 'Espaço Sideral',
-                bgGradient: ['#030712', '#1e1b4b'],
-                elementType: 'stars',
-                elementColor: 'rgba(255, 255, 255, 0.7)',
-                platformColors: {
-                    normal: ['#c084fc', '#7e22ce'],
-                    moving: ['#60a5fa', '#2563eb'],
-                    spring: ['#f472b6', '#db2777'],
-                    fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'Cuidado com os drones de segurança da cidade! Eles acham que nós somos a ameaça!',
+                    player: 'Saltando por antenas e pontes de luz reluzentes no topo da cidade!'
                 }
             },
             {
                 id: 11,
-                name: 'Nuvens Rosadas',
+                actTitle: 'Ato 3: Construções e Fantasia',
+                name: 'Fábrica de Chocolate',
+                subtitle: 'Mundo Mágico',
+                bgGradient: ['#451a03', '#78350f'],
+                elementType: 'spores',
+                elementColor: 'rgba(251, 191, 36, 0.5)',
+                platformColors: {
+                    normal: ['#fbbf24', '#d97706'],
+                    moving: ['#f472b6', '#db2777'],
+                    spring: ['#a855f7', '#7e22ce'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'A nave atravessou o teto de uma fábrica de doces, espalhando caldas por tudo!',
+                    player: 'Gelatinas no chão? Pelo menos dão um ótimo impulso para subir!'
+                }
+            },
+            {
+                id: 12,
+                actTitle: 'Ato 3: Construções e Fantasia',
+                name: 'Reino dos Doces',
+                subtitle: 'Chuva de Confeitos',
                 bgGradient: ['#831843', '#f472b6'],
                 elementType: 'clouds',
-                elementColor: 'rgba(253, 242, 248, 0.5)',
+                elementColor: 'rgba(253, 242, 248, 0.6)',
                 platformColors: {
                     normal: ['#fbcfe8', '#f43f5e'],
                     moving: ['#c084fc', '#9333ea'],
                     spring: ['#facc15', '#d97706'],
                     fragile: ['#e11d48', '#9f1239']
+                },
+                dialogue: {
+                    bleep: 'A temperatura na nave está caindo... acho que o próximo portal vai para um lugar frio!',
+                    player: 'Torres de bolo e barras de chocolate móveis! A subida está surreal!'
                 }
             },
-            {
-                id: 12,
-                name: 'Crepúsculo Violeta',
-                bgGradient: ['#2e1065', '#581c87'],
-                elementType: 'stars',
-                elementColor: 'rgba(233, 213, 255, 0.5)',
-                platformColors: {
-                    normal: ['#a855f7', '#6b21a8'],
-                    moving: ['#ec4899', '#be185d'],
-                    spring: ['#38bdf8', '#0369a1'],
-                    fragile: ['#f43f5e', '#9f1239']
-                }
-            },
+
+            // Ato 4: O Frio e as Alturas
             {
                 id: 13,
-                name: 'Tempestade Elétrica',
-                bgGradient: ['#0f172a', '#1e293b'],
-                elementType: 'spores',
-                elementColor: 'rgba(250, 204, 21, 0.5)',
-                platformColors: {
-                    normal: ['#facc15', '#ca8a04'],
-                    moving: ['#60a5fa', '#1d4ed8'],
-                    spring: ['#c084fc', '#7e22ce'],
-                    fragile: ['#ef4444', '#b91c1c']
-                }
-            },
-            {
-                id: 14,
-                name: 'Inverno Congelado',
+                actTitle: 'Ato 4: O Frio e as Alturas',
+                name: 'Montanha Gelada',
+                subtitle: 'Gelo Escorregadio',
                 bgGradient: ['#164e63', '#a5f3fc'],
                 elementType: 'snow',
-                elementColor: 'rgba(255, 255, 255, 0.6)',
+                elementColor: 'rgba(255, 255, 255, 0.7)',
                 platformColors: {
                     normal: ['#67e8f9', '#0891b2'],
                     moving: ['#93c5fd', '#2563eb'],
                     spring: ['#f472b6', '#db2777'],
                     fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'Sistemas de aquecimento no máximo! Ventos gelados estão soprando forte!',
+                    player: 'Preciso ter cuidado onde piso, o gelo não dá firmeza!'
+                }
+            },
+            {
+                id: 14,
+                actTitle: 'Ato 4: O Frio e as Alturas',
+                name: 'Vila do Papai Noel',
+                subtitle: 'Polo Norte',
+                bgGradient: ['#0f172a', '#1e293b'],
+                elementType: 'snow',
+                elementColor: 'rgba(255, 255, 255, 0.8)',
+                platformColors: {
+                    normal: ['#f87171', '#dc2626'],
+                    moving: ['#34d399', '#059669'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#fb923c', '#c2410c']
+                },
+                dialogue: {
+                    bleep: 'Eles quase bateram nas chaminés da fábrica! O portal está logo acima do grande pinheiro!',
+                    player: 'Esteiras e brinquedos de corda em movimento! Mantenha a calma, Bleep!'
                 }
             },
             {
                 id: 15,
-                name: 'Galáxia de Fuchsia',
-                bgGradient: ['#4a044e', '#a21caf'],
-                elementType: 'stars',
-                elementColor: 'rgba(240, 171, 252, 0.6)',
+                actTitle: 'Ato 4: O Frio e as Alturas',
+                name: 'Pico Congelado',
+                subtitle: 'Ar Rarefeito',
+                bgGradient: ['#0f172a', '#38bdf8'],
+                elementType: 'snow',
+                elementColor: 'rgba(224, 242, 254, 0.7)',
                 platformColors: {
-                    normal: ['#f0abfc', '#a21caf'],
-                    moving: ['#818cf8', '#4338ca'],
-                    spring: ['#fde047', '#ca8a04'],
-                    fragile: ['#f43f5e', '#9f1239']
+                    normal: ['#e0f2fe', '#0284c7'],
+                    moving: ['#c084fc', '#7e22ce'],
+                    spring: ['#facc15', '#d97706'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'O ar está rarefeito! Cuidado com os estalactites de gelo caindo das plataformas!',
+                    player: 'Estamos acima das montanhas! Daqui para frente é só o céu!'
                 }
             },
             {
                 id: 16,
-                name: 'Reino dos Sonhos',
-                bgGradient: ['#701a75', '#fbcfe8'],
-                elementType: 'clouds',
-                elementColor: 'rgba(255, 255, 255, 0.45)',
-                platformColors: {
-                    normal: ['#f472b6', '#ec4899'],
-                    moving: ['#38bdf8', '#0284c7'],
-                    spring: ['#facc15', '#d97706'],
-                    fragile: ['#fb7185', '#e11d48']
-                }
-            },
-            {
-                id: 17,
-                name: 'Eclipse Solar',
-                bgGradient: ['#000000', '#451a03'],
-                elementType: 'embers',
-                elementColor: 'rgba(251, 146, 60, 0.5)',
-                platformColors: {
-                    normal: ['#f97316', '#9a3412'],
-                    moving: ['#facc15', '#b45309'],
-                    spring: ['#a855f7', '#6b21a8'],
-                    fragile: ['#dc2626', '#7f1d1d']
-                }
-            },
-            {
-                id: 18,
-                name: 'Vale Fluorescente',
-                bgGradient: ['#022c22', '#064e3b'],
-                elementType: 'spores',
-                elementColor: 'rgba(74, 222, 128, 0.6)',
-                platformColors: {
-                    normal: ['#4ade80', '#15803d'],
-                    moving: ['#22d3ee', '#0e7490'],
-                    spring: ['#facc15', '#ca8a04'],
-                    fragile: ['#f43f5e', '#be123c']
-                }
-            },
-            {
-                id: 19,
-                name: 'Abismo Sombrio',
-                bgGradient: ['#09090b', '#27272a'],
-                elementType: 'stars',
-                elementColor: 'rgba(161, 161, 170, 0.4)',
-                platformColors: {
-                    normal: ['#a1a1aa', '#3f3f46'],
-                    moving: ['#c084fc', '#7e22ce'],
-                    spring: ['#38bdf8', '#0369a1'],
-                    fragile: ['#ef4444', '#991b1b']
-                }
-            },
-            {
-                id: 20,
-                name: 'Nébula de Cristal',
-                bgGradient: ['#1e1b4b', '#06b6d4'],
-                elementType: 'snow',
-                elementColor: 'rgba(165, 243, 252, 0.6)',
-                platformColors: {
-                    normal: ['#67e8f9', '#0e7490'],
-                    moving: ['#e879f9', '#a21caf'],
-                    spring: ['#fef08a', '#ca8a04'],
-                    fragile: ['#fb7185', '#be123c']
-                }
-            },
-            {
-                id: 21,
-                name: 'Cume Celestial',
+                actTitle: 'Ato 4: O Frio e as Alturas',
+                name: 'Templo das Nuvens',
+                subtitle: 'Ruínas Flutuantes',
                 bgGradient: ['#172554', '#fbbf24'],
                 elementType: 'clouds',
-                elementColor: 'rgba(254, 240, 138, 0.5)',
+                elementColor: 'rgba(254, 240, 138, 0.6)',
                 platformColors: {
                     normal: ['#fef08a', '#d97706'],
                     moving: ['#38bdf8', '#0284c7'],
                     spring: ['#f472b6', '#c084fc'],
                     fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'O motor de dobra deles está superaquecendo! O espaço está logo ali!',
+                    player: 'Essas nuvens sólidas se desfazem rápido! Preciso pular sem hesitar!'
+                }
+            },
+
+            // Ato 5: A Fronteira Espacial
+            {
+                id: 17,
+                actTitle: 'Ato 5: A Fronteira Espacial',
+                name: 'Estratosfera e Aurora',
+                subtitle: 'Luzes Neon',
+                bgGradient: ['#022c22', '#0f766e'],
+                elementType: 'stars',
+                elementColor: 'rgba(167, 243, 208, 0.7)',
+                platformColors: {
+                    normal: ['#2dd4bf', '#0d9488'],
+                    moving: ['#a7f3d0', '#059669'],
+                    spring: ['#38bdf8', '#0284c7'],
+                    fragile: ['#f87171', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'Que espetáculo! As cortinas da aurora boreal estão servindo de caminho!',
+                    player: 'A gravidade está ficando mais leve. Consigo ver a curvatura da Terra!'
+                }
+            },
+            {
+                id: 18,
+                actTitle: 'Ato 5: A Fronteira Espacial',
+                name: 'Cemitério de Satélites',
+                subtitle: 'Lixo Espacial',
+                bgGradient: ['#030712', '#1e1b4b'],
+                elementType: 'stars',
+                elementColor: 'rgba(255, 255, 255, 0.8)',
+                platformColors: {
+                    normal: ['#a1a1aa', '#3f3f46'],
+                    moving: ['#60a5fa', '#2563eb'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#f87171', '#dc2626']
+                },
+                dialogue: {
+                    bleep: 'Eles pararam de abrir portais! O motor queimou de vez e eles estão à deriva!',
+                    player: 'Placas solares e destroços soltos formam nossa escada no vácuo!'
+                }
+            },
+            {
+                id: 19,
+                actTitle: 'Ato 5: A Fronteira Espacial',
+                name: 'Anéis de Asteroides',
+                subtitle: 'Cinturão de Rochas',
+                bgGradient: ['#4a044e', '#a21caf'],
+                elementType: 'stars',
+                elementColor: 'rgba(240, 171, 252, 0.7)',
+                platformColors: {
+                    normal: ['#f0abfc', '#a21caf'],
+                    moving: ['#facc15', '#ca8a04'],
+                    spring: ['#38bdf8', '#0284c7'],
+                    fragile: ['#f43f5e', '#9f1239']
+                },
+                dialogue: {
+                    bleep: 'A nave alienígena está imobilizada no centro do cinturão de rochas!',
+                    player: 'Estou quase lá, Bleep! Consigo ver a nave alienígena bem na minha frente!'
+                }
+            },
+            {
+                id: 20,
+                actTitle: 'Ato 5: A Fronteira Espacial',
+                name: 'Exterior da Nave-Mãe',
+                subtitle: 'Casco de Metal',
+                bgGradient: ['#09090b', '#27272a'],
+                elementType: 'stars',
+                elementColor: 'rgba(161, 161, 170, 0.6)',
+                platformColors: {
+                    normal: ['#38bdf8', '#0284c7'],
+                    moving: ['#c084fc', '#7e22ce'],
+                    spring: ['#facc15', '#ca8a04'],
+                    fragile: ['#ef4444', '#991b1b']
+                },
+                dialogue: {
+                    bleep: 'Estou no compartimento de carga traseiro! A trava manual fica do lado de fora!',
+                    player: 'Escalando a lataria! Desviando de lasers e escotilhas de defesa!'
+                }
+            },
+            {
+                id: 21,
+                actTitle: 'Ato 5: A Fronteira Espacial',
+                name: 'Compartimento de Carga',
+                subtitle: 'O Resgate Final',
+                bgGradient: ['#020617', '#1e1b4b'],
+                elementType: 'stars',
+                elementColor: 'rgba(255, 255, 255, 0.9)',
+                platformColors: {
+                    normal: ['#fef08a', '#d97706'],
+                    moving: ['#22d3ee', '#0891b2'],
+                    spring: ['#f472b6', '#db2777'],
+                    fragile: ['#ef4444', '#b91c1c']
+                },
+                dialogue: {
+                    bleep: 'Eles ativaram os sistemas de defesa em pânico ao nos ver!',
+                    player: 'Cheguei, Bleep! Hora de soltar essa trava e irmos para casa!'
                 }
             }
         ];
@@ -1828,7 +2173,8 @@
                 btn.innerHTML = `
                     <div class="text-xs uppercase font-bold ${isUnlocked ? 'text-amber-300' : 'text-slate-500'} mb-0.5">Fase ${theme.id}</div>
                     <div class="text-[11px] font-sans truncate w-full px-1 ${isUnlocked ? 'text-slate-200' : 'text-slate-500'} leading-tight">${theme.name}</div>
-                    <div class="text-sm mt-1">${isUnlocked ? (theme.id < unlockedStoryLevel ? '✅' : '🚩') : '🔒'}</div>
+                    <div class="text-[9px] font-sans text-amber-400/90 truncate w-full px-0.5">${theme.subtitle || ''}</div>
+                    <div class="text-sm mt-0.5">${isUnlocked ? (theme.id < unlockedStoryLevel ? '✅' : '🚩') : '🔒'}</div>
                 `;
 
                 levelGrid.appendChild(btn);
@@ -2563,7 +2909,41 @@
                 }
 
                 if (this.type === 'finish') {
-                    // Golden Finish Platform at 2000m
+                    // Swirling Hyper-space Warp Portal Effect at 2000m Finish Line
+                    const portalX = this.x + this.width / 2 + offsetX;
+                    const portalY = screenY - 45 + offsetY;
+                    const portalTime = Date.now() * 0.005;
+
+                    // Swirling portal aura rings
+                    for (let r = 50; r >= 10; r -= 10) {
+                        ctx.beginPath();
+                        ctx.arc(portalX, portalY, r, 0, Math.PI * 2);
+                        const pGrad = ctx.createRadialGradient(portalX, portalY, 5, portalX, portalY, r);
+                        pGrad.addColorStop(0, 'rgba(236, 72, 153, 0.8)');
+                        pGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.5)');
+                        pGrad.addColorStop(1, 'rgba(59, 130, 246, 0.1)');
+                        ctx.fillStyle = pGrad;
+                        ctx.fill();
+                    }
+
+                    // Rotating portal spirals
+                    ctx.save();
+                    ctx.translate(portalX, portalY);
+                    ctx.rotate(portalTime);
+                    ctx.strokeStyle = '#fef08a';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    for (let a = 0; a < Math.PI * 4; a += 0.2) {
+                        const rad = a * 6;
+                        const px = Math.cos(a) * rad;
+                        const py = Math.sin(a) * rad;
+                        if (a === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Golden Finish Platform base bar at 2000m
                     const grad = ctx.createLinearGradient(this.x, screenY, this.x, screenY + this.height);
                     grad.addColorStop(0, '#fef08a');
                     grad.addColorStop(0.5, '#f59e0b');
@@ -2578,11 +2958,11 @@
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
-                    // Finish Flag Banner
+                    // Finish Flag & Warp Portal Banner
                     ctx.fillStyle = '#fef08a';
-                    ctx.font = 'bold 16px "Fredoka One", cursive';
+                    ctx.font = 'bold 15px "Fredoka One", cursive';
                     ctx.textAlign = 'center';
-                    ctx.fillText('🏁 CHEGADA 2000m 🏁', this.x + this.width / 2 + offsetX, screenY - 12 + offsetY);
+                    ctx.fillText('🌀 PORTAL DE DOBRA 2000m 🌀', this.x + this.width / 2 + offsetX, screenY - 95 + offsetY);
                     ctx.textAlign = 'left';
 
                     ctx.restore();
@@ -3948,6 +4328,32 @@
             requestAnimationFrame(gameLoop);
         }
 
+        function showLevelDialogue() {
+            if (gameMode !== 'STORY') return;
+
+            const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
+            const dialogueCard = document.getElementById('levelDialogueCard');
+            const dialogueLevelBadge = document.getElementById('dialogueLevelBadge');
+            const bleepText = document.getElementById('bleepText');
+            const playerText = document.getElementById('playerText');
+
+            if (dialogueCard && theme.dialogue) {
+                if (dialogueLevelBadge) {
+                    dialogueLevelBadge.textContent = `📡 COMUNICAÇÃO DE RÁDIO • FASE ${currentStoryLevel}: ${theme.name.toUpperCase()}`;
+                }
+                if (bleepText) bleepText.textContent = `"${theme.dialogue.bleep}"`;
+                if (playerText) playerText.textContent = `"${theme.dialogue.player}"`;
+
+                dialogueCard.classList.remove('hidden');
+
+                // Automatically hide dialogue banner after 8 seconds
+                if (window.dialogueCardTimeout) clearTimeout(window.dialogueCardTimeout);
+                window.dialogueCardTimeout = setTimeout(() => {
+                    dialogueCard.classList.add('hidden');
+                }, 8000);
+            }
+        }
+
         function startGame() {
             gameState = 'PLAYING';
             sound.stopMenuMusic();
@@ -3962,6 +4368,16 @@
             if (levelSelectMenu) levelSelectMenu.classList.add('hidden');
             if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
             gameOverMenu.classList.add('hidden');
+
+            const storyPrologueModal = document.getElementById('storyPrologueModal');
+            if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
+
+            if (gameMode === 'STORY') {
+                showLevelDialogue();
+            } else {
+                const dialogueCard = document.getElementById('levelDialogueCard');
+                if (dialogueCard) dialogueCard.classList.add('hidden');
+            }
         }
 
         function triggerLevelComplete() {
@@ -3976,6 +4392,13 @@
                     unlockedStoryLevel = currentStoryLevel + 1;
                     localStorage.setItem('subida_nuvens_unlocked_level', unlockedStoryLevel.toString());
                 }
+            }
+
+            // If level 21 is completed, open the Grand Final Ending Story Modal!
+            if (currentStoryLevel === 21) {
+                const storyEndingModal = document.getElementById('storyEndingModal');
+                if (storyEndingModal) storyEndingModal.classList.remove('hidden');
+                return;
             }
 
             const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
@@ -4085,12 +4508,58 @@
             });
         }
 
+        const storyPrologueModal = document.getElementById('storyPrologueModal');
+        const storyEndingModal = document.getElementById('storyEndingModal');
+        const closePrologueBtn = document.getElementById('closePrologueBtn');
+        const startStoryPrologueBtn = document.getElementById('startStoryPrologueBtn');
+        const closeDialogueCardBtn = document.getElementById('closeDialogueCardBtn');
+        const closeEndingModalBtn = document.getElementById('closeEndingModalBtn');
+
+        if (closeEndingModalBtn) {
+            closeEndingModalBtn.addEventListener('click', () => {
+                if (storyEndingModal) storyEndingModal.classList.add('hidden');
+                renderLevelSelectGrid();
+                levelSelectMenu.classList.remove('hidden');
+            });
+        }
+
+        if (closeDialogueCardBtn) {
+            closeDialogueCardBtn.addEventListener('click', () => {
+                const dialogueCard = document.getElementById('levelDialogueCard');
+                if (dialogueCard) dialogueCard.classList.add('hidden');
+            });
+        }
+
+        if (closePrologueBtn) {
+            closePrologueBtn.addEventListener('click', () => {
+                if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
+                renderLevelSelectGrid();
+                levelSelectMenu.classList.remove('hidden');
+            });
+        }
+
+        if (startStoryPrologueBtn) {
+            startStoryPrologueBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
+                gameMode = 'STORY';
+                currentStoryLevel = 1;
+                startGame();
+            });
+        }
+
         if (storyModeBtn) {
             storyModeBtn.addEventListener('click', () => {
                 sound.ensureContext();
-                renderLevelSelectGrid();
                 startMenu.classList.add('hidden');
-                levelSelectMenu.classList.remove('hidden');
+
+                // If starting fresh or Level 1 unlocked only, show Prologue Modal
+                if (unlockedStoryLevel === 1 && storyPrologueModal) {
+                    storyPrologueModal.classList.remove('hidden');
+                } else {
+                    renderLevelSelectGrid();
+                    levelSelectMenu.classList.remove('hidden');
+                }
             });
         }
 
