@@ -4741,6 +4741,20 @@
             }
         ];
 
+        // Preload all cutscene images into browser cache so they appear instantly
+        const preloadedCutsceneImages = [];
+        function preloadCutsceneImages() {
+            const allSlides = [...INTRO_CUTSCENE_SLIDES, ...LEVEL1_VICTORY_SLIDES];
+            allSlides.forEach(slide => {
+                if (slide.image) {
+                    const img = new Image();
+                    img.src = slide.image;
+                    preloadedCutsceneImages.push(img);
+                }
+            });
+        }
+        preloadCutsceneImages();
+
         function startCutsceneSequence(slides, onComplete) {
             currentCutsceneSequence = slides;
             currentCutsceneIndex = 0;
