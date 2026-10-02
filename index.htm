@@ -4528,6 +4528,7 @@
         if (infiniteModeBtn) {
             infiniteModeBtn.addEventListener('click', () => {
                 sound.ensureContext();
+                sound.stopMenuMusic();
                 gameMode = 'INFINITE';
                 startGame();
             });
@@ -4600,6 +4601,7 @@
         if (storyModeBtn) {
             storyModeBtn.addEventListener('click', () => {
                 sound.ensureContext();
+                sound.stopMenuMusic();
                 startMenu.classList.add('hidden');
 
                 // If starting fresh or Level 1 unlocked only, show Prologue Modal
@@ -4616,6 +4618,7 @@
             backToMenuBtn.addEventListener('click', () => {
                 levelSelectMenu.classList.add('hidden');
                 startMenu.classList.remove('hidden');
+                sound.playMenuMusic();
             });
         }
 
