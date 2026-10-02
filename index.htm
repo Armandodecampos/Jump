@@ -244,41 +244,17 @@
             </div>
         </div>
 
-        <!-- Story Mode Prologue Modal -->
-        <div id="storyPrologueModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
-            <div class="bg-slate-900/95 rounded-3xl p-5 sm:p-6 border border-amber-500/50 w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] my-auto">
-                <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-3">
-                    <h3 class="text-xl sm:text-2xl font-game text-amber-300 flex items-center gap-2">
-                        🌌 Perseguição nas Dobras do Espaço
-                    </h3>
-                    <button id="closePrologueBtn" class="text-slate-400 hover:text-white text-2xl font-bold p-1">✕</button>
+        <!-- Story Mode Cutscene Modal -->
+        <div id="storyCutsceneModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center z-40 hidden transition-opacity duration-300 overflow-y-auto">
+            <div class="bg-slate-900/95 rounded-3xl p-4 sm:p-6 border border-amber-500/50 w-full max-w-md shadow-2xl flex flex-col max-h-[92vh] my-auto space-y-3">
+                <div id="cutsceneImgContainer" class="relative w-full flex items-center justify-center overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-950/80 min-h-[160px] max-h-[48vh] p-1">
+                    <img id="storyCutsceneImg" src="" alt="Cena História" class="max-h-[45vh] w-auto max-w-full rounded-xl object-contain shadow-lg">
                 </div>
-
-                <div class="text-left space-y-3 overflow-y-auto text-xs sm:text-sm text-slate-200 leading-relaxed pr-1 mb-4">
-                    <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3">
-                        <span class="text-3xl">⛏️🤖</span>
-                        <div>
-                            <span class="font-bold text-amber-300 block">O Prólogo</span>
-                            <span class="text-[11px] text-slate-300">Laboratório subterrâneo de mineração no ponto mais fundo da Terra.</span>
-                        </div>
-                    </div>
-
-                    <p>
-                        Você e seu fiel robô assistente, <strong>Bleep</strong>, trabalham lado a lado perto de rios de magma no núcleo terrestre. Repentinamente, uma nave alienígena em pane atravessa a crosta terrestre e faz um pouso forçado catastrófico na estação!
-                    </p>
-                    <p>
-                        Com o impacto, o compartimento da nave se rompe. Em pânico com o magma subindo, os alienígenas ativam o raio-trator para recolher suas ferramentas — e <strong>sugam o Bleep por engano</strong> para o compartimento de carga!
-                    </p>
-                    <p>
-                        Para piorar, o <strong>Motor de Dobra Espacial</strong> da nave foi danificado. A cada trecho que avança em direção ao espaço, a nave dispara portais hiperespaciais descontrolados, saltando por diferentes biomas do planeta.
-                    </p>
-                    <p class="font-bold text-amber-300 text-center text-sm pt-1">
-                        🚀 Você precisa escalar cada ambiente e saltar pelos portais para resgatar o Bleep!
-                    </p>
+                <div id="cutsceneTextContainer" class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-3 text-center min-h-[60px] flex items-center justify-center">
+                    <p id="storyCutsceneText" class="text-xs sm:text-sm text-amber-200 font-game leading-relaxed"></p>
                 </div>
-
-                <button id="startStoryPrologueBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40">
-                    INICIAR PERSEGUIÇÃO ➔
+                <button id="storyCutsceneNextBtn" class="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-base sm:text-lg rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40">
+                    Seguinte
                 </button>
             </div>
         </div>
@@ -4521,8 +4497,8 @@
             if (levelCompleteMenu) levelCompleteMenu.classList.add('hidden');
             gameOverMenu.classList.add('hidden');
 
-            const storyPrologueModal = document.getElementById('storyPrologueModal');
-            if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
+            const storyCutsceneModal = document.getElementById('storyCutsceneModal');
+            if (storyCutsceneModal) storyCutsceneModal.classList.add('hidden');
 
             const levelDialogueModal = document.getElementById('levelDialogueModal');
             if (levelDialogueModal) levelDialogueModal.classList.add('hidden');
@@ -4540,6 +4516,14 @@
                     unlockedStoryLevel = currentStoryLevel + 1;
                     localStorage.setItem('subida_nuvens_unlocked_level', unlockedStoryLevel.toString());
                 }
+            }
+
+            // If Level 1 is completed, trigger the post-level 1 cutscene (images 8 and 9)
+            if (currentStoryLevel === 1) {
+                startCutsceneSequence(LEVEL1_VICTORY_SLIDES, () => {
+                    openPreLevelDialogue(2);
+                });
+                return;
             }
 
             // If level 21 is completed, open the Grand Final Ending Story Modal!
@@ -4661,31 +4645,13 @@
             });
         }
 
-        const storyPrologueModal = document.getElementById('storyPrologueModal');
+        const storyCutsceneModal = document.getElementById('storyCutsceneModal');
         const storyEndingModal = document.getElementById('storyEndingModal');
-        const closePrologueBtn = document.getElementById('closePrologueBtn');
-        const startStoryPrologueBtn = document.getElementById('startStoryPrologueBtn');
-        const closeDialogueCardBtn = document.getElementById('closeDialogueCardBtn');
         const closeEndingModalBtn = document.getElementById('closeEndingModalBtn');
 
         if (closeEndingModalBtn) {
             closeEndingModalBtn.addEventListener('click', () => {
                 if (storyEndingModal) storyEndingModal.classList.add('hidden');
-                renderLevelSelectGrid();
-                levelSelectMenu.classList.remove('hidden');
-            });
-        }
-
-        if (closeDialogueCardBtn) {
-            closeDialogueCardBtn.addEventListener('click', () => {
-                const dialogueCard = document.getElementById('levelDialogueCard');
-                if (dialogueCard) dialogueCard.classList.add('hidden');
-            });
-        }
-
-        if (closePrologueBtn) {
-            closePrologueBtn.addEventListener('click', () => {
-                if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
                 renderLevelSelectGrid();
                 levelSelectMenu.classList.remove('hidden');
             });
@@ -4716,12 +4682,118 @@
             });
         }
 
-        if (startStoryPrologueBtn) {
-            startStoryPrologueBtn.addEventListener('click', () => {
-                sound.ensureContext();
-                if (storyPrologueModal) storyPrologueModal.classList.add('hidden');
-                gameMode = 'STORY';
-                openPreLevelDialogue(1);
+        // Story Mode Cutscene Data & Controller Logic
+        let currentCutsceneSequence = [];
+        let currentCutsceneIndex = 0;
+        let onCutsceneCompleteCallback = null;
+
+        const INTRO_CUTSCENE_SLIDES = [
+            {
+                image: 'https://dl.dropbox.com/scl/fi/qsxflumcpupzk2rpby5sd/1.png?rlkey=5upour2hdg67sbtz97i890epd&st=2usyldwh&raw=1',
+                text: 'Em um laboratório subterrâneo de mineração no ponto mais fundo da Terra, o Pip e seu robô assistente, Bleep, trabalham ao lado de rios de magma',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/4tqgm38nzrqrut4un5ubh/2.png?rlkey=7gg22s7b1ywnf4juadn33sh5h&st=9rksozom&raw=1',
+                text: 'Uma nave alienígena em pane atravessa a crosta terrestre',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/21dvbhrfuubc2sthzp5rs/3.png?rlkey=xle6myia05blij0t5p8iecmcp&st=htzfr5c2&raw=1',
+                text: 'e faz um pouso forçado catastrófico na estação.',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/ji6xgsb6dd6k6yl0fvvre/4.png?rlkey=ro1pmwmkq6oni7h6bpaxjelob&st=zcb80je3&raw=1',
+                text: 'Pip e Bleep se aproximam da nave para ver o que aconteceu.',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/4k7rh4ri816h02yu93h0h/5.png?rlkey=13kvyysgotj3dvl86xgn3es2d&st=6mzlhpfy&raw=1',
+                text: 'Com o impacto, o compartimento da nave se abre, arremessando suprimentos e ferramentas',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/q4ld0giyg2gn60wglhn9x/6.png?rlkey=uhu2e3bbdipdb5sk4ah538bav&st=72dxupnv&raw=1',
+                text: 'O vulção entra em erupção por causa da colisão da nave',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/f781jhnz831lw9voaa3q3/7.png?rlkey=yifx0mbpx8cx9mrhn6w7me57j&st=2n7f0jpx&raw=1',
+                text: 'Em pânico com o magma subindo, os alienígenas ativam o raio-trator de sucção para puxar suas ferramentas de volta, sugando o Bleep por engano para o compartimento de carga.',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/f781jhnz831lw9voaa3q3/7.png?rlkey=yifx0mbpx8cx9mrhn6w7me57j&st=2n7f0jpx&raw=1',
+                text: 'Sobreviva e resgate o Bleep!',
+                btnText: 'Iniciar'
+            }
+        ];
+
+        const LEVEL1_VICTORY_SLIDES = [
+            {
+                image: 'https://dl.dropbox.com/scl/fi/j7i17cf70xc83gd3bb0gu/8.png?rlkey=6qox4p05psyt3qsrijca4lqdp&st=22173vzv&raw=1',
+                text: '',
+                btnText: 'Seguinte'
+            },
+            {
+                image: 'https://dl.dropbox.com/scl/fi/jyjc5rvfmvi2nc70x19r1/9.png?rlkey=4t7en9zlt04riweqclcgd2mqu&st=gcgt5il6&raw=1',
+                text: '',
+                btnText: 'Continuar'
+            }
+        ];
+
+        function startCutsceneSequence(slides, onComplete) {
+            currentCutsceneSequence = slides;
+            currentCutsceneIndex = 0;
+            onCutsceneCompleteCallback = onComplete;
+            renderCutsceneSlide();
+            const modal = document.getElementById('storyCutsceneModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function renderCutsceneSlide() {
+            if (!currentCutsceneSequence || currentCutsceneIndex >= currentCutsceneSequence.length) return;
+            const slide = currentCutsceneSequence[currentCutsceneIndex];
+            const imgEl = document.getElementById('storyCutsceneImg');
+            const textEl = document.getElementById('storyCutsceneText');
+            const textContainer = document.getElementById('cutsceneTextContainer');
+            const btnEl = document.getElementById('storyCutsceneNextBtn');
+
+            if (imgEl) imgEl.src = slide.image;
+
+            if (textEl && textContainer) {
+                if (slide.text && slide.text.trim().length > 0) {
+                    textEl.textContent = slide.text;
+                    textContainer.classList.remove('hidden');
+                } else {
+                    textEl.textContent = '';
+                    textContainer.classList.add('hidden');
+                }
+            }
+
+            if (btnEl) btnEl.textContent = slide.btnText || 'Seguinte';
+        }
+
+        function advanceCutscene() {
+            sound.ensureContext();
+            sound.playSpring();
+            currentCutsceneIndex++;
+            if (currentCutsceneIndex < currentCutsceneSequence.length) {
+                renderCutsceneSlide();
+            } else {
+                const modal = document.getElementById('storyCutsceneModal');
+                if (modal) modal.classList.add('hidden');
+                if (typeof onCutsceneCompleteCallback === 'function') {
+                    onCutsceneCompleteCallback();
+                }
+            }
+        }
+
+        const storyCutsceneNextBtn = document.getElementById('storyCutsceneNextBtn');
+        if (storyCutsceneNextBtn) {
+            storyCutsceneNextBtn.addEventListener('click', () => {
+                advanceCutscene();
             });
         }
 
@@ -4731,13 +4803,12 @@
                 sound.stopMenuMusic();
                 startMenu.classList.add('hidden');
 
-                // If starting fresh or Level 1 unlocked only, show Prologue Modal
-                if (unlockedStoryLevel === 1 && storyPrologueModal) {
-                    storyPrologueModal.classList.remove('hidden');
-                } else {
-                    renderLevelSelectGrid();
-                    levelSelectMenu.classList.remove('hidden');
-                }
+                // Show intro cutscene sequence when clicking "MODO HISTÓRIA"
+                startCutsceneSequence(INTRO_CUTSCENE_SLIDES, () => {
+                    gameMode = 'STORY';
+                    currentStoryLevel = 1;
+                    startGame();
+                });
             });
         }
 
