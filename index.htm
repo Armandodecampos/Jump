@@ -237,9 +237,15 @@
                     </button>
                 </div>
 
-                <p class="text-slate-300 text-xs sm:text-sm mb-4">
+                <p class="text-slate-300 text-xs sm:text-sm mb-3">
                     Escolha o seu personagem favorito para subir nas nuvens!
                 </p>
+
+                <div class="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-2.5 mb-3 text-left">
+                    <p class="text-[11px] sm:text-xs text-amber-200 font-sans leading-tight">
+                        💡 <strong>Nota:</strong> No <strong>Modo História</strong> você joga sempre com o <strong>Pip</strong>! No <strong>Modo Infinito</strong> você pode escolher qualquer personagem (inclusive o <strong>Bleep</strong>)!
+                    </p>
+                </div>
 
                 <!-- Grid of Character Cards -->
                 <div id="characterGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-1 mb-4 max-h-[50vh]">
@@ -306,8 +312,8 @@
                 <!-- Dialogue Stage Content -->
                 <div id="dialogueContentArea" class="flex flex-col items-center justify-center space-y-4 my-auto py-2">
                     <!-- Dynamic Speaker Avatar -->
-                    <div id="speakerAvatar" class="w-20 h-20 bg-slate-800 border-2 border-purple-400 rounded-2xl flex items-center justify-center text-4xl shadow-xl animate-bounce">
-                        🤖
+                    <div id="speakerAvatar" class="w-20 h-20 bg-slate-800 border-2 border-purple-400 rounded-2xl flex items-center justify-center shadow-xl animate-bounce p-1">
+                        <canvas id="speakerCanvas" width="64" height="64"></canvas>
                     </div>
 
                     <!-- Speaker Name -->
@@ -461,22 +467,34 @@
                     </p>
 
                     <div class="p-2 bg-purple-950/60 rounded-xl border border-purple-500/40">
-                        <span class="font-game text-purple-300 block text-[11px]">🤖 Bleep:</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <canvas class="ending-bleep-canvas bg-slate-900 rounded-lg border border-purple-400/50 p-0.5" width="24" height="24"></canvas>
+                            <span class="font-game text-purple-300 text-[11px]">Bleep:</span>
+                        </div>
                         <p class="text-slate-100 font-sans">"Você conseguiu! Cruzou o planeta inteiro e subiu até o espaço por mim!"</p>
                     </div>
 
                     <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
-                        <span class="font-game text-amber-300 block text-[11px]">👷 Pip:</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <canvas class="ending-pip-canvas bg-slate-900 rounded-lg border border-amber-400/50 p-0.5" width="24" height="24"></canvas>
+                            <span class="font-game text-amber-300 text-[11px]">Pip:</span>
+                        </div>
                         <p class="text-slate-100 font-sans">"Eu disse que não deixaria você para trás. Agora vamos voltar antes que o vulcão esfrie!"</p>
                     </div>
 
                     <div class="p-2 bg-purple-950/60 rounded-xl border border-purple-500/40">
-                        <span class="font-game text-purple-300 block text-[11px]">🤖 Bleep:</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <canvas class="ending-bleep-canvas bg-slate-900 rounded-lg border border-purple-400/50 p-0.5" width="24" height="24"></canvas>
+                            <span class="font-game text-purple-300 text-[11px]">Bleep:</span>
+                        </div>
                         <p class="text-slate-100 font-sans">"Os alienígenas pediram desculpas pelo mal-entendido e prepararam uma cápsula de transporte direto para a Terra!"</p>
                     </div>
 
                     <div class="p-2 bg-amber-950/60 rounded-xl border border-amber-500/40">
-                        <span class="font-game text-amber-300 block text-[11px]">👷 Pip:</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <canvas class="ending-pip-canvas bg-slate-900 rounded-lg border border-amber-400/50 p-0.5" width="24" height="24"></canvas>
+                            <span class="font-game text-amber-300 text-[11px]">Pip:</span>
+                        </div>
                         <p class="text-slate-100 font-sans">"Ótimo! A subida foi incrível, mas a descida vai ser bem mais rápida!"</p>
                     </div>
 
@@ -1135,6 +1153,12 @@
                 description: 'Destemido minerador em busca do seu robô Bleep!'
             },
             {
+                id: 'bleep',
+                name: 'Bleep',
+                badge: '🤖 Robô',
+                description: 'Fiel robô assistente com circuitos de alta precisão!'
+            },
+            {
                 id: 'pink_alien',
                 name: 'Alien Rosa',
                 badge: '💖 Clássico',
@@ -1167,6 +1191,10 @@
         ];
 
         let selectedCharacterId = localStorage.getItem('subida_nuvens_character') || 'miner';
+
+        function getActiveCharacterId() {
+            return gameMode === 'STORY' ? 'miner' : selectedCharacterId;
+        }
 
         function drawRocketSprite(targetCtx, x, y, options = {}) {
             const isSputtering = options.isSputtering || false;
@@ -1335,6 +1363,85 @@
                 targetCtx.fillStyle = '#fef08a'; // Glowing lamp lens
                 targetCtx.beginPath();
                 targetCtx.arc(0, -height / 2, 3, 0, Math.PI * 2);
+                targetCtx.fill();
+
+            } else if (charId === 'bleep') {
+                // === BLEEP (Fiel Robô Assistente) ===
+                // 1. Head Antenna (Centered on top)
+                targetCtx.fillStyle = '#475569'; // Dark slate stem
+                targetCtx.fillRect(-2, -height / 2 - 10, 4, 10);
+
+                // Antenna Tip Light Ball
+                targetCtx.fillStyle = '#38bdf8'; // Glowing cyan
+                targetCtx.beginPath();
+                targetCtx.arc(0, -height / 2 - 11, 4.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Antenna Tip Shine
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(-1, -height / 2 - 12.5, 1.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // 2. Ear Bolts / Dials (Left & Right)
+                targetCtx.fillStyle = '#64748b'; // Metallic slate
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 - 4, -height / 2 + 6, 4, 8, [2]);
+                targetCtx.roundRect(width / 2, -height / 2 + 6, 4, 8, [2]);
+                targetCtx.fill();
+
+                // 3. Metallic Body & Head
+                targetCtx.fillStyle = '#cbd5e1'; // Light silver/slate head & body
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2, -height / 2, width, height, [10]);
+                targetCtx.fill();
+
+                // Metallic Body Border / Shading
+                targetCtx.strokeStyle = '#94a3b8';
+                targetCtx.lineWidth = 1.5;
+                targetCtx.stroke();
+
+                // Dark Visor Screen Frame
+                targetCtx.fillStyle = '#0f172a'; // Dark slate screen
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 + 3, -height / 2 + 3, width - 6, 14, [5]);
+                targetCtx.fill();
+
+                // Glowing Digital Eyes inside Visor
+                targetCtx.fillStyle = '#22d3ee'; // Bright cyan digital eyes
+                targetCtx.beginPath();
+                targetCtx.roundRect(-9, -height / 2 + 6, 6, 8, [2]);
+                targetCtx.roundRect(3, -height / 2 + 6, 6, 8, [2]);
+                targetCtx.fill();
+
+                // Specular White Eye Highlights
+                targetCtx.fillStyle = '#ffffff';
+                targetCtx.beginPath();
+                targetCtx.arc(-7, -height / 2 + 8, 1.2, 0, Math.PI * 2);
+                targetCtx.arc(5, -height / 2 + 8, 1.2, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // 4. Chest Panel / Power Core
+                targetCtx.fillStyle = '#334155'; // Dark metallic chest plate
+                targetCtx.beginPath();
+                targetCtx.roundRect(-width / 2 + 5, 2, width - 10, 12, [4]);
+                targetCtx.fill();
+
+                // Glowing Power Core Circle / Heart LED
+                targetCtx.fillStyle = '#38bdf8'; // Cyan core light
+                targetCtx.beginPath();
+                targetCtx.arc(0, 8, 3.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // Status LEDs (Red & Yellow)
+                targetCtx.fillStyle = '#ef4444'; // Red LED
+                targetCtx.beginPath();
+                targetCtx.arc(-7, 8, 1.5, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = '#facc15'; // Yellow LED
+                targetCtx.beginPath();
+                targetCtx.arc(7, 8, 1.5, 0, Math.PI * 2);
                 targetCtx.fill();
 
             } else if (charId === 'bw_cat') {
@@ -2809,7 +2916,7 @@
                 }
 
                 // Draw active character sprite (drawn on top of the jetpack)
-                drawCharacterBody(ctx, selectedCharacterId, this.width, this.height, true);
+                drawCharacterBody(ctx, getActiveCharacterId(), this.width, this.height, true);
 
                 ctx.restore();
             }
@@ -4346,28 +4453,69 @@
             const name = document.getElementById('speakerName');
             const text = document.getElementById('speakerDialogueText');
             const btn = document.getElementById('nextDialogueBtn');
+            const speakerCanvas = document.getElementById('speakerCanvas');
 
             if (!theme.dialogue) return;
 
             if (currentDialogueStep === 0) {
                 // Step 1: Bleep
-                if (avatar) avatar.textContent = '🤖';
+                if (avatar) avatar.className = 'w-20 h-20 bg-slate-800 border-2 border-purple-400 rounded-2xl flex items-center justify-center shadow-xl animate-bounce p-1';
                 if (name) {
                     name.textContent = 'Bleep (rádio)';
                     name.className = 'font-game text-lg text-purple-300';
                 }
                 if (text) text.textContent = `"${theme.dialogue.bleep}"`;
                 if (btn) btn.textContent = 'CONTINUAR ➔';
+
+                if (speakerCanvas) {
+                    const sctx = speakerCanvas.getContext('2d');
+                    sctx.clearRect(0, 0, speakerCanvas.width, speakerCanvas.height);
+                    sctx.save();
+                    sctx.translate(speakerCanvas.width / 2, speakerCanvas.height / 2 + 3);
+                    drawCharacterBody(sctx, 'bleep', 36, 40, true);
+                    sctx.restore();
+                }
             } else {
                 // Step 2: Pip
-                if (avatar) avatar.textContent = '👷';
+                if (avatar) avatar.className = 'w-20 h-20 bg-slate-800 border-2 border-amber-400 rounded-2xl flex items-center justify-center shadow-xl animate-bounce p-1';
                 if (name) {
                     name.textContent = 'Pip';
                     name.className = 'font-game text-lg text-amber-300';
                 }
                 if (text) text.textContent = `"${theme.dialogue.player}"`;
                 if (btn) btn.textContent = 'INICIAR FASE 🚀';
+
+                if (speakerCanvas) {
+                    const sctx = speakerCanvas.getContext('2d');
+                    sctx.clearRect(0, 0, speakerCanvas.width, speakerCanvas.height);
+                    sctx.save();
+                    sctx.translate(speakerCanvas.width / 2, speakerCanvas.height / 2 + 3);
+                    drawCharacterBody(sctx, 'miner', 36, 40, true);
+                    sctx.restore();
+                }
             }
+        }
+
+        function renderEndingDialogueCanvases() {
+            const bleepCanvases = document.querySelectorAll('.ending-bleep-canvas');
+            bleepCanvases.forEach(cvs => {
+                const bctx = cvs.getContext('2d');
+                bctx.clearRect(0, 0, cvs.width, cvs.height);
+                bctx.save();
+                bctx.translate(cvs.width / 2, cvs.height / 2 + 1);
+                drawCharacterBody(bctx, 'bleep', 18, 20, true);
+                bctx.restore();
+            });
+
+            const pipCanvases = document.querySelectorAll('.ending-pip-canvas');
+            pipCanvases.forEach(cvs => {
+                const pctx = cvs.getContext('2d');
+                pctx.clearRect(0, 0, cvs.width, cvs.height);
+                pctx.save();
+                pctx.translate(cvs.width / 2, cvs.height / 2 + 1);
+                drawCharacterBody(pctx, 'miner', 18, 20, true);
+                pctx.restore();
+            });
         }
 
         function startGame() {
@@ -4409,7 +4557,10 @@
             // If level 21 is completed, open the Grand Final Ending Story Modal!
             if (currentStoryLevel === 21) {
                 const storyEndingModal = document.getElementById('storyEndingModal');
-                if (storyEndingModal) storyEndingModal.classList.remove('hidden');
+                if (storyEndingModal) {
+                    storyEndingModal.classList.remove('hidden');
+                    renderEndingDialogueCanvases();
+                }
                 return;
             }
 
