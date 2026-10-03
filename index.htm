@@ -245,19 +245,19 @@
         </div>
 
         <!-- Story Mode Cutscene Modal -->
-        <div id="storyCutsceneModal" class="absolute inset-0 bg-slate-950 flex flex-col justify-end p-3 sm:p-5 text-center z-40 hidden transition-opacity duration-300 w-full h-full overflow-hidden">
-            <!-- Fullscreen Background Image -->
+        <div id="storyCutsceneModal" class="absolute inset-0 bg-slate-950 flex flex-col justify-end p-4 sm:p-6 pb-6 sm:pb-8 text-center z-40 hidden transition-opacity duration-300 w-full h-full overflow-hidden">
+            <!-- Fullscreen Background Image (Bright & Unobscured) -->
             <img id="storyCutsceneImg" src="" alt="Cena História" class="absolute inset-0 w-full h-full object-cover z-0">
 
-            <!-- Vignette Overlay to ensure contrast -->
-            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none z-0"></div>
+            <!-- Subtle Bottom Gradient to complement backdrop text readability -->
+            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none z-0"></div>
 
-            <!-- Content Overlay (Text + Button positioned directly below text) -->
-            <div class="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-2.5 sm:gap-3.5">
-                <div id="cutsceneTextContainer" class="w-full bg-slate-900/85 backdrop-blur-md border border-amber-500/40 rounded-2xl p-3 sm:p-4 text-center min-h-[52px] flex items-center justify-center shadow-2xl">
-                    <p id="storyCutsceneText" class="text-xs sm:text-base text-amber-200 font-game leading-relaxed"></p>
+            <!-- Content Overlay (Large Text + Button positioned directly below text) -->
+            <div class="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-3 sm:gap-4 mb-2">
+                <div id="cutsceneTextContainer" class="w-full bg-slate-950/85 backdrop-blur-md border-2 border-amber-400/60 rounded-2xl p-4 sm:p-5 text-center min-h-[64px] flex items-center justify-center shadow-2xl">
+                    <p id="storyCutsceneText" class="text-base sm:text-2xl text-amber-100 font-game font-bold leading-relaxed tracking-wide drop-shadow-md"></p>
                 </div>
-                <button id="storyCutsceneNextBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-base sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40 cursor-pointer">
+                <button id="storyCutsceneNextBtn" class="w-full py-3.5 sm:py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-lg sm:text-2xl rounded-2xl shadow-xl shadow-orange-500/40 transition active:scale-95 border border-amber-300/50 cursor-pointer">
                     Seguinte
                 </button>
             </div>
