@@ -245,16 +245,22 @@
         </div>
 
         <!-- Story Mode Cutscene Modal -->
-        <div id="storyCutsceneModal" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-between p-3 sm:p-4 text-center z-40 hidden transition-opacity duration-300 w-full h-full">
-            <div id="cutsceneImgContainer" class="relative w-full flex-1 flex items-center justify-center overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-900/80 p-2 mb-3">
-                <img id="storyCutsceneImg" src="" alt="Cena História" class="w-full h-full object-contain rounded-xl shadow-2xl">
+        <div id="storyCutsceneModal" class="absolute inset-0 bg-slate-950 flex flex-col justify-end p-3 sm:p-5 text-center z-40 hidden transition-opacity duration-300 w-full h-full overflow-hidden">
+            <!-- Fullscreen Background Image -->
+            <img id="storyCutsceneImg" src="" alt="Cena História" class="absolute inset-0 w-full h-full object-cover z-0">
+
+            <!-- Vignette Overlay to ensure contrast -->
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none z-0"></div>
+
+            <!-- Content Overlay (Text + Button positioned directly below text) -->
+            <div class="relative z-10 w-full max-w-xl mx-auto flex flex-col gap-2.5 sm:gap-3.5">
+                <div id="cutsceneTextContainer" class="w-full bg-slate-900/85 backdrop-blur-md border border-amber-500/40 rounded-2xl p-3 sm:p-4 text-center min-h-[52px] flex items-center justify-center shadow-2xl">
+                    <p id="storyCutsceneText" class="text-xs sm:text-base text-amber-200 font-game leading-relaxed"></p>
+                </div>
+                <button id="storyCutsceneNextBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-base sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40 cursor-pointer">
+                    Seguinte
+                </button>
             </div>
-            <div id="cutsceneTextContainer" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3 text-center min-h-[56px] flex items-center justify-center mb-2.5">
-                <p id="storyCutsceneText" class="text-xs sm:text-base text-amber-200 font-game leading-relaxed max-w-xl mx-auto"></p>
-            </div>
-            <button id="storyCutsceneNextBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-game text-base sm:text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition active:scale-95 border border-amber-300/40 cursor-pointer">
-                Seguinte
-            </button>
         </div>
 
         <!-- Story Level Pre-Start Sequential Dialogue Modal -->
