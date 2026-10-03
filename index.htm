@@ -1761,28 +1761,26 @@
         let gameMode = 'INFINITE'; // 'INFINITE' or 'STORY'
         let currentStoryLevel = 1;
         let unlockedStoryLevel = parseInt(localStorage.getItem('subida_nuvens_unlocked_level') || '1', 10);
-        let lavaY = 0;
-        let lavaSurgeTimer = 0;
 
         const STORY_THEMES = [
             // Ato 1: A Fuga das Profundezas
             {
                 id: 1,
                 actTitle: 'Ato 1: A Fuga das Profundezas',
-                name: 'Caverna do Vulcão',
-                subtitle: 'O Início',
-                bgGradient: ['#18181b', '#7f1d1d'],
+                name: 'Fundo do Vulcão',
+                subtitle: 'A Lava Subindo!',
+                bgGradient: ['#18181b', '#450a0a'],
                 elementType: 'embers',
-                elementColor: 'rgba(249, 115, 22, 0.6)',
+                elementColor: 'rgba(249, 115, 22, 0.7)',
                 platformColors: {
-                    normal: ['#f97316', '#c2410c'],
-                    moving: ['#facc15', '#ca8a04'],
-                    spring: ['#e11d48', '#9f1239'],
+                    normal: ['#52525b', '#27272a'],
+                    moving: ['#71717a', '#3f3f46'],
+                    spring: ['#ea580c', '#9a3412'],
                     fragile: ['#ef4444', '#7f1d1d']
                 },
                 dialogue: {
-                    bleep: 'O raio me puxou para o compartimento de carga! O motor deles está avariado e criando portais!',
-                    player: 'Segure-se, Bleep! Vou usar esses escombros para subir e entrar no portal!'
+                    bleep: 'A erupção começou! A lava está subindo muito rápido! Cuidado com as rochas quebradiças!',
+                    player: 'Preciso saltar pelas rochas vulcânicas e subir sem parar antes que a lava me alcance!'
                 }
             },
             {
@@ -2617,8 +2615,6 @@
                 this.lives = 5;
                 this.invulnerableTimer = 0;
                 sound.stopJetpackSound();
-                lavaY = (canvas.height || 600) + 150;
-                lavaSurgeTimer = 0;
             },
 
             activateJetpack(forcedWillFail = null) {
@@ -2902,6 +2898,8 @@
         let cameraY = 0;
         let highestY = 0;
         let score = 0;
+        let lavaY = 0;
+        let lavaStartTimer = 180;
         let coinCount = 0;
         let baseCameraSpeed = 0.8; // Reduced base camera scroll speed
         let currentCameraSpeed = 0.8;
@@ -2921,6 +2919,32 @@
                 this.crumbling = false;
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
+
+                // Generate unique irregular volcanic rock contour points
+                this.topRockPoints = [];
+                this.bottomRockPoints = [];
+                const segments = Math.max(5, Math.floor(width / 12));
+                const segWidth = width / segments;
+
+                for (let i = 0; i <= segments; i++) {
+                    const isEdge = (i === 0 || i === segments);
+                    const topY = isEdge ? (Math.random() * 2) : (Math.random() * 5 - 2);
+                    this.topRockPoints.push({ x: i * segWidth, y: topY });
+
+                    const botY = isEdge ? (14 + Math.random() * 4) : (12 + Math.random() * 9);
+                    this.bottomRockPoints.push({ x: i * segWidth, y: botY });
+                }
+
+                this.rockCrags = [];
+                const cragCount = 2 + Math.floor(Math.random() * 3);
+                for (let c = 0; c < cragCount; c++) {
+                    this.rockCrags.push({
+                        relX: 0.15 + Math.random() * 0.7,
+                        relY: 3 + Math.random() * 5,
+                        dx: (Math.random() - 0.5) * 12,
+                        dy: 4 + Math.random() * 6
+                    });
+                }
             }
 
             triggerBend() {
@@ -3080,15 +3104,118 @@
 
                 ctx.fillStyle = colorGradient;
 
-                if (Math.abs(bendOffset) < 0.1) {
-                    // Platform main bar
-                    ctx.beginPath();
-                    ctx.roundRect(x0, y0, this.width, this.height, 6);
-                    ctx.fill();
+                const isVolcanoLevel = gameMode === 'STORY' && currentStoryLevel === 1;
 
-                    // Highlight top edge
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(x0 + 4, y0 + 2, this.width - 8, 3);
+                if (Math.abs(bendOffset) < 0.1) {
+                    if (isVolcanoLevel) {
+                        // Render unique procedural volcanic rock shape
+                        ctx.beginPath();
+                        if (this.topRockPoints && this.topRockPoints.length > 0) {
+                            ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y);
+                            for (let i = 1; i < this.topRockPoints.length; i++) {
+                                ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y);
+                            }
+                            for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
+                                ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y);
+                            }
+                        } else {
+                            ctx.roundRect(x0, y0, this.width, this.height, 6);
+                        }
+                        ctx.closePath();
+
+                        // Base stone gradient fill
+                        const rockGrad = ctx.createLinearGradient(x0, y0, x0, y0 + this.height + 6);
+                        if (this.type === 'fragile') {
+                            rockGrad.addColorStop(0, '#52525b');
+                            rockGrad.addColorStop(0.6, '#3f3f46');
+                            rockGrad.addColorStop(1, '#18181b');
+                        } else if (this.type === 'spring') {
+                            rockGrad.addColorStop(0, '#71717a');
+                            rockGrad.addColorStop(0.5, '#475569');
+                            rockGrad.addColorStop(1, '#1e293b');
+                        } else {
+                            rockGrad.addColorStop(0, '#52525b');
+                            rockGrad.addColorStop(0.6, '#27272a');
+                            rockGrad.addColorStop(1, '#0f172a');
+                        }
+                        ctx.fillStyle = rockGrad;
+                        ctx.fill();
+
+                        // Rock Top Surface Highlight
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + 1);
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + 1);
+                        }
+                        ctx.stroke();
+
+                        // Dark Rock Bottom Shadow
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.bottomRockPoints[0].x, y0 + this.bottomRockPoints[0].y);
+                        for (let i = 1; i < this.bottomRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y);
+                        }
+                        ctx.stroke();
+
+                        // Internal Rock Crags & Cracks
+                        if (this.rockCrags) {
+                            ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+                            ctx.lineWidth = 1.2;
+                            this.rockCrags.forEach(crag => {
+                                const cx = x0 + this.width * crag.relX;
+                                const cy = y0 + crag.relY;
+                                ctx.beginPath();
+                                ctx.moveTo(cx, cy);
+                                ctx.lineTo(cx + crag.dx, cy + crag.dy);
+                                ctx.stroke();
+                            });
+                        }
+
+                        // Glowing details for Fragile and Spring rocks
+                        if (this.type === 'fragile') {
+                            // Fiery glowing magma veins on fragile volcanic rocks
+                            const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+                            ctx.strokeStyle = `rgba(249, 115, 22, ${pulse})`;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(x0 + this.width * 0.2, y0 + 3);
+                            ctx.lineTo(x0 + this.width * 0.35, y0 + 10);
+                            ctx.lineTo(x0 + this.width * 0.55, y0 + 6);
+                            ctx.lineTo(x0 + this.width * 0.8, y0 + 13);
+                            ctx.stroke();
+
+                            ctx.strokeStyle = `rgba(250, 204, 21, ${pulse * 0.8})`;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(x0 + this.width * 0.35, y0 + 10);
+                            ctx.lineTo(x0 + this.width * 0.45, y0 + 15);
+                            ctx.stroke();
+                        } else if (this.type === 'spring') {
+                            // Glowing magma vent at the center
+                            const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
+                            ctx.fillStyle = '#ff4500';
+                            ctx.beginPath();
+                            ctx.ellipse(midX, y0 + 4, 11 * pulse, 3.5 * pulse, 0, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            ctx.fillStyle = '#fef08a';
+                            ctx.beginPath();
+                            ctx.ellipse(midX, y0 + 4, 5.5 * pulse, 1.8 * pulse, 0, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    } else {
+                        // Standard rectangular platform
+                        ctx.beginPath();
+                        ctx.roundRect(x0, y0, this.width, this.height, 6);
+                        ctx.fill();
+
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.fillRect(x0 + 4, y0 + 2, this.width - 8, 3);
+                    }
                 } else {
                     // Curved platform path
                     ctx.beginPath();
@@ -3100,7 +3227,7 @@
                     ctx.fill();
 
                     // Highlight top edge along curve
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                    ctx.strokeStyle = isVolcanoLevel ? 'rgba(249, 115, 22, 0.6)' : 'rgba(255, 255, 255, 0.35)';
                     ctx.lineWidth = 3;
                     ctx.beginPath();
                     ctx.moveTo(x0 + 4, y0 + 2);
@@ -3628,8 +3755,8 @@
                     }
                 }
 
-                // Level 1: Replace springs with fragile platforms
-                if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'spring') {
+                // In Level 1 of Story Mode, moving platforms become fragile platforms
+                if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
                     type = 'fragile';
                     consecutiveFragile++;
                 }
@@ -3652,12 +3779,12 @@
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
-                // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance except Level 1)
+                // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
                 if (type !== 'fragile' && type !== 'finish') {
                     const randCollect = Math.random();
                     if (randCollect < 0.08) {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                    } else if (randCollect < 0.11 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
+                    } else if (randCollect < 0.11) {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                     }
                 }
@@ -3726,8 +3853,8 @@
                         }
                     }
 
-                    // Level 1: Replace springs with fragile platforms
-                    if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'spring') {
+                    // In Level 1 of Story Mode, moving platforms become fragile platforms
+                    if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
                         type = 'fragile';
                         consecutiveFragile++;
                     }
@@ -3750,12 +3877,12 @@
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
-                    // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance except Level 1)
+                    // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
                     if (type !== 'fragile' && type !== 'finish') {
                         const randCollect = Math.random();
                         if (randCollect < 0.08) {
                             collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                        } else if (randCollect < 0.11 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
+                        } else if (randCollect < 0.11) {
                             collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                         }
                     }
@@ -3923,6 +4050,31 @@
 
             player.update();
 
+            // Rising Lava System for Level 1 (Story Mode)
+            if (gameMode === 'STORY' && currentStoryLevel === 1) {
+                if (lavaStartTimer > 0) {
+                    lavaStartTimer--;
+                } else {
+                    lavaY -= 0.85; // Rising speed
+                }
+
+                // Game over condition: player touched rising lava
+                if (player.y + player.height >= lavaY) {
+                    triggerGameOver();
+                    return;
+                }
+
+                // Heat embers emitted from lava surface
+                if (Math.random() < 0.35) {
+                    createParticles(
+                        Math.random() * canvas.width,
+                        lavaY,
+                        Math.random() < 0.5 ? '#ff4500' : '#facc15',
+                        1
+                    );
+                }
+            }
+
             // Camera movement: Smoothly follows the player as they climb higher
             if (player.hasFirstJumped) {
                 const targetCameraY = player.y - canvas.height * 0.55;
@@ -3939,24 +4091,6 @@
 
             // Generate platforms as we climb higher
             generateHigherPlatforms();
-
-            // Story Mode Level 1 Surging Lava logic
-            if (gameMode === 'STORY' && currentStoryLevel === 1 && player.hasFirstJumped) {
-                lavaSurgeTimer++;
-                const baseTargetY = cameraY + canvas.height + 40;
-                const cycle = lavaSurgeTimer % 240;
-                let targetY = baseTargetY;
-                if (cycle < 100) {
-                    targetY = Math.min(baseTargetY, player.y + 90);
-                }
-                lavaY += (targetY - lavaY) * 0.06;
-
-                if (player.y + player.height >= lavaY - 6) {
-                    takeDamage(1);
-                    player.vy = -15;
-                    createParticles(player.x + player.width / 2, lavaY, '#f97316', 15);
-                }
-            }
 
             // Story Mode finish condition check (crossing the finish line height or reaching 2000m)
             if (gameMode === 'STORY') {
@@ -4220,50 +4354,6 @@
                         ctx.fill();
                     }
                 }
-
-                // Render Level 1 Surging Lava overlay
-                if (currentStoryLevel === 1) {
-                    const screenLavaY = lavaY - cameraY;
-                    if (screenLavaY < canvas.height + 100) {
-                        ctx.save();
-
-                        // Heat glow
-                        const glowGrad = ctx.createLinearGradient(0, Math.max(0, screenLavaY - 35), 0, screenLavaY);
-                        glowGrad.addColorStop(0, 'rgba(249, 115, 22, 0)');
-                        glowGrad.addColorStop(1, 'rgba(249, 115, 22, 0.45)');
-                        ctx.fillStyle = glowGrad;
-                        ctx.fillRect(0, Math.max(0, screenLavaY - 35), canvas.width, 35);
-
-                        // Wavy crest
-                        ctx.beginPath();
-                        ctx.moveTo(0, canvas.height + 100);
-                        ctx.lineTo(0, screenLavaY);
-                        const waveTime = Date.now() * 0.005;
-                        for (let x = 0; x <= canvas.width; x += 10) {
-                            const waveY = screenLavaY + Math.sin(x * 0.03 + waveTime) * 6 + Math.cos(x * 0.015 - waveTime * 0.8) * 4;
-                            ctx.lineTo(x, waveY);
-                        }
-                        ctx.lineTo(canvas.width, canvas.height + 100);
-                        ctx.closePath();
-
-                        // Lava body
-                        const lavaGrad = ctx.createLinearGradient(0, screenLavaY, 0, canvas.height + 100);
-                        lavaGrad.addColorStop(0, '#facc15');
-                        lavaGrad.addColorStop(0.15, '#f97316');
-                        lavaGrad.addColorStop(0.5, '#dc2626');
-                        lavaGrad.addColorStop(1, '#450a0a');
-                        ctx.fillStyle = lavaGrad;
-                        ctx.fill();
-
-                        // Sparks
-                        if (Math.random() < 0.25) {
-                            const px = Math.random() * canvas.width;
-                            createParticles(px, lavaY, Math.random() < 0.5 ? '#facc15' : '#f97316', 1);
-                        }
-
-                        ctx.restore();
-                    }
-                }
             } else {
                 // Infinite Mode dynamic sky gradient
                 const skyProgress = Math.min(1, score / 500);
@@ -4339,6 +4429,38 @@
                 }
                 ctx.restore();
             });
+
+            // Draw Rising Lava in Level 1 (Story Mode)
+            if (gameMode === 'STORY' && currentStoryLevel === 1) {
+                ctx.save();
+                const waveTime = Date.now() * 0.005;
+
+                ctx.beginPath();
+                ctx.moveTo(0, lavaY);
+                for (let x = 0; x <= canvas.width + 10; x += 15) {
+                    const waveHeight = Math.sin(x * 0.04 + waveTime) * 5;
+                    ctx.lineTo(x, lavaY + waveHeight);
+                }
+                ctx.lineTo(canvas.width + 10, lavaY + canvas.height * 2);
+                ctx.lineTo(0, lavaY + canvas.height * 2);
+                ctx.closePath();
+
+                const lavaGrad = ctx.createLinearGradient(0, lavaY - 10, 0, lavaY + 250);
+                lavaGrad.addColorStop(0, '#facc15'); // Hot yellow surface
+                lavaGrad.addColorStop(0.12, '#f97316'); // Bright orange
+                lavaGrad.addColorStop(0.4, '#dc2626'); // Fiery red
+                lavaGrad.addColorStop(1, '#450a0a'); // Dark deep lava
+
+                ctx.fillStyle = lavaGrad;
+                ctx.fill();
+
+                // Surface heat glow line
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
 
             // Draw Player
             player.draw();
@@ -4438,6 +4560,26 @@
                     }
                     ctx.font = '13px sans-serif';
                     ctx.fillText(heartsText, 26, 131);
+
+                    // Lava warning HUD badge for Level 1
+                    if (currentStoryLevel === 1) {
+                        ctx.save();
+                        ctx.font = 'bold 13px "Fredoka One", cursive';
+                        ctx.textAlign = 'center';
+
+                        if (lavaStartTimer > 0) {
+                            const sec = Math.ceil(lavaStartTimer / 60);
+                            ctx.fillStyle = '#facc15';
+                            ctx.fillText(`⚠️ LAVA SUBINDO EM ${sec}s!`, canvas.width / 2, 32);
+                        } else {
+                            const pulse = 1 + 0.08 * Math.sin(Date.now() * 0.01);
+                            ctx.translate(canvas.width / 2, 32);
+                            ctx.scale(pulse, pulse);
+                            ctx.fillStyle = '#ef4444';
+                            ctx.fillText('🔥 A LAVA ESTÁ SUBINDO! 🔥', 0, 0);
+                        }
+                        ctx.restore();
+                    }
                 } else {
                     ctx.beginPath();
                     ctx.roundRect(16, 70, 150, 60, 12);
@@ -4570,11 +4712,14 @@
             score = 0;
             coinCount = 0;
             cameraY = 0;
-            lavaY = (canvas.height || 600) + 150;
-            lavaSurgeTimer = 0;
             particles = [];
             player.reset();
             generateInitialPlatforms();
+
+            if (gameMode === 'STORY' && currentStoryLevel === 1) {
+                lavaY = (canvas.height || 600) + 120;
+                lavaStartTimer = 180;
+            }
 
             startMenu.classList.add('hidden');
             if (levelSelectMenu) levelSelectMenu.classList.add('hidden');
