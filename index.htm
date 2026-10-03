@@ -2900,6 +2900,9 @@
         let score = 0;
         let lavaY = 0;
         let lavaStartTimer = 180;
+        let lavaSurgeInterval = 360; // 6 seconds normal speed
+        let lavaSurgeTimer = 360;
+        let lavaSurgeActiveTimer = 0; // Duration of active surge (e.g. 150 frames = 2.5s)
         let coinCount = 0;
         let baseCameraSpeed = 0.8; // Reduced base camera scroll speed
         let currentCameraSpeed = 0.8;
@@ -3755,8 +3758,8 @@
                     }
                 }
 
-                // In Level 1 of Story Mode, moving platforms become fragile platforms
-                if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
+                // In Level 1 of Story Mode, moving and spring platforms become fragile platforms
+                if (gameMode === 'STORY' && currentStoryLevel === 1 && (type === 'moving' || type === 'spring')) {
                     type = 'fragile';
                     consecutiveFragile++;
                 }
@@ -3779,12 +3782,12 @@
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
-                // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
+                // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance except Level 1)
                 if (type !== 'fragile' && type !== 'finish') {
                     const randCollect = Math.random();
                     if (randCollect < 0.08) {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                    } else if (randCollect < 0.11) {
+                    } else if (randCollect < 0.11 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                     }
                 }
@@ -3853,8 +3856,8 @@
                         }
                     }
 
-                    // In Level 1 of Story Mode, moving platforms become fragile platforms
-                    if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
+                    // In Level 1 of Story Mode, moving and spring platforms become fragile platforms
+                    if (gameMode === 'STORY' && currentStoryLevel === 1 && (type === 'moving' || type === 'spring')) {
                         type = 'fragile';
                         consecutiveFragile++;
                     }
@@ -3877,12 +3880,12 @@
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
-                    // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance)
+                    // Spawn Collectibles (Hearts ~8% chance, Jetpacks ~3% chance except Level 1)
                     if (type !== 'fragile' && type !== 'finish') {
                         const randCollect = Math.random();
                         if (randCollect < 0.08) {
                             collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                        } else if (randCollect < 0.11) {
+                        } else if (randCollect < 0.11 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
                             collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                         }
                     }
@@ -4050,12 +4053,33 @@
 
             player.update();
 
-            // Rising Lava System for Level 1 (Story Mode)
+            // Rising Lava System with Periodic Surges for Level 1 (Story Mode)
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
                 if (lavaStartTimer > 0) {
                     lavaStartTimer--;
                 } else {
-                    lavaY -= 0.85; // Rising speed
+                    let currentLavaSpeed = 0.85;
+
+                    // Surge timer cycle
+                    if (lavaSurgeActiveTimer > 0) {
+                        lavaSurgeActiveTimer--;
+                        // During active surge, speed up lava significantly to surge into viewport
+                        currentLavaSpeed = 3.2;
+
+                        // Guarantee lava reaches near viewport during surge if it's lagging far behind
+                        const minViewportLavaY = cameraY + canvas.height * 0.85;
+                        if (lavaY > minViewportLavaY) {
+                            lavaY -= (lavaY - minViewportLavaY) * 0.08;
+                        }
+                    } else {
+                        lavaSurgeTimer--;
+                        if (lavaSurgeTimer <= 0) {
+                            lavaSurgeActiveTimer = 150; // Active surge for 2.5 seconds
+                            lavaSurgeTimer = 360; // Reset 6-second interval
+                        }
+                    }
+
+                    lavaY -= currentLavaSpeed;
                 }
 
                 // Game over condition: player touched rising lava
@@ -4065,12 +4089,12 @@
                 }
 
                 // Heat embers emitted from lava surface
-                if (Math.random() < 0.35) {
+                if (Math.random() < (lavaSurgeActiveTimer > 0 ? 0.85 : 0.35)) {
                     createParticles(
                         Math.random() * canvas.width,
                         lavaY,
                         Math.random() < 0.5 ? '#ff4500' : '#facc15',
-                        1
+                        lavaSurgeActiveTimer > 0 ? 2 : 1
                     );
                 }
             }
@@ -4571,6 +4595,12 @@
                             const sec = Math.ceil(lavaStartTimer / 60);
                             ctx.fillStyle = '#facc15';
                             ctx.fillText(`⚠️ LAVA SUBINDO EM ${sec}s!`, canvas.width / 2, 32);
+                        } else if (lavaSurgeActiveTimer > 0) {
+                            const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.02);
+                            ctx.translate(canvas.width / 2, 32);
+                            ctx.scale(pulse, pulse);
+                            ctx.fillStyle = '#ff0000';
+                            ctx.fillText('🚨 ERUPÇÃO! A LAVA ESTÁ SUBINDO RÁPIDO! 🚨', 0, 0);
                         } else {
                             const pulse = 1 + 0.08 * Math.sin(Date.now() * 0.01);
                             ctx.translate(canvas.width / 2, 32);
@@ -4719,6 +4749,8 @@
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
                 lavaY = (canvas.height || 600) + 120;
                 lavaStartTimer = 180;
+                lavaSurgeTimer = 360;
+                lavaSurgeActiveTimer = 0;
             }
 
             startMenu.classList.add('hidden');
