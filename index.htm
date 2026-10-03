@@ -2919,6 +2919,32 @@
                 this.crumbling = false;
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
+
+                // Generate unique irregular volcanic rock contour points
+                this.topRockPoints = [];
+                this.bottomRockPoints = [];
+                const segments = Math.max(5, Math.floor(width / 12));
+                const segWidth = width / segments;
+
+                for (let i = 0; i <= segments; i++) {
+                    const isEdge = (i === 0 || i === segments);
+                    const topY = isEdge ? (Math.random() * 2) : (Math.random() * 5 - 2);
+                    this.topRockPoints.push({ x: i * segWidth, y: topY });
+
+                    const botY = isEdge ? (14 + Math.random() * 4) : (12 + Math.random() * 9);
+                    this.bottomRockPoints.push({ x: i * segWidth, y: botY });
+                }
+
+                this.rockCrags = [];
+                const cragCount = 2 + Math.floor(Math.random() * 3);
+                for (let c = 0; c < cragCount; c++) {
+                    this.rockCrags.push({
+                        relX: 0.15 + Math.random() * 0.7,
+                        relY: 3 + Math.random() * 5,
+                        dx: (Math.random() - 0.5) * 12,
+                        dy: 4 + Math.random() * 6
+                    });
+                }
             }
 
             triggerBend() {
@@ -3081,50 +3107,112 @@
                 const isVolcanoLevel = gameMode === 'STORY' && currentStoryLevel === 1;
 
                 if (Math.abs(bendOffset) < 0.1) {
-                    // Platform main bar
-                    ctx.beginPath();
                     if (isVolcanoLevel) {
-                        // Jagged volcanic rock contour
-                        ctx.moveTo(x0, y0 + 4);
-                        ctx.lineTo(x0 + 6, y0);
-                        ctx.lineTo(x1 - 6, y0);
-                        ctx.lineTo(x1, y0 + 5);
-                        ctx.lineTo(x1 - 3, y1);
-                        ctx.lineTo(x0 + 3, y1);
+                        // Render unique procedural volcanic rock shape
+                        ctx.beginPath();
+                        if (this.topRockPoints && this.topRockPoints.length > 0) {
+                            ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y);
+                            for (let i = 1; i < this.topRockPoints.length; i++) {
+                                ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y);
+                            }
+                            for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
+                                ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y);
+                            }
+                        } else {
+                            ctx.roundRect(x0, y0, this.width, this.height, 6);
+                        }
                         ctx.closePath();
-                    } else {
-                        ctx.roundRect(x0, y0, this.width, this.height, 6);
-                    }
-                    ctx.fill();
 
-                    if (isVolcanoLevel) {
-                        // Volcanic Rock Details
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-                        ctx.fillRect(x0 + 6, y0 + 2, this.width - 12, 2);
-
+                        // Base stone gradient fill
+                        const rockGrad = ctx.createLinearGradient(x0, y0, x0, y0 + this.height + 6);
                         if (this.type === 'fragile') {
-                            // Glowing fiery lava cracks on fragile volcanic rocks
-                            ctx.strokeStyle = '#f97316';
-                            ctx.lineWidth = 1.5;
+                            rockGrad.addColorStop(0, '#52525b');
+                            rockGrad.addColorStop(0.6, '#3f3f46');
+                            rockGrad.addColorStop(1, '#18181b');
+                        } else if (this.type === 'spring') {
+                            rockGrad.addColorStop(0, '#71717a');
+                            rockGrad.addColorStop(0.5, '#475569');
+                            rockGrad.addColorStop(1, '#1e293b');
+                        } else {
+                            rockGrad.addColorStop(0, '#52525b');
+                            rockGrad.addColorStop(0.6, '#27272a');
+                            rockGrad.addColorStop(1, '#0f172a');
+                        }
+                        ctx.fillStyle = rockGrad;
+                        ctx.fill();
+
+                        // Rock Top Surface Highlight
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + 1);
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + 1);
+                        }
+                        ctx.stroke();
+
+                        // Dark Rock Bottom Shadow
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.bottomRockPoints[0].x, y0 + this.bottomRockPoints[0].y);
+                        for (let i = 1; i < this.bottomRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y);
+                        }
+                        ctx.stroke();
+
+                        // Internal Rock Crags & Cracks
+                        if (this.rockCrags) {
+                            ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+                            ctx.lineWidth = 1.2;
+                            this.rockCrags.forEach(crag => {
+                                const cx = x0 + this.width * crag.relX;
+                                const cy = y0 + crag.relY;
+                                ctx.beginPath();
+                                ctx.moveTo(cx, cy);
+                                ctx.lineTo(cx + crag.dx, cy + crag.dy);
+                                ctx.stroke();
+                            });
+                        }
+
+                        // Glowing details for Fragile and Spring rocks
+                        if (this.type === 'fragile') {
+                            // Fiery glowing magma veins on fragile volcanic rocks
+                            const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+                            ctx.strokeStyle = `rgba(249, 115, 22, ${pulse})`;
+                            ctx.lineWidth = 2;
                             ctx.beginPath();
-                            ctx.moveTo(x0 + this.width * 0.25, y0 + 2);
-                            ctx.lineTo(x0 + this.width * 0.35, y0 + 9);
-                            ctx.lineTo(x0 + this.width * 0.5, y0 + 5);
-                            ctx.lineTo(x0 + this.width * 0.7, y0 + 12);
+                            ctx.moveTo(x0 + this.width * 0.2, y0 + 3);
+                            ctx.lineTo(x0 + this.width * 0.35, y0 + 10);
+                            ctx.lineTo(x0 + this.width * 0.55, y0 + 6);
+                            ctx.lineTo(x0 + this.width * 0.8, y0 + 13);
+                            ctx.stroke();
+
+                            ctx.strokeStyle = `rgba(250, 204, 21, ${pulse * 0.8})`;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(x0 + this.width * 0.35, y0 + 10);
+                            ctx.lineTo(x0 + this.width * 0.45, y0 + 15);
                             ctx.stroke();
                         } else if (this.type === 'spring') {
                             // Glowing magma vent at the center
+                            const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
                             ctx.fillStyle = '#ff4500';
                             ctx.beginPath();
-                            ctx.ellipse(midX, y0 + 3, 10, 3, 0, 0, Math.PI * 2);
+                            ctx.ellipse(midX, y0 + 4, 11 * pulse, 3.5 * pulse, 0, 0, Math.PI * 2);
                             ctx.fill();
-                            ctx.fillStyle = '#ffff00';
+
+                            ctx.fillStyle = '#fef08a';
                             ctx.beginPath();
-                            ctx.ellipse(midX, y0 + 3, 5, 1.5, 0, 0, Math.PI * 2);
+                            ctx.ellipse(midX, y0 + 4, 5.5 * pulse, 1.8 * pulse, 0, 0, Math.PI * 2);
                             ctx.fill();
                         }
                     } else {
-                        // Highlight top edge
+                        // Standard rectangular platform
+                        ctx.beginPath();
+                        ctx.roundRect(x0, y0, this.width, this.height, 6);
+                        ctx.fill();
+
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.fillRect(x0 + 4, y0 + 2, this.width - 8, 3);
                     }
@@ -3667,10 +3755,10 @@
                     }
                 }
 
-                // Level 1 of Story Mode has no moving platforms
+                // In Level 1 of Story Mode, moving platforms become fragile platforms
                 if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
-                    type = Math.random() < 0.5 ? 'normal' : 'fragile';
-                    if (type === 'fragile') consecutiveFragile++;
+                    type = 'fragile';
+                    consecutiveFragile++;
                 }
 
                 const platform = new Platform(x, currentY, width, type);
@@ -3765,10 +3853,10 @@
                         }
                     }
 
-                    // Level 1 of Story Mode has no moving platforms
+                    // In Level 1 of Story Mode, moving platforms become fragile platforms
                     if (gameMode === 'STORY' && currentStoryLevel === 1 && type === 'moving') {
-                        type = Math.random() < 0.5 ? 'normal' : 'fragile';
-                        if (type === 'fragile') consecutiveFragile++;
+                        type = 'fragile';
+                        consecutiveFragile++;
                     }
 
                     const platform = new Platform(x, currentY, width, type);
