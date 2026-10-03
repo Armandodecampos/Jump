@@ -4359,6 +4359,49 @@
                         ctx.fill();
                     }
                 } else if (theme.elementType === 'embers' || theme.elementType === 'spores') {
+                    // Draw lava veins dripping on background rock walls for Level 1 volcano theme
+                    if (currentStoryLevel === 1) {
+                        ctx.save();
+                        const time = Date.now() * 0.002;
+
+                        // Draw rock wall crag cracks with flowing glowing lava veins
+                        ctx.lineWidth = 3.5;
+                        ctx.lineCap = 'round';
+
+                        const veins = [
+                            { startX: canvas.width * 0.15, startY: 0, points: [[30, 150], [-20, 300], [40, 480], [-10, 650], [25, 800]] },
+                            { startX: canvas.width * 0.45, startY: -100, points: [[-40, 180], [35, 340], [-25, 520], [30, 700]] },
+                            { startX: canvas.width * 0.80, startY: -50, points: [[-25, 140], [30, 290], [-35, 460], [20, 620], [-15, 780]] }
+                        ];
+
+                        veins.forEach((vein, idx) => {
+                            const glowPulse = 0.6 + 0.4 * Math.sin(time * 2 + idx);
+
+                            // Outer magma glow
+                            ctx.strokeStyle = `rgba(239, 68, 68, ${0.45 * glowPulse})`;
+                            ctx.lineWidth = 8;
+                            ctx.beginPath();
+                            let curX = vein.startX;
+                            let curY = (vein.startY - cameraY * 0.2) % (canvas.height + 200);
+                            if (curY < -200) curY += canvas.height + 400;
+                            ctx.moveTo(curX, curY);
+
+                            vein.points.forEach(pt => {
+                                curX += pt[0];
+                                curY += pt[1];
+                                ctx.lineTo(curX, curY);
+                            });
+                            ctx.stroke();
+
+                            // Inner bright yellow/orange lava vein core
+                            ctx.strokeStyle = `rgba(250, 204, 21, ${0.85 * glowPulse})`;
+                            ctx.lineWidth = 3;
+                            ctx.stroke();
+                        });
+                        ctx.restore();
+                    }
+
+                    // Floating heat embers
                     for (let i = 0; i < 30; i++) {
                         const ex = (i * 89 + 5) % canvas.width;
                         const ey = (i * 103 - cameraY * 0.35) % canvas.height;
@@ -4458,18 +4501,19 @@
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
                 ctx.save();
                 const waveTime = Date.now() * 0.005;
+                const screenLavaY = lavaY - cameraY;
 
                 ctx.beginPath();
-                ctx.moveTo(0, lavaY);
+                ctx.moveTo(0, screenLavaY);
                 for (let x = 0; x <= canvas.width + 10; x += 15) {
                     const waveHeight = Math.sin(x * 0.04 + waveTime) * 5;
-                    ctx.lineTo(x, lavaY + waveHeight);
+                    ctx.lineTo(x, screenLavaY + waveHeight);
                 }
-                ctx.lineTo(canvas.width + 10, lavaY + canvas.height * 2);
-                ctx.lineTo(0, lavaY + canvas.height * 2);
+                ctx.lineTo(canvas.width + 10, screenLavaY + canvas.height * 2);
+                ctx.lineTo(0, screenLavaY + canvas.height * 2);
                 ctx.closePath();
 
-                const lavaGrad = ctx.createLinearGradient(0, lavaY - 10, 0, lavaY + 250);
+                const lavaGrad = ctx.createLinearGradient(0, screenLavaY - 10, 0, screenLavaY + 250);
                 lavaGrad.addColorStop(0, '#facc15'); // Hot yellow surface
                 lavaGrad.addColorStop(0.12, '#f97316'); // Bright orange
                 lavaGrad.addColorStop(0.4, '#dc2626'); // Fiery red
