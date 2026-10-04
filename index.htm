@@ -4322,7 +4322,7 @@
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
                 // Volcanic Cracked Lava Texture Background for Level 1
                 const pat = createVolcanoTexture();
-                const offsetY = (-cameraY * 0.25) % 512;
+                const offsetY = (-cameraY) % 512;
 
                 ctx.save();
                 ctx.translate(0, offsetY);
