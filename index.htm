@@ -4742,13 +4742,25 @@
 
             const startWorldY = chunkY * CHUNK_SIZE;
 
+            // Deterministic hash helper for micro-texture and grain
+            function hash21(x, y) {
+                let h = Math.imul(x ^ 0x9E3779B9, 374761393) ^ Math.imul(y ^ 0x85EBCA6B, 668265263);
+                h = Math.imul(h ^ (h >>> 13), 1274126177);
+                return ((h ^ (h >>> 16)) >>> 0) / 4294967295.0;
+            }
+
             for (let py = 0; py < CHUNK_SIZE; py++) {
                 const wy = startWorldY + py;
-                const gy = Math.floor(wy / GRID_SIZE);
 
                 for (let px = 0; px < CHUNK_SIZE; px++) {
                     const wx = px;
-                    const gx = Math.floor(wx / GRID_SIZE);
+
+                    // Organic distortion of coordinates to create jagged, natural rock fractures
+                    const warpX = wx + Math.sin(wy * 0.035 + wx * 0.015) * 14.0 + Math.cos(wy * 0.07) * 5.0;
+                    const warpY = wy + Math.cos(wx * 0.035 - wy * 0.015) * 14.0 + Math.sin(wx * 0.07) * 5.0;
+
+                    const gx = Math.floor(warpX / GRID_SIZE);
+                    const gy = Math.floor(warpY / GRID_SIZE);
 
                     let d1 = Infinity, d2 = Infinity, d3 = Infinity;
                     let p1x = 0, p1y = 0;
@@ -4756,7 +4768,7 @@
                     for (let dx = -1; dx <= 1; dx++) {
                         for (let dy = -1; dy <= 1; dy++) {
                             const pt = getVolcanicGridPoint(gx + dx, gy + dy);
-                            const distSq = (wx - pt.x) ** 2 + (wy - pt.y) ** 2;
+                            const distSq = (warpX - pt.x) ** 2 + (warpY - pt.y) ** 2;
                             if (distSq < d1) {
                                 d3 = d2;
                                 d2 = d1;
@@ -4775,78 +4787,108 @@
                     const dist1 = Math.sqrt(d1);
                     const dist2 = Math.sqrt(d2);
                     const dist3 = Math.sqrt(d3);
-                    const edgeDist = dist2 - dist1; // distance to main cell boundary / lava fissure
+                    const edgeDist = dist2 - dist1; // Distance to cell boundary fracture
 
-                    // Junction flare offset (wider molten pool where multiple cell seams intersect)
-                    const junctionProximity = Math.max(0, 1.0 - (dist3 - dist1) / 36.0);
-                    const fissureWidth = 10.0 + junctionProximity * 10.0;
+                    // Junction flare at intersections of multiple rock plates
+                    const junctionProximity = Math.max(0, 1.0 - (dist3 - dist1) / 40.0);
 
-                    // Secondary branching micro-fissure network cutting across basalt rock faces
-                    const angle1 = Math.sin(wx * 0.035 + wy * 0.025) * 3.5;
-                    const angle2 = Math.cos(wx * 0.025 - wy * 0.04) * 3.5;
-                    const n1 = Math.sin((wx * 0.09 + angle1) + (wy * 0.07 + angle2));
-                    const n2 = Math.cos((wx * 0.07 - angle2) - (wy * 0.09 + angle1));
-                    const microVal = Math.abs(n1 * n2);
-                    const isMicroCrack = (microVal < 0.045) && (edgeDist > fissureWidth + 2.0);
+                    // Continuous noise field determining which fractures contain molten lava vs dry dark cracks
+                    const lavaField = Math.sin(warpX * 0.012 + warpY * 0.009) +
+                                      Math.cos(warpX * 0.007 - warpY * 0.014) +
+                                      Math.sin((warpX + warpY) * 0.018);
+
+                    // Main fissure path width (matching reference image trench structure)
+                    const isLavaChannel = lavaField > -0.15;
+                    const baseFissureWidth = isLavaChannel ? (11.0 + junctionProximity * 12.0) : 3.5;
+
+                    // Fine micro-crack network running across rock faces
+                    const microVal = Math.abs(Math.sin(warpX * 0.08 + Math.cos(warpY * 0.06) * 3) * Math.cos(warpY * 0.08 - Math.sin(warpX * 0.05) * 3));
+                    const isMicroCrack = (microVal < 0.035) && (edgeDist > baseFissureWidth + 3.0);
 
                     const idx = (py * CHUNK_SIZE + px) * 4;
 
-                    if (edgeDist < fissureWidth) {
-                        // Main Incandescent Lava Fissure with hyper-vibrant glowing layers (Matching reference image kjkjk.jfif)
-                        const normDist = edgeDist / fissureWidth;
-                        const intensity = 1.0 - normDist;
+                    if (edgeDist < baseFissureWidth && isLavaChannel) {
+                        // --- MOLTEN LAVA FISSURE (Matching Screenshot_20261004-115801~2.jpg) ---
+                        const t = edgeDist / baseFissureWidth; // 0 at core, 1 at rock edge
 
-                        if (edgeDist < 2.0) {
-                            // Ultra-hot white-yellow core
+                        if (t < 0.18) {
+                            // Incandescent white-yellow molten heat core
+                            const k = t / 0.18;
                             data[idx]     = 255;
-                            data[idx + 1] = 255;
-                            data[idx + 2] = Math.floor(180 + intensity * 75);
-                        } else if (edgeDist < 5.0) {
-                            // Vivid golden yellow into neon orange
-                            const t = (edgeDist - 2.0) / 3.0;
+                            data[idx + 1] = Math.floor(255 * (1 - k) + 230 * k);
+                            data[idx + 2] = Math.floor(220 * (1 - k) + 110 * k);
+                        } else if (t < 0.48) {
+                            // Brilliant fiery orange-yellow
+                            const k = (t - 0.18) / 0.30;
                             data[idx]     = 255;
-                            data[idx + 1] = Math.floor(215 * (1 - t) + 110 * t);
-                            data[idx + 2] = Math.floor(40 * (1 - t));
-                        } else if (edgeDist < 8.5) {
-                            // Fiery orange-red
-                            const t = (edgeDist - 5.0) / 3.5;
-                            data[idx]     = 255;
-                            data[idx + 1] = Math.floor(110 * (1 - t) + 25 * t);
-                            data[idx + 2] = 0;
+                            data[idx + 1] = Math.floor(230 * (1 - k) + 110 * k);
+                            data[idx + 2] = Math.floor(110 * (1 - k) + 10 * k);
+                        } else if (t < 0.78) {
+                            // Deep vibrant red-orange
+                            const k = (t - 0.48) / 0.30;
+                            data[idx]     = Math.floor(255 * (1 - k) + 200 * k);
+                            data[idx + 1] = Math.floor(110 * (1 - k) + 25 * k);
+                            data[idx + 2] = Math.floor(10 * (1 - k));
                         } else {
-                            // Crimson red margin bleeding into basalt rock
-                            const t = (edgeDist - 8.5) / (fissureWidth - 8.5);
-                            data[idx]     = Math.floor(220 * (1 - t) + 120 * t);
-                            data[idx + 1] = Math.floor(25 * (1 - t));
+                            // Cooling crimson crust margin
+                            const k = (t - 0.78) / 0.22;
+                            data[idx]     = Math.floor(200 * (1 - k) + 90 * k);
+                            data[idx + 1] = Math.floor(25 * (1 - k) + 5 * k);
                             data[idx + 2] = 0;
                         }
+                    } else if (edgeDist < baseFissureWidth && !isLavaChannel) {
+                        // Dark dry fracture shadow between rock plates
+                        const shadowDepth = 1.0 - (edgeDist / baseFissureWidth);
+                        const darkness = Math.floor(25 * (1 - shadowDepth * 0.7));
+                        data[idx]     = darkness;
+                        data[idx + 1] = darkness;
+                        data[idx + 2] = darkness + 2;
                     } else if (isMicroCrack) {
-                        // Secondary glowing micro-crack network
-                        const crackIntensity = (0.045 - microVal) / 0.045;
-                        data[idx]     = 255;
-                        data[idx + 1] = Math.floor(70 + crackIntensity * 120);
-                        data[idx + 2] = Math.floor(10 + crackIntensity * 30);
+                        // Secondary dark micro-crack on basalt surface
+                        data[idx]     = 18;
+                        data[idx + 1] = 18;
+                        data[idx + 2] = 20;
                     } else {
-                        // Highly detailed 3D basalt rock surface with facet lighting, micro-relief & rim glow
-                        const plateDist = edgeDist - fissureWidth;
-                        const nx = (wx - p1x) / (dist1 + 0.1);
-                        const ny = (wy - p1y) / (dist1 + 0.1);
+                        // --- CHARCOAL BASALT ROCK SURFACE (Matching Screenshot_20261004-115801~2.jpg) ---
+                        const plateDist = edgeDist - baseFissureWidth;
+                        const nx = (warpX - p1x) / (dist1 + 0.1);
+                        const ny = (warpY - p1y) / (dist1 + 0.1);
 
-                        // Rugged rock texture noise & micro-facets
-                        const rockBump = Math.sin(wx * 0.22 + wy * 0.17) * 0.5 + Math.sin(wx * 0.45 - wy * 0.4) * 0.3 + (Math.sin(wx * 0.9 + wy * 0.8) * 0.2);
-                        const light = Math.max(-0.4, Math.min(0.4, -nx * 0.55 - ny * 0.65 + rockBump * 0.3));
+                        // Coarse ash/grain noise
+                        const rnd = hash21(px, py);
+                        const grain = (rnd - 0.5) * 32.0;
 
-                        // Fiery rim light reflection on rock edges adjacent to molten fissures
-                        const rimGlow = Math.pow(Math.max(0, 1.0 - plateDist / 24.0), 1.6);
+                        // Earthy soil/ash patch variation
+                        const ashPatch = Math.sin(wx * 0.11 + wy * 0.08) * Math.cos(wx * 0.07 - wy * 0.12);
+                        const isAshy = ashPatch > 0.25;
 
-                        // Base charcoal rock color with rich depth
-                        let r = 22 + Math.floor(light * 30 + rockBump * 18 + rimGlow * 140);
-                        let g = 20 + Math.floor(light * 25 + rockBump * 14 + rimGlow * 38);
-                        let b = 24 + Math.floor(light * 25 + rockBump * 14 + rimGlow * 12);
+                        // Facet lighting directional light (top-left light source giving 3D plate bevel)
+                        const dirLight = -nx * 0.45 - ny * 0.55;
+                        const bevel = Math.max(-0.35, Math.min(0.45, dirLight));
 
-                        data[idx]     = Math.max(10, Math.min(255, r));
-                        data[idx + 1] = Math.max(10, Math.min(210, g));
-                        data[idx + 2] = Math.max(10, Math.min(180, b));
+                        // Glossy obsidian crystal sparkles
+                        const obsidianHash = hash21(Math.floor(wx * 0.3), Math.floor(wy * 0.3));
+                        const isObsidian = (obsidianHash > 0.88) && (rnd > 0.65);
+                        const glassHighlight = isObsidian ? (rnd - 0.65) * 260.0 : 0.0;
+
+                        // Thermal fiery rim bounce light on rock edges near lava
+                        const rimGlow = isLavaChannel ? Math.pow(Math.max(0, 1.0 - plateDist / 28.0), 1.8) : 0;
+
+                        // Base charcoal slate colors
+                        let r = 40 + bevel * 42 + grain * 0.8 + rimGlow * 150 + glassHighlight * 0.7;
+                        let g = 38 + bevel * 38 + grain * 0.8 + rimGlow * 32 + glassHighlight * 0.75;
+                        let b = 42 + bevel * 42 + grain * 0.8 + rimGlow * 10 + glassHighlight * 0.85;
+
+                        if (isAshy) {
+                            // Warm tan ash/dirt dust speckles seen in the target photo
+                            r += 18;
+                            g += 12;
+                            b += 6;
+                        }
+
+                        data[idx]     = Math.max(12, Math.min(255, Math.floor(r)));
+                        data[idx + 1] = Math.max(12, Math.min(255, Math.floor(g)));
+                        data[idx + 2] = Math.max(12, Math.min(255, Math.floor(b)));
                     }
                     data[idx + 3] = 255;
                 }
@@ -4854,7 +4896,7 @@
 
             octx.putImageData(imgData, 0, 0);
 
-            // Add soft bloom layer for lava heat aura
+            // Add subtle soft bloom layer for ambient lava glow
             const bloomCanvas = document.createElement('canvas');
             bloomCanvas.width = CHUNK_SIZE;
             bloomCanvas.height = CHUNK_SIZE;
@@ -4863,7 +4905,7 @@
 
             octx.save();
             octx.globalCompositeOperation = 'screen';
-            octx.globalAlpha = 0.45;
+            octx.globalAlpha = 0.35;
             octx.drawImage(bloomCanvas, 0, 0);
             octx.restore();
 
