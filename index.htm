@@ -4709,8 +4709,8 @@
         }
 
         const CHUNK_SIZE = 512;
-        const GRID_SIZE = 64;
-        const COLS = 8; // 8 * 64 = 512px
+        const GRID_SIZE = 128;
+        const COLS = 4; // 4 * 128 = 512px
         const volcanoChunkCache = new Map();
 
         function getVolcanicGridPoint(cellGx, cellGy) {
@@ -4722,8 +4722,8 @@
             h = Math.imul(h ^ (h >>> 13), 1274126177);
             h = h ^ (h >>> 16);
 
-            const rx = 0.12 + 0.76 * ((h & 0xFFFF) / 65535);
-            const ry = 0.12 + 0.76 * (((h >>> 16) & 0xFFFF) / 65535);
+            const rx = 0.15 + 0.70 * ((h & 0xFFFF) / 65535);
+            const ry = 0.15 + 0.70 * (((h >>> 16) & 0xFFFF) / 65535);
 
             return {
                 x: (wrappedGx + rx) * GRID_SIZE + colShift * (COLS * GRID_SIZE),
@@ -4750,7 +4750,7 @@
                     const wx = px;
                     const gx = Math.floor(wx / GRID_SIZE);
 
-                    let d1 = Infinity, d2 = Infinity;
+                    let d1 = Infinity, d2 = Infinity, d3 = Infinity;
                     let p1x = 0, p1y = 0;
 
                     for (let dx = -1; dx <= 1; dx++) {
@@ -4758,55 +4758,73 @@
                             const pt = getVolcanicGridPoint(gx + dx, gy + dy);
                             const distSq = (wx - pt.x) ** 2 + (wy - pt.y) ** 2;
                             if (distSq < d1) {
+                                d3 = d2;
                                 d2 = d1;
                                 d1 = distSq;
                                 p1x = pt.x;
                                 p1y = pt.y;
                             } else if (distSq < d2) {
+                                d3 = d2;
                                 d2 = distSq;
+                            } else if (distSq < d3) {
+                                d3 = distSq;
                             }
                         }
                     }
 
                     const dist1 = Math.sqrt(d1);
                     const dist2 = Math.sqrt(d2);
+                    const dist3 = Math.sqrt(d3);
                     const edgeDist = dist2 - dist1; // distance to cell boundary / lava fissure
+
+                    // Junction flare offset (wider molten pool where multiple cell seams intersect)
+                    const junctionProximity = Math.max(0, 1.0 - (dist3 - dist1) / 32.0);
+                    const fissureWidth = 9.5 + junctionProximity * 8.0;
 
                     const idx = (py * CHUNK_SIZE + px) * 4;
 
-                    if (edgeDist < 8.5) {
-                        // Lava Fissure with multi-layer glow
-                        const intensity = 1.0 - (edgeDist / 8.5);
-                        if (edgeDist < 2.2) {
+                    if (edgeDist < fissureWidth) {
+                        // Lava Fissure with multi-layer glowing molten core matching Gemini reference
+                        const intensity = 1.0 - (edgeDist / fissureWidth);
+                        if (edgeDist < 2.5) {
                             // Hot yellow-white core
                             data[idx]     = 255;
-                            data[idx + 1] = Math.min(255, 225 + Math.floor(intensity * 30));
-                            data[idx + 2] = 130;
-                        } else if (edgeDist < 5.0) {
-                            // Vibrant orange
-                            data[idx]     = 249;
-                            data[idx + 1] = Math.floor(125 * intensity + 35);
-                            data[idx + 2] = 20;
+                            data[idx + 1] = Math.min(255, 230 + Math.floor(intensity * 25));
+                            data[idx + 2] = Math.min(255, 140 + Math.floor(intensity * 100));
+                        } else if (edgeDist < 5.8) {
+                            // Vibrant glowing orange body
+                            data[idx]     = 255;
+                            data[idx + 1] = Math.floor(100 + intensity * 125);
+                            data[idx + 2] = Math.floor(12 * intensity);
                         } else {
-                            // Deep crimson/red glow
-                            data[idx]     = Math.floor(225 * intensity);
+                            // Crimson / fiery red glow transition into rock edge
+                            data[idx]     = Math.floor(180 + intensity * 75);
                             data[idx + 1] = Math.floor(30 * intensity);
-                            data[idx + 2] = 10;
+                            data[idx + 2] = 2;
                         }
                     } else {
-                        // Charcoal basalt rock plate surface with 3D bevel shading
-                        const bevel = Math.min(1.0, (edgeDist - 8.5) / 14.0);
+                        // Dark reddish-charcoal basalt plate surface with diagonal striations & heat glow
+                        const plateDist = edgeDist - fissureWidth;
                         const nx = (wx - p1x) / (dist1 + 0.1);
                         const ny = (wy - p1y) / (dist1 + 0.1);
                         const light = Math.max(-0.25, Math.min(0.35, -nx * 0.45 - ny * 0.55));
 
-                        let rockVal = 16 + Math.floor(bevel * 18 + light * 28);
-                        const noise = (Math.sin(wx * 0.25) * Math.cos(wy * 0.25) + Math.sin(wx * 0.6 + wy * 0.4)) * 5;
-                        rockVal = Math.max(10, Math.min(65, Math.floor(rockVal + noise)));
+                        // Diagonal directional texture striations matching reference image
+                        const diagPattern = Math.sin((wx * 0.7 + wy * 1.1) * 0.12) * Math.cos((wx * 0.5 - wy * 0.8) * 0.15);
+                        const microNoise = (Math.sin(wx * 0.4) * Math.cos(wy * 0.4) + Math.sin(wx * 0.9 + wy * 0.7)) * 4.5;
 
-                        data[idx]     = rockVal;
-                        data[idx + 1] = rockVal + 1;
-                        data[idx + 2] = rockVal + 3;
+                        // Heat glow near plate boundary fading into dark plate center
+                        const heatGlow = Math.max(0, 1.0 - plateDist / 35.0);
+
+                        // Base rock tones: dark charcoal infused with deep crimson/burnt red
+                        let r = 28 + Math.floor(heatGlow * 55 + diagPattern * 18 + light * 20 + microNoise);
+                        let g = 8 + Math.floor(heatGlow * 12 + diagPattern * 6 + light * 10);
+                        let b = 8 + Math.floor(heatGlow * 6 + light * 8);
+
+                        // Clamp colors
+                        data[idx]     = Math.max(12, Math.min(120, r));
+                        data[idx + 1] = Math.max(4, Math.min(45, g));
+                        data[idx + 2] = Math.max(4, Math.min(30, b));
                     }
                     data[idx + 3] = 255;
                 }
@@ -4823,7 +4841,7 @@
 
             octx.save();
             octx.globalCompositeOperation = 'screen';
-            octx.globalAlpha = 0.35;
+            octx.globalAlpha = 0.40;
             octx.drawImage(bloomCanvas, 0, 0);
             octx.restore();
 
