@@ -4775,56 +4775,78 @@
                     const dist1 = Math.sqrt(d1);
                     const dist2 = Math.sqrt(d2);
                     const dist3 = Math.sqrt(d3);
-                    const edgeDist = dist2 - dist1; // distance to cell boundary / lava fissure
+                    const edgeDist = dist2 - dist1; // distance to main cell boundary / lava fissure
 
                     // Junction flare offset (wider molten pool where multiple cell seams intersect)
-                    const junctionProximity = Math.max(0, 1.0 - (dist3 - dist1) / 32.0);
-                    const fissureWidth = 9.5 + junctionProximity * 8.0;
+                    const junctionProximity = Math.max(0, 1.0 - (dist3 - dist1) / 36.0);
+                    const fissureWidth = 10.0 + junctionProximity * 10.0;
+
+                    // Secondary branching micro-fissure network cutting across basalt rock faces
+                    const angle1 = Math.sin(wx * 0.035 + wy * 0.025) * 3.5;
+                    const angle2 = Math.cos(wx * 0.025 - wy * 0.04) * 3.5;
+                    const n1 = Math.sin((wx * 0.09 + angle1) + (wy * 0.07 + angle2));
+                    const n2 = Math.cos((wx * 0.07 - angle2) - (wy * 0.09 + angle1));
+                    const microVal = Math.abs(n1 * n2);
+                    const isMicroCrack = (microVal < 0.045) && (edgeDist > fissureWidth + 2.0);
 
                     const idx = (py * CHUNK_SIZE + px) * 4;
 
                     if (edgeDist < fissureWidth) {
-                        // Lava Fissure with multi-layer glowing molten core matching Gemini reference
-                        const intensity = 1.0 - (edgeDist / fissureWidth);
-                        if (edgeDist < 2.5) {
-                            // Hot yellow-white core
+                        // Main Incandescent Lava Fissure with hyper-vibrant glowing layers (Matching reference image kjkjk.jfif)
+                        const normDist = edgeDist / fissureWidth;
+                        const intensity = 1.0 - normDist;
+
+                        if (edgeDist < 2.0) {
+                            // Ultra-hot white-yellow core
                             data[idx]     = 255;
-                            data[idx + 1] = Math.min(255, 230 + Math.floor(intensity * 25));
-                            data[idx + 2] = Math.min(255, 140 + Math.floor(intensity * 100));
-                        } else if (edgeDist < 5.8) {
-                            // Vibrant glowing orange body
+                            data[idx + 1] = 255;
+                            data[idx + 2] = Math.floor(180 + intensity * 75);
+                        } else if (edgeDist < 5.0) {
+                            // Vivid golden yellow into neon orange
+                            const t = (edgeDist - 2.0) / 3.0;
                             data[idx]     = 255;
-                            data[idx + 1] = Math.floor(100 + intensity * 125);
-                            data[idx + 2] = Math.floor(12 * intensity);
+                            data[idx + 1] = Math.floor(215 * (1 - t) + 110 * t);
+                            data[idx + 2] = Math.floor(40 * (1 - t));
+                        } else if (edgeDist < 8.5) {
+                            // Fiery orange-red
+                            const t = (edgeDist - 5.0) / 3.5;
+                            data[idx]     = 255;
+                            data[idx + 1] = Math.floor(110 * (1 - t) + 25 * t);
+                            data[idx + 2] = 0;
                         } else {
-                            // Crimson / fiery red glow transition into rock edge
-                            data[idx]     = Math.floor(180 + intensity * 75);
-                            data[idx + 1] = Math.floor(30 * intensity);
-                            data[idx + 2] = 2;
+                            // Crimson red margin bleeding into basalt rock
+                            const t = (edgeDist - 8.5) / (fissureWidth - 8.5);
+                            data[idx]     = Math.floor(220 * (1 - t) + 120 * t);
+                            data[idx + 1] = Math.floor(25 * (1 - t));
+                            data[idx + 2] = 0;
                         }
+                    } else if (isMicroCrack) {
+                        // Secondary glowing micro-crack network
+                        const crackIntensity = (0.045 - microVal) / 0.045;
+                        data[idx]     = 255;
+                        data[idx + 1] = Math.floor(70 + crackIntensity * 120);
+                        data[idx + 2] = Math.floor(10 + crackIntensity * 30);
                     } else {
-                        // Dark reddish-charcoal basalt plate surface with diagonal striations & heat glow
+                        // Highly detailed 3D basalt rock surface with facet lighting, micro-relief & rim glow
                         const plateDist = edgeDist - fissureWidth;
                         const nx = (wx - p1x) / (dist1 + 0.1);
                         const ny = (wy - p1y) / (dist1 + 0.1);
-                        const light = Math.max(-0.25, Math.min(0.35, -nx * 0.45 - ny * 0.55));
 
-                        // Diagonal directional texture striations matching reference image
-                        const diagPattern = Math.sin((wx * 0.7 + wy * 1.1) * 0.12) * Math.cos((wx * 0.5 - wy * 0.8) * 0.15);
-                        const microNoise = (Math.sin(wx * 0.4) * Math.cos(wy * 0.4) + Math.sin(wx * 0.9 + wy * 0.7)) * 4.5;
+                        // Rugged rock texture noise & micro-facets
+                        const rockBump = Math.sin(wx * 0.22 + wy * 0.17) * 0.5 + Math.sin(wx * 0.45 - wy * 0.4) * 0.3 + (Math.sin(wx * 0.9 + wy * 0.8) * 0.2);
+                        const light = Math.max(-0.4, Math.min(0.4, -nx * 0.55 - ny * 0.65 + rockBump * 0.3));
 
-                        // Heat glow near plate boundary fading into dark plate center
-                        const heatGlow = Math.max(0, 1.0 - plateDist / 35.0);
+                        // Fiery rim light reflection on rock edges adjacent to molten fissures
+                        const rimGlow = Math.pow(Math.max(0, 1.0 - plateDist / 24.0), 1.6);
 
-                        // Base rock tones: dark charcoal infused with deep crimson/burnt red
-                        let r = 28 + Math.floor(heatGlow * 55 + diagPattern * 18 + light * 20 + microNoise);
-                        let g = 8 + Math.floor(heatGlow * 12 + diagPattern * 6 + light * 10);
-                        let b = 8 + Math.floor(heatGlow * 6 + light * 8);
+                        // Base charcoal rock color with rich depth
+                        let r = 22 + Math.floor(light * 30 + rockBump * 18 + rimGlow * 140);
+                        let g = 20 + Math.floor(light * 25 + rockBump * 14 + rimGlow * 38);
+                        let b = 24 + Math.floor(light * 25 + rockBump * 14 + rimGlow * 12);
 
-                        // Clamp colors
-                        data[idx]     = Math.max(12, Math.min(120, r));
-                        data[idx + 1] = Math.max(4, Math.min(45, g));
-                        data[idx + 2] = Math.max(4, Math.min(30, b));
+                        data[idx]     = Math.max(10, Math.min(255, r));
+                        data[idx + 1] = Math.max(10, Math.min(210, g));
+                        data[idx + 2] = Math.max(10, Math.min(180, b));
                     }
                     data[idx + 3] = 255;
                 }
@@ -4841,7 +4863,7 @@
 
             octx.save();
             octx.globalCompositeOperation = 'screen';
-            octx.globalAlpha = 0.40;
+            octx.globalAlpha = 0.45;
             octx.drawImage(bloomCanvas, 0, 0);
             octx.restore();
 
