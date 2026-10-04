@@ -4318,9 +4318,36 @@
 
         function drawBackground() {
             ctx.save();
-            const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
 
-            if (gameMode === 'STORY') {
+            if (gameMode === 'STORY' && currentStoryLevel === 1) {
+                // Volcanic Cracked Lava Texture Background for Level 1
+                const pat = createVolcanoTexture();
+                const offsetY = (-cameraY * 0.25) % 512;
+
+                ctx.save();
+                ctx.translate(0, offsetY);
+                ctx.fillStyle = pat;
+                ctx.fillRect(0, -offsetY - 512, canvas.width, canvas.height + 1024);
+                ctx.restore();
+
+                // Pulsating heat bloom overlay
+                const pulse = 0.08 + 0.04 * Math.sin(Date.now() * 0.003);
+                ctx.fillStyle = `rgba(239, 68, 68, ${pulse})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Floating volcanic heat embers
+                const theme = STORY_THEMES[0];
+                ctx.fillStyle = theme.elementColor || 'rgba(249, 115, 22, 0.7)';
+                for (let i = 0; i < 35; i++) {
+                    const ex = (i * 89 + 5) % canvas.width;
+                    const ey = (i * 103 - cameraY * 0.35) % canvas.height;
+                    const adjustedY = ey < 0 ? ey + canvas.height : ey;
+                    ctx.beginPath();
+                    ctx.arc(ex, adjustedY, (i % 3) + 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (gameMode === 'STORY') {
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
                 const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
                 bgGradient.addColorStop(0, theme.bgGradient[0]);
                 bgGradient.addColorStop(1, theme.bgGradient[1]);
@@ -4379,6 +4406,7 @@
                     }
                 }
             } else {
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
                 // Infinite Mode dynamic sky gradient
                 const skyProgress = Math.min(1, score / 500);
                 if (skyProgress < 0.5) {
@@ -4645,6 +4673,123 @@
             updateGame();
             render();
             requestAnimationFrame(gameLoop);
+        }
+
+        let volcanoPattern = null;
+        let volcanoCanvas = null;
+
+        function createVolcanoTexture() {
+            if (volcanoPattern) return volcanoPattern;
+            const size = 512;
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = size;
+            offCanvas.height = size;
+            const octx = offCanvas.getContext('2d');
+
+            function lcg(seed) {
+                let s = seed;
+                return function() {
+                    s = (s * 1664525 + 1013904223) % 4294967296;
+                    return s / 4294967296;
+                };
+            }
+            const rand = lcg(12345);
+
+            // Generate seamless Voronoi points
+            const numCells = 24;
+            const points = [];
+            for (let i = 0; i < numCells; i++) {
+                points.push({ x: rand() * size, y: rand() * size });
+            }
+
+            const imgData = octx.createImageData(size, size);
+            const data = imgData.data;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    let d1 = Infinity, d2 = Infinity;
+                    let p1x = 0, p1y = 0;
+
+                    for (let i = 0; i < points.length; i++) {
+                        const px = points[i].x;
+                        const py = points[i].y;
+                        for (let dx = -size; dx <= size; dx += size) {
+                            for (let dy = -size; dy <= size; dy += size) {
+                                const distSq = (x - (px + dx)) ** 2 + (y - (py + dy)) ** 2;
+                                if (distSq < d1) {
+                                    d2 = d1;
+                                    d1 = distSq;
+                                    p1x = px + dx;
+                                    p1y = py + dy;
+                                } else if (distSq < d2) {
+                                    d2 = distSq;
+                                }
+                            }
+                        }
+                    }
+
+                    const dist1 = Math.sqrt(d1);
+                    const dist2 = Math.sqrt(d2);
+                    const edgeDist = dist2 - dist1; // distance to cell boundary / lava fissure
+
+                    const idx = (y * size + x) * 4;
+
+                    if (edgeDist < 8.5) {
+                        // Lava Fissure with multi-layer glow
+                        const intensity = 1.0 - (edgeDist / 8.5);
+                        if (edgeDist < 2.2) {
+                            // Hot yellow-white core
+                            data[idx]     = 255;
+                            data[idx + 1] = Math.min(255, 225 + Math.floor(intensity * 30));
+                            data[idx + 2] = 130;
+                        } else if (edgeDist < 5.0) {
+                            // Vibrant orange
+                            data[idx]     = 249;
+                            data[idx + 1] = Math.floor(125 * intensity + 35);
+                            data[idx + 2] = 20;
+                        } else {
+                            // Deep crimson/red glow
+                            data[idx]     = Math.floor(225 * intensity);
+                            data[idx + 1] = Math.floor(30 * intensity);
+                            data[idx + 2] = 10;
+                        }
+                    } else {
+                        // Charcoal basalt rock plate surface with 3D bevel shading
+                        const bevel = Math.min(1.0, (edgeDist - 8.5) / 14.0);
+                        const nx = (x - p1x) / (dist1 + 0.1);
+                        const ny = (y - p1y) / (dist1 + 0.1);
+                        const light = Math.max(-0.25, Math.min(0.35, -nx * 0.45 - ny * 0.55));
+
+                        let rockVal = 16 + Math.floor(bevel * 18 + light * 28);
+                        const noise = (Math.sin(x * 0.25) * Math.cos(y * 0.25) + Math.sin(x * 0.6 + y * 0.4)) * 5;
+                        rockVal = Math.max(10, Math.min(65, Math.floor(rockVal + noise)));
+
+                        data[idx]     = rockVal;
+                        data[idx + 1] = rockVal + 1;
+                        data[idx + 2] = rockVal + 3;
+                    }
+                    data[idx + 3] = 255;
+                }
+            }
+
+            octx.putImageData(imgData, 0, 0);
+
+            // Add soft bloom layer for lava heat aura
+            const bloomCanvas = document.createElement('canvas');
+            bloomCanvas.width = size;
+            bloomCanvas.height = size;
+            const bctx = bloomCanvas.getContext('2d');
+            bctx.drawImage(offCanvas, 0, 0);
+
+            octx.save();
+            octx.globalCompositeOperation = 'screen';
+            octx.globalAlpha = 0.35;
+            octx.drawImage(bloomCanvas, 0, 0);
+            octx.restore();
+
+            volcanoCanvas = offCanvas;
+            volcanoPattern = ctx.createPattern(offCanvas, 'repeat');
+            return volcanoPattern;
         }
 
         let currentDialogueStep = 0; // 0 for Bleep, 1 for Pip
