@@ -4538,23 +4538,22 @@
             ctx.save();
 
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
-                // Repeating background image for Level 1
+                // Repeating background image for Level 1 from Dropbox
                 if (level1BgImage.complete && level1BgImage.naturalWidth > 0) {
-                    const imgWidth = level1BgImage.naturalWidth;
-                    const imgHeight = level1BgImage.naturalHeight;
-                    const scaledHeight = canvas.width * (imgHeight / imgWidth);
+                    const bgWidth = canvas.width;
+                    const bgHeight = canvas.width * (level1BgImage.naturalHeight / level1BgImage.naturalWidth);
 
-                    let offsetY = (-cameraY) % scaledHeight;
-                    if (offsetY > 0) offsetY -= scaledHeight;
+                    // Calculate start and end indices for vertical tiling relative to cameraY
+                    const startTileIndex = Math.floor(cameraY / bgHeight);
+                    const endTileIndex = Math.floor((cameraY + canvas.height) / bgHeight);
 
-                    for (let y = offsetY; y < canvas.height; y += scaledHeight) {
-                        ctx.drawImage(level1BgImage, 0, y, canvas.width, scaledHeight);
+                    for (let tileIndex = startTileIndex; tileIndex <= endTileIndex; tileIndex++) {
+                        const screenTopY = tileIndex * bgHeight - cameraY;
+                        ctx.drawImage(level1BgImage, 0, screenTopY, bgWidth, bgHeight);
                     }
                 } else {
-                    const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                    bgGradient.addColorStop(0, '#18181b');
-                    bgGradient.addColorStop(1, '#450a0a');
-                    ctx.fillStyle = bgGradient;
+                    // Fallback fill while image is loading
+                    ctx.fillStyle = '#18181b';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
             } else if (gameMode === 'STORY') {
@@ -5324,7 +5323,7 @@
             }
         ];
 
-        // Level 1 Background Image
+        // Level 1 Background Image from Dropbox
         const level1BgImage = new Image();
         level1BgImage.src = 'https://dl.dropbox.com/scl/fi/ao72mrc1wacxhd0520hg3/e4dd25e6-c22c-4122-ae4e-5a0a23c637f1.png?rlkey=v10g1dklq77vvxjix2u238fxz&st=tf7esboj&raw=1';
 
