@@ -2894,6 +2894,8 @@
         let collectibles = [];
         let enemies = [];
         let enemyProjectiles = [];
+        let fallingVolcanicRocks = [];
+        let rockSpawnTimer = 120;
         let particles = [];
         let cameraY = 0;
         let highestY = 0;
@@ -3718,6 +3720,8 @@
             collectibles = [];
             enemies = [];
             enemyProjectiles = [];
+            fallingVolcanicRocks = [];
+            rockSpawnTimer = 120;
             
             const startY = canvas.height - 60;
             const groundWidth = Math.min(200, canvas.width * 0.4);
@@ -4081,6 +4085,101 @@
 
                     lavaY -= currentLavaSpeed;
                 }
+
+                // Spawning falling volcanic rocks in Level 1
+                if (player.hasFirstJumped && gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
+                    rockSpawnTimer--;
+                    if (rockSpawnTimer <= 0) {
+                        rockSpawnTimer = 100 + Math.floor(Math.random() * 80); // Spawn every 1.6s - 3s
+                        const targetX = Math.min(Math.max(30, player.x + player.width / 2 + (Math.random() * 140 - 70)), canvas.width - 30);
+                        const rockRadius = 13 + Math.random() * 6; // 13px - 19px radius
+                        const pointCount = 7 + Math.floor(Math.random() * 3);
+                        const points = [];
+                        for (let i = 0; i < pointCount; i++) {
+                            const angle = (i / pointCount) * Math.PI * 2;
+                            const r = rockRadius * (0.8 + Math.random() * 0.4);
+                            points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+                        }
+                        fallingVolcanicRocks.push({
+                            targetX: targetX,
+                            x: targetX,
+                            y: cameraY - 30,
+                            vx: (Math.random() - 0.5) * 0.6,
+                            vy: 2.0,
+                            maxVy: 6.0 + Math.random() * 2.5,
+                            radius: rockRadius,
+                            points: points,
+                            rotation: Math.random() * Math.PI * 2,
+                            rotSpeed: (Math.random() - 0.5) * 0.12,
+                            warningTimer: 45, // 0.75s warning before falling fast
+                            alive: true
+                        });
+                    }
+                }
+
+                // Update falling volcanic rocks physics & collisions
+                fallingVolcanicRocks.forEach(rock => {
+                    if (!rock.alive) return;
+
+                    if (rock.warningTimer > 0) {
+                        rock.warningTimer--;
+                        rock.y = cameraY - 25;
+                        return;
+                    }
+
+                    // Downward acceleration
+                    rock.vy = Math.min(rock.maxVy, rock.vy + 0.22);
+                    rock.x += rock.vx;
+                    rock.y += rock.vy;
+                    rock.rotation += rock.rotSpeed;
+
+                    // Fire / smoke particles trail
+                    if (Math.random() < 0.6) {
+                        createParticles(
+                            rock.x + (Math.random() - 0.5) * rock.radius,
+                            rock.y - rock.radius * 0.5,
+                            Math.random() < 0.5 ? '#f97316' : '#ef4444',
+                            1
+                        );
+                    }
+
+                    // Collision with player
+                    const px = player.x + player.width / 2;
+                    const py = player.y + player.height / 2;
+                    const dx = px - rock.x;
+                    const dy = py - rock.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < (player.width / 2 + rock.radius * 0.85)) {
+                        rock.alive = false;
+                        createParticles(rock.x, rock.y, '#f97316', 14);
+                        createParticles(rock.x, rock.y, '#3f3f46', 10);
+                        takeDamage(1);
+                    }
+
+                    // Collision with non-broken platforms
+                    platforms.forEach(p => {
+                        if (p.broken) return;
+                        if (rock.x + rock.radius > p.x && rock.x - rock.radius < p.x + p.width) {
+                            if (rock.y + rock.radius >= p.y && rock.y - rock.radius <= p.y + p.height) {
+                                rock.alive = false;
+                                createParticles(rock.x, rock.y, '#ea580c', 10);
+                                createParticles(rock.x, rock.y, '#27272a', 8);
+                                if (p.type === 'fragile' && !p.crumbling) {
+                                    p.crumbling = true;
+                                }
+                            }
+                        }
+                    });
+
+                    // Destroy if falling into lava or offscreen bottom
+                    if (rock.y >= lavaY || rock.y > cameraY + canvas.height + 80) {
+                        rock.alive = false;
+                        if (rock.y >= lavaY) {
+                            createParticles(rock.x, lavaY, '#ff4500', 8);
+                        }
+                    }
+                });
+                fallingVolcanicRocks = fallingVolcanicRocks.filter(r => r.alive);
 
                 // Game over condition: player touched rising lava
                 if (player.y + player.height >= lavaY) {
@@ -4496,6 +4595,87 @@
                 ctx.fill();
                 ctx.stroke();
                 ctx.restore();
+            });
+
+            // Draw falling volcanic rocks & warning indicators
+            fallingVolcanicRocks.forEach(rock => {
+                if (rock.warningTimer > 0) {
+                    // Render translucent warning beam and animated indicator at top of screen
+                    ctx.save();
+                    const warnAlpha = 0.3 + 0.4 * Math.sin(Date.now() * 0.02);
+
+                    // Vertical warning beam
+                    ctx.fillStyle = `rgba(239, 68, 68, ${warnAlpha * 0.35})`;
+                    ctx.fillRect(rock.targetX - 14, 0, 28, canvas.height);
+
+                    // Warning badge at top
+                    const badgeY = 24;
+                    ctx.translate(rock.targetX, badgeY);
+
+                    // Glowing outer circle
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(220, 38, 38, ${warnAlpha})`;
+                    ctx.fill();
+
+                    // Inner warning triangle
+                    ctx.beginPath();
+                    ctx.moveTo(0, -9);
+                    ctx.lineTo(8, 7);
+                    ctx.lineTo(-8, 7);
+                    ctx.closePath();
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fill();
+
+                    // Exclamation mark
+                    ctx.fillStyle = '#991b1b';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('!', 0, 1);
+
+                    ctx.restore();
+                } else {
+                    // Render falling jagged volcanic rock with molten core
+                    ctx.save();
+                    ctx.translate(rock.x, rock.y);
+                    ctx.rotate(rock.rotation);
+
+                    // Outer jagged volcanic stone body
+                    ctx.beginPath();
+                    if (rock.points && rock.points.length > 0) {
+                        ctx.moveTo(rock.points[0].x, rock.points[0].y);
+                        for (let i = 1; i < rock.points.length; i++) {
+                            ctx.lineTo(rock.points[i].x, rock.points[i].y);
+                        }
+                    } else {
+                        ctx.arc(0, 0, rock.radius, 0, Math.PI * 2);
+                    }
+                    ctx.closePath();
+
+                    const rockGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, rock.radius);
+                    rockGrad.addColorStop(0, '#f97316'); // Molten core
+                    rockGrad.addColorStop(0.35, '#7f1d1d'); // Fiery deep red
+                    rockGrad.addColorStop(0.7, '#27272a'); // Dark basalt rock
+                    rockGrad.addColorStop(1, '#09090b'); // Obsidian edge
+
+                    ctx.fillStyle = rockGrad;
+                    ctx.fill();
+                    ctx.strokeStyle = '#ea580c';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Inner molten fissure cracks
+                    ctx.beginPath();
+                    ctx.moveTo(-rock.radius * 0.4, -rock.radius * 0.2);
+                    ctx.lineTo(0, 0);
+                    ctx.lineTo(rock.radius * 0.3, rock.radius * 0.4);
+                    ctx.strokeStyle = '#facc15';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
             });
 
             // Draw particles
