@@ -4202,11 +4202,11 @@
                     lavaY -= currentLavaSpeed;
                 }
 
-                // Spawning falling volcanic rocks in Level 1 (Tripled spawn rate: every ~0.5s - 1.0s)
+                // Spawning falling volcanic rocks in Level 1 (Reduced density by 30%)
                 if (player.hasFirstJumped && gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
                     rockSpawnTimer--;
                     if (rockSpawnTimer <= 0) {
-                        rockSpawnTimer = 32 + Math.floor(Math.random() * 28); // Spawn every 0.5s - 1.0s (3x density)
+                        rockSpawnTimer = 46 + Math.floor(Math.random() * 40); // Spawn every ~0.75s - 1.4s (30% lower density)
                         const targetX = Math.min(Math.max(30, player.x + player.width / 2 + (Math.random() * 140 - 70)), canvas.width - 30);
                         const rockRadius = 13 + Math.random() * 6; // 13px - 19px radius
                         const pointCount = 7 + Math.floor(Math.random() * 3);
@@ -4274,21 +4274,6 @@
                         takeDamage(1);
                     }
 
-                    // Collision with non-broken platforms
-                    platforms.forEach(p => {
-                        if (p.broken) return;
-                        if (rock.x + rock.radius > p.x && rock.x - rock.radius < p.x + p.width) {
-                            if (rock.y + rock.radius >= p.y && rock.y - rock.radius <= p.y + p.height) {
-                                rock.alive = false;
-                                createParticles(rock.x, rock.y, '#ea580c', 10);
-                                createParticles(rock.x, rock.y, '#27272a', 8);
-                                sound.playRockImpact();
-                                if (p.type === 'fragile' && !p.crumbling) {
-                                    p.crumbling = true;
-                                }
-                            }
-                        }
-                    });
 
                     // Destroy if falling into lava or offscreen bottom
                     if (rock.y >= lavaY || rock.y > cameraY + canvas.height + 80) {
@@ -4300,10 +4285,10 @@
                 });
                 fallingVolcanicRocks = fallingVolcanicRocks.filter(r => r.alive);
 
-                // Game over condition: player touched rising lava
+                // Player touched rising lava: take 3 hearts of damage & bounce upward
                 if (player.y + player.height >= lavaY) {
-                    triggerGameOver();
-                    return;
+                    takeDamage(3);
+                    player.vy = -16;
                 }
 
                 // Heat embers emitted from lava surface
