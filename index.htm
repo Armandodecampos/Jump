@@ -1001,6 +1001,61 @@
                 }
             }
 
+            // Sizzle, fire roar & burn sound when touching lava
+            playBurn() {
+                if (this.muted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                if (!this.ctx) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    const duration = 0.45;
+
+                    // High-pass / band-pass sizzle noise
+                    const bufLen = Math.floor(this.ctx.sampleRate * duration);
+                    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                    const pcm = buf.getChannelData(0);
+                    for (let i = 0; i < bufLen; i++) {
+                        const t = i / this.ctx.sampleRate;
+                        pcm[i] = (Math.random() * 2 - 1) * Math.exp(-t * 4);
+                    }
+
+                    const noiseSource = this.ctx.createBufferSource();
+                    noiseSource.buffer = buf;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(2200, now);
+                    filter.frequency.exponentialRampToValueAtTime(700, now + duration);
+
+                    const noiseGain = this.ctx.createGain();
+                    noiseGain.gain.setValueAtTime(0.85, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    noiseSource.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+                    noiseSource.start(now);
+
+                    // Low flame burst rumble
+                    const osc = this.ctx.createOscillator();
+                    const oscGain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(190, now);
+                    osc.frequency.exponentialRampToValueAtTime(45, now + duration);
+
+                    oscGain.gain.setValueAtTime(0.6, now);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    osc.connect(oscGain);
+                    oscGain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + duration);
+                } catch (e) {
+                    this.playBuffer('break', 0.8);
+                }
+            }
+
             playMenuMusic() {
                 if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
@@ -4206,7 +4261,7 @@
                 if (player.hasFirstJumped && gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
                     rockSpawnTimer--;
                     if (rockSpawnTimer <= 0) {
-                        rockSpawnTimer = 32 + Math.floor(Math.random() * 28); // Spawn every 0.5s - 1.0s (3x density)
+                        rockSpawnTimer = 46 + Math.floor(Math.random() * 40); // 30% lower density (every ~0.75s - 1.4s)
                         const targetX = Math.min(Math.max(30, player.x + player.width / 2 + (Math.random() * 140 - 70)), canvas.width - 30);
                         const rockRadius = 13 + Math.random() * 6; // 13px - 19px radius
                         const pointCount = 7 + Math.floor(Math.random() * 3);
@@ -4274,21 +4329,6 @@
                         takeDamage(1);
                     }
 
-                    // Collision with non-broken platforms
-                    platforms.forEach(p => {
-                        if (p.broken) return;
-                        if (rock.x + rock.radius > p.x && rock.x - rock.radius < p.x + p.width) {
-                            if (rock.y + rock.radius >= p.y && rock.y - rock.radius <= p.y + p.height) {
-                                rock.alive = false;
-                                createParticles(rock.x, rock.y, '#ea580c', 10);
-                                createParticles(rock.x, rock.y, '#27272a', 8);
-                                sound.playRockImpact();
-                                if (p.type === 'fragile' && !p.crumbling) {
-                                    p.crumbling = true;
-                                }
-                            }
-                        }
-                    });
 
                     // Destroy if falling into lava or offscreen bottom
                     if (rock.y >= lavaY || rock.y > cameraY + canvas.height + 80) {
@@ -4300,10 +4340,18 @@
                 });
                 fallingVolcanicRocks = fallingVolcanicRocks.filter(r => r.alive);
 
-                // Game over condition: player touched rising lava
+                // Player touched rising lava: suffer 3 hearts damage & launch upward with burn sound
                 if (player.y + player.height >= lavaY) {
-                    triggerGameOver();
-                    return;
+                    if (player.invulnerableTimer <= 0) {
+                        sound.playBurn();
+                        takeDamage(3);
+                        player.vy = -16;
+                        createParticles(player.x + player.width / 2, lavaY, '#ff4500', 16);
+                        createParticles(player.x + player.width / 2, lavaY, '#facc15', 10);
+                    } else {
+                        // While invulnerable after lava contact, keep launching player upward out of lava
+                        player.vy = -16;
+                    }
                 }
 
                 // Heat embers emitted from lava surface
