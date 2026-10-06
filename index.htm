@@ -3890,7 +3890,7 @@
                 this.x = x;
                 this.y = y;
                 this.type = type; // 'jetpack' or 'heart'
-                this.radius = type === 'jetpack' ? 24 : 12;
+                this.radius = type === 'jetpack' ? 24 : 24; // Doubled heart radius from 12 to 24
                 this.collected = false;
                 this.angle = 0;
             }
@@ -3913,12 +3913,12 @@
                         ctx.restore();
                         return;
                     }
-                    // Pulsating Collectible Heart
+                    // Pulsating Collectible Heart (Doubled size: 40px)
                     const scale = 1 + 0.1 * Math.sin(this.angle * 2);
                     ctx.scale(scale, scale);
 
                     ctx.fillStyle = '#f43f5e';
-                    ctx.font = 'bold 20px sans-serif';
+                    ctx.font = 'bold 40px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText('❤️', 0, 0);
@@ -3954,7 +3954,7 @@
                 y: y,
                 vx: 0,
                 vy: -1.5,
-                radius: 12,
+                radius: 24,
                 color: '#ef4444',
                 alpha: 1,
                 life: 40,
@@ -4436,12 +4436,12 @@
                     lavaY -= currentLavaSpeed;
                 }
 
-                // Spawning falling volcanic rocks in Level 1 (Reduced quantity by 30%: every ~1.1s - 2.0s)
+                // Spawning falling volcanic rocks in Level 1 (Reduced quantity by 50%, random positions across full scenario)
                 if (player.hasFirstJumped && gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
                     rockSpawnTimer--;
                     if (rockSpawnTimer <= 0) {
-                        rockSpawnTimer = 66 + Math.floor(Math.random() * 57); // 30% lower quantity of falling rocks
-                        const targetX = Math.min(Math.max(30, player.x + player.width / 2 + (Math.random() * 140 - 70)), canvas.width - 30);
+                        rockSpawnTimer = 132 + Math.floor(Math.random() * 114); // Reduced falling rocks quantity by 50%
+                        const targetX = 30 + Math.random() * (canvas.width - 60);
                         const rockRadius = 13 + Math.random() * 6; // 13px - 19px radius
                         const pointCount = 7 + Math.floor(Math.random() * 3);
                         const points = [];
@@ -4951,8 +4951,8 @@
                 ctx.globalAlpha = pt.alpha;
                 if (pt.isHeartText) {
                     ctx.fillStyle = '#ef4444';
-                    ctx.font = 'bold 16px "Fredoka One", cursive';
-                    ctx.fillText('+1 ❤️', pt.x - 15, pt.y);
+                    ctx.font = 'bold 32px "Fredoka One", cursive';
+                    ctx.fillText('+1 ❤️', pt.x - 30, pt.y);
                 } else {
                     ctx.fillStyle = pt.color;
                     ctx.beginPath();
@@ -5065,7 +5065,7 @@
 
                 if (gameMode === 'STORY') {
                     ctx.beginPath();
-                    ctx.roundRect(16, 70, 180, 72, 12);
+                    ctx.roundRect(16, 70, 220, 92, 12);
                     ctx.fill();
 
                     const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
@@ -5085,13 +5085,13 @@
                     ctx.fillStyle = '#34d399';
                     ctx.fillRect(26, 111, barWidth * progress, 3);
 
-                    // Hearts HUD
+                    // Hearts HUD (Doubled font size)
                     let heartsText = '';
                     for (let h = 0; h < player.maxLives; h++) {
                         heartsText += h < player.lives ? '❤️' : '🖤';
                     }
-                    ctx.font = '13px sans-serif';
-                    ctx.fillText(heartsText, 26, 131);
+                    ctx.font = '26px sans-serif';
+                    ctx.fillText(heartsText, 26, 148);
 
                     // Lava warning HUD badge for Level 1
                     if (currentStoryLevel === 1) {
@@ -5120,20 +5120,20 @@
                     }
                 } else {
                     ctx.beginPath();
-                    ctx.roundRect(16, 70, 150, 60, 12);
+                    ctx.roundRect(16, 70, 220, 80, 12);
                     ctx.fill();
 
                     ctx.font = 'bold 18px "Fredoka One", cursive';
                     ctx.fillStyle = '#facc15';
                     ctx.fillText(`🚀 ${score}m`, 28, 96);
 
-                    // Hearts HUD
+                    // Hearts HUD (Doubled font size)
                     let heartsText = '';
                     for (let h = 0; h < player.maxLives; h++) {
                         heartsText += h < player.lives ? '❤️' : '🖤';
                     }
-                    ctx.font = '13px sans-serif';
-                    ctx.fillText(heartsText, 28, 118);
+                    ctx.font = '26px sans-serif';
+                    ctx.fillText(heartsText, 28, 134);
                 }
 
                 // Prompt before first jump
