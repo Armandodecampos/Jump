@@ -3285,100 +3285,162 @@
                     return bendOffset * Math.sin((rx / this.width) * Math.PI);
                 };
 
-                // Draw organic non-rectangular rock path
-                ctx.beginPath();
-                if (this.topRockPoints && this.topRockPoints.length > 0) {
-                    ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + getCurveY(this.topRockPoints[0].x));
-                    for (let i = 1; i < this.topRockPoints.length; i++) {
-                        ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                const isRockTheme = (gameMode === 'STORY' && currentStoryLevel === 1);
+
+                if (isRockTheme) {
+                    // Draw organic non-rectangular rock path for Story Mode Level 1 (Vulcão)
+                    ctx.beginPath();
+                    if (this.topRockPoints && this.topRockPoints.length > 0) {
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                        }
+                        for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                    } else {
+                        ctx.roundRect(x0, y0, this.width, this.height, 6);
                     }
-                    for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
-                        ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                    ctx.closePath();
+
+                    // Base rock gradient fill
+                    const rockGrad = ctx.createLinearGradient(x0, y0, x0, y0 + this.height + 6);
+                    rockGrad.addColorStop(0, c1);
+                    rockGrad.addColorStop(1, c2);
+                    ctx.fillStyle = rockGrad;
+                    ctx.fill();
+
+                    // Draw Mineral Speckles / Stippling Texture
+                    if (this.textureSpeckles) {
+                        this.textureSpeckles.forEach(s => {
+                            const sx = x0 + s.relX;
+                            const sy = y0 + s.relY + getCurveY(s.relX);
+                            ctx.fillStyle = s.isLight ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.25)';
+                            ctx.beginPath();
+                            ctx.arc(sx, sy, s.radius, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+
+                    // Top Surface Rim Highlight
+                    if (this.topRockPoints && this.topRockPoints.length > 0) {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + 1 + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + 1 + getCurveY(this.topRockPoints[i].x));
+                        }
+                        ctx.stroke();
+
+                        // Dark Rock Bottom Shadow Edge
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.bottomRockPoints[0].x, y0 + this.bottomRockPoints[0].y + getCurveY(this.bottomRockPoints[0].x));
+                        for (let i = 1; i < this.bottomRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                        ctx.stroke();
+                    }
+
+                    // Internal Rock Crags & Crevices
+                    if (this.rockCrags) {
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.38)';
+                        ctx.lineWidth = 1.2;
+                        this.rockCrags.forEach(crag => {
+                            const cx = x0 + this.width * crag.relX;
+                            const cy = y0 + crag.relY + getCurveY(this.width * crag.relX);
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
+                            ctx.lineTo(cx + crag.dx, cy + crag.dy);
+                            ctx.stroke();
+                        });
+                    }
+
+                    // Glowing details for Fragile and Spring rocks
+                    if (this.type === 'fragile') {
+                        const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+                        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
+                        ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
+                        ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
+                        ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
+                        ctx.stroke();
+                    } else if (this.type === 'spring') {
+                        const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
+                        const springY = y0 + 4 + getCurveY(this.width * 0.5);
+                        ctx.fillStyle = '#facc15';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 10 * pulse, 3.2 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 5 * pulse, 1.6 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
                     }
                 } else {
-                    ctx.roundRect(x0, y0, this.width, this.height, 6);
-                }
-                ctx.closePath();
+                    // Standard rectangular platform drawing for all other story levels & Infinite Mode
+                    ctx.beginPath();
+                    if (Math.abs(bendOffset) > 0.1) {
+                        ctx.moveTo(x0, y0);
+                        ctx.quadraticCurveTo(midX, y0 + bendOffset, x0 + this.width, y0);
+                        ctx.lineTo(x0 + this.width, y0 + this.height);
+                        ctx.quadraticCurveTo(midX, y0 + this.height + bendOffset, x0, y0 + this.height);
+                        ctx.closePath();
+                    } else {
+                        ctx.roundRect(x0, y0, this.width, this.height, 6);
+                    }
 
-                // Base rock gradient fill
-                const rockGrad = ctx.createLinearGradient(x0, y0, x0, y0 + this.height + 6);
-                rockGrad.addColorStop(0, c1);
-                rockGrad.addColorStop(1, c2);
-                ctx.fillStyle = rockGrad;
-                ctx.fill();
+                    const grad = ctx.createLinearGradient(x0, y0, x0, y0 + this.height);
+                    grad.addColorStop(0, c1);
+                    grad.addColorStop(1, c2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
 
-                // Draw Mineral Speckles / Stippling Texture
-                if (this.textureSpeckles) {
-                    this.textureSpeckles.forEach(s => {
-                        const sx = x0 + s.relX;
-                        const sy = y0 + s.relY + getCurveY(s.relX);
-                        ctx.fillStyle = s.isLight ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.25)';
+                    // Top highlight line
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                    if (Math.abs(bendOffset) > 0.1) {
                         ctx.beginPath();
-                        ctx.arc(sx, sy, s.radius, 0, Math.PI * 2);
+                        ctx.moveTo(x0, y0);
+                        ctx.quadraticCurveTo(midX, y0 + bendOffset, x0 + this.width, y0);
+                        ctx.lineTo(x0 + this.width, y0 + 3);
+                        ctx.quadraticCurveTo(midX, y0 + 3 + bendOffset, x0, y0 + 3);
+                        ctx.closePath();
                         ctx.fill();
-                    });
-                }
-
-                // Top Surface Rim Highlight
-                if (this.topRockPoints && this.topRockPoints.length > 0) {
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + 1 + getCurveY(this.topRockPoints[0].x));
-                    for (let i = 1; i < this.topRockPoints.length; i++) {
-                        ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + 1 + getCurveY(this.topRockPoints[i].x));
-                    }
-                    ctx.stroke();
-
-                    // Dark Rock Bottom Shadow Edge
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x0 + this.bottomRockPoints[0].x, y0 + this.bottomRockPoints[0].y + getCurveY(this.bottomRockPoints[0].x));
-                    for (let i = 1; i < this.bottomRockPoints.length; i++) {
-                        ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
-                    }
-                    ctx.stroke();
-                }
-
-                // Internal Rock Crags & Crevices
-                if (this.rockCrags) {
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.38)';
-                    ctx.lineWidth = 1.2;
-                    this.rockCrags.forEach(crag => {
-                        const cx = x0 + this.width * crag.relX;
-                        const cy = y0 + crag.relY + getCurveY(this.width * crag.relX);
+                    } else {
                         ctx.beginPath();
-                        ctx.moveTo(cx, cy);
-                        ctx.lineTo(cx + crag.dx, cy + crag.dy);
+                        ctx.roundRect(x0, y0, this.width, 3, [3, 3, 0, 0]);
+                        ctx.fill();
+                    }
+
+                    // Fragile stripes or Spring gem indicator
+                    if (this.type === 'fragile') {
+                        const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+                        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
+                        ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
+                        ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
+                        ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
                         ctx.stroke();
-                    });
-                }
+                    } else if (this.type === 'spring') {
+                        const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
+                        const springY = y0 + 4 + getCurveY(this.width * 0.5);
+                        ctx.fillStyle = '#facc15';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 10 * pulse, 3.2 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
 
-                // Glowing details for Fragile and Spring rocks
-                if (this.type === 'fragile') {
-                    const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
-                    ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
-                    ctx.lineWidth = 1.8;
-                    ctx.beginPath();
-                    ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
-                    ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
-                    ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
-                    ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
-                    ctx.stroke();
-                } else if (this.type === 'spring') {
-                    // Glowing energy vent / spring gem at center
-                    const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
-                    const springY = y0 + 4 + getCurveY(this.width * 0.5);
-                    ctx.fillStyle = '#facc15';
-                    ctx.beginPath();
-                    ctx.ellipse(midX, springY, 10 * pulse, 3.2 * pulse, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.ellipse(midX, springY, 5 * pulse, 1.6 * pulse, 0, 0, Math.PI * 2);
-                    ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 5 * pulse, 1.6 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 }
 
                 ctx.restore();
