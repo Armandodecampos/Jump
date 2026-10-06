@@ -735,62 +735,79 @@
                     } catch (e) {}
                 };
 
-                // 1. Jump Sound Buffer
-                createBuf('jump', 0.08, (data, sr, len) => {
+                // 1. Jump Sound Buffer (Organic physical jump: foot thump + cloth swoosh)
+                createBuf('jump', 0.12, (data, sr, len) => {
+                    let lastNoise = 0;
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
-                        const freq = 280 + t * 4000;
-                        const env = Math.exp(-t * 35);
-                        data[i] = (Math.sin(2 * Math.PI * freq * t) > 0 ? 0.3 : -0.3) * env;
+                        const thumpFreq = 140 * Math.exp(-t * 25) + 38;
+                        const thump = Math.sin(2 * Math.PI * thumpFreq * t) * Math.exp(-t * 25);
+                        const white = Math.random() * 2 - 1;
+                        lastNoise = lastNoise * 0.65 + white * 0.35;
+                        const swoosh = lastNoise * Math.sin(Math.PI * (t / 0.12));
+                        data[i] = (thump * 0.6 + swoosh * 0.4);
                     }
                 });
 
-                // 2. Spring Sound Buffer
-                createBuf('spring', 0.15, (data, sr, len) => {
+                // 2. Spring Sound Buffer (Metallic spring recoil)
+                createBuf('spring', 0.2, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
-                        const freq = 300 + Math.sin(t * 80) * 400 + t * 2500;
-                        const env = Math.exp(-t * 18);
-                        data[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
-                    }
-                });
-
-                // 3. Break Noise Buffer
-                createBuf('break', 0.12, (data, sr, len) => {
-                    for (let i = 0; i < len; i++) {
-                        const t = i / sr;
-                        const env = Math.exp(-t * 28);
-                        data[i] = (Math.random() * 2 - 1) * 0.35 * env;
-                    }
-                });
-
-                // 4. GameOver Sound Buffer
-                createBuf('gameOver', 0.25, (data, sr, len) => {
-                    for (let i = 0; i < len; i++) {
-                        const t = i / sr;
-                        const freq = Math.max(50, 240 - t * 700);
+                        const baseFreq = 220 + t * 3150;
                         const env = Math.exp(-t * 12);
-                        data[i] = ((i % Math.floor(sr / freq) < sr / freq / 2) ? 0.3 : -0.3) * env;
+                        const tone1 = Math.sin(2 * Math.PI * baseFreq * t);
+                        const tone2 = Math.sin(2 * Math.PI * baseFreq * 2.76 * t) * 0.3;
+                        data[i] = (tone1 + tone2) * 0.4 * env;
                     }
                 });
 
-                // 5. Jetpack Engine Noise Buffer
+                // 3. Break Noise Buffer (Wood/stone crumble)
+                createBuf('break', 0.18, (data, sr, len) => {
+                    let last = 0;
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const env = Math.exp(-t * 16);
+                        const white = Math.random() * 2 - 1;
+                        const crackle = (Math.random() < 0.08) ? (Math.random() * 2 - 1) * 1.5 : 0;
+                        last = last * 0.5 + white * 0.5;
+                        data[i] = (last * 0.4 + crackle) * env * 0.5;
+                    }
+                });
+
+                // 4. GameOver Sound Buffer (Deep organic bass drop)
+                createBuf('gameOver', 0.45, (data, sr, len) => {
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const freq = Math.max(30, 160 * Math.exp(-t * 6));
+                        const env = Math.exp(-t * 4);
+                        const sub = Math.sin(2 * Math.PI * freq * t);
+                        data[i] = sub * 0.5 * env;
+                    }
+                });
+
+                // 5. Jetpack Engine Noise Buffer (Combustion roar)
                 createBuf('jetpack', 0.5, (data, sr, len) => {
-                    let lastOut = 0;
+                    let b0 = 0, b1 = 0;
                     for (let i = 0; i < len; i++) {
                         const white = Math.random() * 2 - 1;
-                        lastOut = (lastOut + 0.08 * white) / 1.08;
-                        data[i] = lastOut * 0.6;
+                        b0 = b0 * 0.95 + white * 0.05;
+                        b1 = b1 * 0.85 + white * 0.15;
+                        const rumble = (b0 + b1) * 0.4;
+                        data[i] = rumble * 0.6;
                     }
                 });
 
-                // 6. High-pitched Heart Pickup Buffer
-                createBuf('heart', 0.15, (data, sr, len) => {
+                // 6. Heart Pickup Buffer (Crystalline bell chime arpeggio)
+                createBuf('heart', 0.25, (data, sr, len) => {
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
-                        const freq = 880 + t * 12000;
-                        const env = Math.exp(-t * 20);
-                        data[i] = Math.sin(2 * Math.PI * freq * t) * 0.4 * env;
+                        const env = Math.exp(-t * 10);
+                        let freq = 1046.50;
+                        if (t > 0.12) freq = 2093.00;
+                        else if (t > 0.06) freq = 1567.98;
+                        const p1 = Math.sin(2 * Math.PI * freq * t);
+                        const p2 = Math.sin(2 * Math.PI * freq * 2.01 * t) * 0.25;
+                        data[i] = (p1 + p2) * 0.35 * env;
                     }
                 });
             }
@@ -833,18 +850,49 @@
                 this.ensureContext();
                 if (!this.ctx) return;
 
-                if (this.jumpOsc && this.jumpGain) {
+                try {
                     const now = this.ctx.currentTime;
-                    this.jumpOsc.frequency.cancelScheduledValues(now);
-                    this.jumpGain.gain.cancelScheduledValues(now);
+                    // Low physical foot push-off thump (body resonance)
+                    const osc = this.ctx.createOscillator();
+                    const oscGain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(130, now);
+                    osc.frequency.exponentialRampToValueAtTime(38, now + 0.1);
+                    oscGain.gain.setValueAtTime(0.5, now);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                    osc.connect(oscGain);
+                    oscGain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
 
-                    this.jumpOsc.frequency.setValueAtTime(320, now);
-                    this.jumpOsc.frequency.exponentialRampToValueAtTime(950, now + 0.08);
+                    // Airy cloth/wind jump swoosh
+                    const bufLen = Math.floor(this.ctx.sampleRate * 0.12);
+                    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                    const pcm = buf.getChannelData(0);
+                    let last = 0;
+                    for (let i = 0; i < bufLen; i++) {
+                        const t = i / bufLen;
+                        const white = Math.random() * 2 - 1;
+                        last = last * 0.6 + white * 0.4;
+                        pcm[i] = last * Math.sin(Math.PI * t);
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    const filter = this.ctx.createBiquadFilter();
+                    const noiseGain = this.ctx.createGain();
+                    noise.buffer = buf;
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(600, now);
+                    filter.frequency.exponentialRampToValueAtTime(1800, now + 0.08);
+                    filter.Q.value = 1.2;
+                    noiseGain.gain.setValueAtTime(0.35, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
-                    this.jumpGain.gain.setValueAtTime(0.4, now);
-                    this.jumpGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.08);
-                } else {
-                    this.playBuffer('jump', 0.45);
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+                    noise.start(now);
+                } catch (e) {
+                    this.playBuffer('jump', 0.5);
                 }
             }
 
@@ -853,14 +901,34 @@
                 this.ensureContext();
                 if (!this.ctx) return;
 
-                if (this.springOsc && this.springGain) {
+                try {
                     const now = this.ctx.currentTime;
-                    this.springOsc.frequency.setValueAtTime(350, now);
-                    this.springOsc.frequency.exponentialRampToValueAtTime(1300, now + 0.15);
-                    this.springGain.gain.cancelScheduledValues(now);
-                    this.springGain.gain.setValueAtTime(0.45, now);
-                    this.springGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
-                } else {
+                    // Realistic metallic coil recoil with overtone harmonics
+                    const osc1 = this.ctx.createOscillator();
+                    const osc2 = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+
+                    osc1.frequency.setValueAtTime(220, now);
+                    osc1.frequency.exponentialRampToValueAtTime(850, now + 0.18);
+
+                    osc2.frequency.setValueAtTime(220 * 2.76, now);
+                    osc2.frequency.exponentialRampToValueAtTime(850 * 2.76, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc1.start(now);
+                    osc2.start(now);
+                    osc1.stop(now + 0.2);
+                    osc2.stop(now + 0.2);
+                } catch (e) {
                     this.playBuffer('spring', 0.5);
                 }
             }
@@ -870,17 +938,26 @@
                 this.ensureContext();
                 if (!this.ctx) return;
 
-                if (this.heartOsc && this.heartGain) {
+                try {
                     const now = this.ctx.currentTime;
-                    this.heartOsc.frequency.cancelScheduledValues(now);
-                    this.heartGain.gain.cancelScheduledValues(now);
+                    // Crystalline bell / marimba chime arpeggio: C6, E6, G6, C7
+                    const notes = [1046.50, 1318.51, 1567.98, 2093.00];
+                    notes.forEach((freq, idx) => {
+                        const noteTime = now + idx * 0.04;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, noteTime);
 
-                    this.heartOsc.frequency.setValueAtTime(880, now);
-                    this.heartOsc.frequency.exponentialRampToValueAtTime(2640, now + 0.15);
+                        gain.gain.setValueAtTime(0.35, noteTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.25);
 
-                    this.heartGain.gain.setValueAtTime(0.5, now);
-                    this.heartGain.gain.exponentialRampToValueAtTime(0.00001, now + 0.15);
-                } else {
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(noteTime);
+                        osc.stop(noteTime + 0.25);
+                    });
+                } catch (e) {
                     this.playBuffer('heart', 0.5);
                 }
             }
@@ -890,14 +967,82 @@
             }
 
             playBreak() {
-                this.playBuffer('break', 0.4);
+                if (this.muted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                if (!this.ctx) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    // Low wood/stone crumble thud
+                    const thud = this.ctx.createOscillator();
+                    const thudGain = this.ctx.createGain();
+                    thud.type = 'triangle';
+                    thud.frequency.setValueAtTime(150, now);
+                    thud.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                    thudGain.gain.setValueAtTime(0.5, now);
+                    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    thud.connect(thudGain);
+                    thudGain.connect(this.ctx.destination);
+                    thud.start(now);
+                    thud.stop(now + 0.15);
+
+                    // Debris crackle
+                    const bufLen = Math.floor(this.ctx.sampleRate * 0.18);
+                    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                    const pcm = buf.getChannelData(0);
+                    let last = 0;
+                    for (let i = 0; i < bufLen; i++) {
+                        const white = Math.random() * 2 - 1;
+                        const crackle = (Math.random() < 0.1) ? (Math.random() * 2 - 1) * 1.8 : 0;
+                        last = last * 0.5 + white * 0.5;
+                        pcm[i] = (last * 0.3 + crackle) * Math.exp(- (i / bufLen) * 5);
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    const filter = this.ctx.createBiquadFilter();
+                    const noiseGain = this.ctx.createGain();
+                    noise.buffer = buf;
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(1200, now);
+                    filter.Q.value = 0.8;
+                    noiseGain.gain.setValueAtTime(0.4, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+                    noise.start(now);
+                } catch (e) {
+                    this.playBuffer('break', 0.4);
+                }
             }
 
             playGameOver() {
-                this.playBuffer('gameOver', 0.5);
+                if (this.muted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                if (!this.ctx) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    // Organic deep bass drop with muted floor thud
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(160, now);
+                    osc.frequency.exponentialRampToValueAtTime(32, now + 0.45);
+
+                    gain.gain.setValueAtTime(0.6, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                } catch (e) {
+                    this.playBuffer('gameOver', 0.5);
+                }
             }
 
-            // Loud, characteristic falling rock warning whistle / rumble sound
+            // Descending heavy falling rock wind whoosh and rumble sound
             playRockFall() {
                 if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
@@ -905,26 +1050,54 @@
 
                 try {
                     const now = this.ctx.currentTime;
-                    // Low rumble sine oscillator descending in pitch
-                    const osc = this.ctx.createOscillator();
+                    const bufLen = Math.floor(this.ctx.sampleRate * 0.4);
+                    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                    const pcm = buf.getChannelData(0);
+                    let b0 = 0, b1 = 0;
+                    for (let i = 0; i < bufLen; i++) {
+                        const t = i / bufLen;
+                        const white = Math.random() * 2 - 1;
+                        b0 = b0 * 0.92 + white * 0.08;
+                        b1 = b1 * 0.98 + white * 0.02;
+                        const env = Math.sin(Math.PI * t);
+                        pcm[i] = (b0 * 0.6 + b1 * 0.4) * env;
+                    }
+
+                    const noise = this.ctx.createBufferSource();
+                    const filter = this.ctx.createBiquadFilter();
                     const gain = this.ctx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(180, now);
-                    osc.frequency.exponentialRampToValueAtTime(70, now + 0.35);
 
-                    gain.gain.setValueAtTime(0.65, now); // Loud volume
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    noise.buffer = buf;
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(300, now);
+                    filter.frequency.exponentialRampToValueAtTime(110, now + 0.4);
+                    filter.Q.value = 1.8;
 
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    gain.gain.setValueAtTime(0.7, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(this.ctx.destination);
+                    noise.start(now);
+
+                    const osc = this.ctx.createOscillator();
+                    const oscGain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(55, now + 0.4);
+                    oscGain.gain.setValueAtTime(0.4, now);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.connect(oscGain);
+                    oscGain.connect(this.ctx.destination);
                     osc.start(now);
-                    osc.stop(now + 0.35);
+                    osc.stop(now + 0.4);
                 } catch (e) {
                     this.playBuffer('break', 0.6);
                 }
             }
 
-            // Heavy rock impact / explosion thud sound
+            // Heavy rock impact / stone debris explosion sound
             playRockImpact() {
                 if (this.muted || gameState === 'ATTRACT') return;
                 this.ensureContext();
@@ -932,14 +1105,13 @@
 
                 try {
                     const now = this.ctx.currentTime;
-                    // Low frequency punch
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(140, now);
-                    osc.frequency.exponentialRampToValueAtTime(35, now + 0.25);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
 
-                    gain.gain.setValueAtTime(0.85, now); // Loud heavy impact
+                    gain.gain.setValueAtTime(0.9, now);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
                     osc.connect(gain);
@@ -947,21 +1119,30 @@
                     osc.start(now);
                     osc.stop(now + 0.25);
 
-                    // Add harsh noise impact burst
-                    const noiseBuf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.15), this.ctx.sampleRate);
-                    const pcm = noiseBuf.getChannelData(0);
-                    for (let i = 0; i < pcm.length; i++) {
-                        pcm[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.03));
+                    const bufLen = Math.floor(this.ctx.sampleRate * 0.2);
+                    const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                    const pcm = buf.getChannelData(0);
+                    let last = 0;
+                    for (let i = 0; i < bufLen; i++) {
+                        const white = Math.random() * 2 - 1;
+                        const crackle = (Math.random() < 0.15) ? (Math.random() * 2 - 1) * 2.0 : 0;
+                        last = last * 0.4 + white * 0.6;
+                        pcm[i] = (last * 0.4 + crackle) * Math.exp(- (i / bufLen) * 8);
                     }
-                    const noiseNode = this.ctx.createBufferSource();
+                    const noise = this.ctx.createBufferSource();
+                    const filter = this.ctx.createBiquadFilter();
                     const noiseGain = this.ctx.createGain();
-                    noiseNode.buffer = noiseBuf;
-                    noiseGain.gain.setValueAtTime(0.7, now);
-                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    noise.buffer = buf;
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1600, now);
+                    filter.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+                    noiseGain.gain.setValueAtTime(0.8, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
-                    noiseNode.connect(noiseGain);
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
                     noiseGain.connect(this.ctx.destination);
-                    noiseNode.start(now);
+                    noise.start(now);
                 } catch (e) {
                     this.playBuffer('break', 0.8);
                 }
