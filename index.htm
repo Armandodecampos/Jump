@@ -341,12 +341,29 @@
                     </button>
                 </div>
 
-                <!-- Audio Toggle -->
+                <!-- Sound Effects & Master Audio Toggle -->
                 <div class="flex justify-between items-center text-sm">
-                    <span class="font-bold text-slate-200">Áudio do Jogo:</span>
+                    <span class="font-bold text-slate-200">Sons (SFX):</span>
                     <button id="soundToggleOptionBtn" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-game transition active:scale-95 border border-slate-600 flex items-center gap-2">
                         <span id="soundOptionText">🔊 Som Ativado</span>
                     </button>
+                </div>
+
+                <!-- Music Mute Toggle -->
+                <div class="flex justify-between items-center text-sm">
+                    <span class="font-bold text-slate-200">Música de Fundo:</span>
+                    <button id="musicToggleOptionBtn" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-game transition active:scale-95 border border-slate-600 flex items-center gap-2">
+                        <span id="musicOptionText">🎵 Música Ativada</span>
+                    </button>
+                </div>
+
+                <!-- Music Volume Slider -->
+                <div class="space-y-1.5 text-left text-sm pt-1">
+                    <div class="flex justify-between items-center font-bold text-slate-200 text-xs">
+                        <span>🎚️ Volume da Música:</span>
+                        <span id="musicVolumeValue" class="text-purple-300 font-game">50%</span>
+                    </div>
+                    <input type="range" id="musicVolumeSlider" min="0" max="100" value="50" class="w-full accent-purple-500 cursor-pointer h-2 bg-slate-700 rounded-lg appearance-none">
                 </div>
 
                 <!-- Developer Unlock Button -->
@@ -618,13 +635,18 @@
         // Dual-Engine Zero-Latency Realistic Sound Architecture (Web Audio API + Pre-Warmed HTML5 Audio Pool)
         class SoundEngine {
             constructor() {
-                this.muted = false;
+                this.muted = localStorage.getItem('subida_nuvens_sound_muted') === 'true';
+                this.musicMuted = localStorage.getItem('subida_nuvens_music_muted') === 'true';
+                const savedVol = localStorage.getItem('subida_nuvens_music_volume');
+                this.musicVolume = savedVol !== null ? parseFloat(savedVol) : 0.5;
+
                 this.ctx = null;
                 this.buffers = {};
                 this.audioPool = {};
                 this.jetpackSource = null;
                 this.jetpackGain = null;
-                this.bgMusicSource = null;
+                this.bgMusicAudio = null;
+                this.level1MusicAudio = null;
                 this.keepAliveNode = null;
                 this.unlocked = false;
 
@@ -635,6 +657,22 @@
                         this.buildBuffers();
                     }
                 } catch (e) {}
+
+                this.initAudioElements();
+            }
+
+            initAudioElements() {
+                if (!this.bgMusicAudio) {
+                    this.bgMusicAudio = new Audio('musica_corrigida-menu.m4a');
+                    this.bgMusicAudio.loop = true;
+                    this.bgMusicAudio.volume = this.musicVolume;
+                }
+                if (!this.level1MusicAudio) {
+                    this.level1MusicAudio = new Audio('https://dl.dropbox.com/scl/fi/4oqa2nfk0yddbjj3eikrr/fase-1.mp3?rlkey=0decwlp3jrjg50fl0slpa2ncl&st=5so96gnc&raw=1');
+                    this.level1MusicAudio.preload = 'auto';
+                    this.level1MusicAudio.loop = true;
+                    this.level1MusicAudio.volume = this.musicVolume;
+                }
             }
 
             ensureContext() {
@@ -1057,13 +1095,11 @@
             }
 
             playMenuMusic() {
-                if (this.muted || gameState === 'ATTRACT') return;
+                if (this.muted || this.musicMuted || gameState === 'ATTRACT') return;
                 this.ensureContext();
-                if (!this.bgMusicAudio) {
-                    this.bgMusicAudio = new Audio('musica_corrigida-menu.m4a');
-                    this.bgMusicAudio.loop = true;
-                    this.bgMusicAudio.volume = 0.5;
-                }
+                this.stopLevel1Music();
+                this.initAudioElements();
+                this.bgMusicAudio.volume = this.musicVolume;
                 if (this.bgMusicAudio.paused) {
                     this.bgMusicAudio.currentTime = 0;
                     this.bgMusicAudio.play().catch(() => {});
@@ -1075,19 +1111,65 @@
                     this.bgMusicAudio.pause();
                     this.bgMusicAudio.currentTime = 0;
                 }
-                if (this.bgMusicSource) {
-                    try { this.bgMusicSource.stop(); } catch (e) {}
-                    this.bgMusicSource = null;
+            }
+
+            playLevel1Music() {
+                if (this.muted || this.musicMuted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                this.stopMenuMusic();
+                this.initAudioElements();
+                this.level1MusicAudio.volume = this.musicVolume;
+                if (this.level1MusicAudio.paused) {
+                    this.level1MusicAudio.currentTime = 0;
+                    this.level1MusicAudio.play().catch(() => {});
+                }
+            }
+
+            stopLevel1Music() {
+                if (this.level1MusicAudio) {
+                    this.level1MusicAudio.pause();
+                    this.level1MusicAudio.currentTime = 0;
+                }
+            }
+
+            stopAllMusic() {
+                this.stopMenuMusic();
+                this.stopLevel1Music();
+            }
+
+            setMusicVolume(vol) {
+                this.musicVolume = Math.max(0, Math.min(1, vol));
+                localStorage.setItem('subida_nuvens_music_volume', this.musicVolume.toString());
+                if (this.bgMusicAudio) this.bgMusicAudio.volume = this.musicVolume;
+                if (this.level1MusicAudio) this.level1MusicAudio.volume = this.musicVolume;
+            }
+
+            toggleMusicMute() {
+                this.musicMuted = !this.musicMuted;
+                localStorage.setItem('subida_nuvens_music_muted', this.musicMuted.toString());
+                if (this.musicMuted) {
+                    this.stopAllMusic();
+                } else {
+                    if (gameState === 'MENU') {
+                        this.playMenuMusic();
+                    } else if (gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
+                        this.playLevel1Music();
+                    }
                 }
             }
 
             toggleMute() {
                 this.muted = !this.muted;
+                localStorage.setItem('subida_nuvens_sound_muted', this.muted.toString());
                 if (this.muted) {
-                    this.stopMenuMusic();
+                    this.stopAllMusic();
                     this.stopJetpackSound();
-                } else if (gameState === 'MENU') {
-                    this.playMenuMusic();
+                } else {
+                    if (gameState === 'MENU') {
+                        this.playMenuMusic();
+                    } else if (gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
+                        this.playLevel1Music();
+                    }
                 }
             }
 
@@ -2342,11 +2424,27 @@
             }
         ];
 
+        const musicToggleOptionBtn = document.getElementById('musicToggleOptionBtn');
+        const musicOptionText = document.getElementById('musicOptionText');
+        const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+        const musicVolumeValue = document.getElementById('musicVolumeValue');
+
         function updateSoundUI() {
-            soundOptionText.textContent = sound.muted ? '🔇 Muted' : '🔊 Som Ativado';
+            if (soundOptionText) {
+                soundOptionText.textContent = sound.muted ? '🔇 Som Muted' : '🔊 Som Ativado';
+            }
+            if (musicOptionText) {
+                musicOptionText.textContent = sound.musicMuted ? '🔇 Música Muted' : '🎵 Música Ativada';
+            }
+            if (musicVolumeSlider && musicVolumeValue) {
+                const volPct = Math.round(sound.musicVolume * 100);
+                musicVolumeSlider.value = volPct;
+                musicVolumeValue.textContent = `${volPct}%`;
+            }
         }
 
         function openOptionsModal() {
+            updateSoundUI();
             optionsModal.classList.remove('hidden');
         }
 
@@ -2371,6 +2469,7 @@
             gameState = 'MENU';
             resetMenuInactivityTimer();
             sound.stopJetpackSound();
+            sound.stopLevel1Music();
             sound.playMenuMusic();
             closeOptionsModal();
             gameOverMenu.classList.add('hidden');
@@ -2420,11 +2519,31 @@
         doneOptionsBtn.addEventListener('click', () => closeOptionsModal());
         goToMenuBtn.addEventListener('click', () => returnToMainMenu());
 
-        soundToggleOptionBtn.addEventListener('click', () => {
-            sound.ensureContext();
-            sound.toggleMute();
-            updateSoundUI();
-        });
+        if (soundToggleOptionBtn) {
+            soundToggleOptionBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                sound.toggleMute();
+                updateSoundUI();
+            });
+        }
+
+        if (musicToggleOptionBtn) {
+            musicToggleOptionBtn.addEventListener('click', () => {
+                sound.ensureContext();
+                sound.toggleMusicMute();
+                updateSoundUI();
+            });
+        }
+
+        if (musicVolumeSlider) {
+            musicVolumeSlider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value) / 100;
+                sound.setMusicVolume(val);
+                if (musicVolumeValue) {
+                    musicVolumeValue.textContent = `${Math.round(val * 100)}%`;
+                }
+            });
+        }
 
         if (unlockAllLevelsBtn) {
             unlockAllLevelsBtn.addEventListener('click', () => {
@@ -2653,7 +2772,7 @@
         function enterAttractMode() {
             gameState = 'ATTRACT';
             demoStartTime = Date.now();
-            sound.stopMenuMusic();
+            sound.stopAllMusic();
             sound.stopJetpackSound();
 
             const startMenu = document.getElementById('startMenu');
@@ -3889,6 +4008,7 @@
             victoryCelebrationTimer = 300; // 5 seconds at 60fps
 
             sound.stopJetpackSound();
+            sound.stopLevel1Music();
             sound.playSpring();
             sound.playFireworks();
 
@@ -5126,7 +5246,11 @@
 
         function startGame() {
             gameState = 'PLAYING';
-            sound.stopMenuMusic();
+            if (gameMode === 'STORY' && currentStoryLevel === 1) {
+                sound.playLevel1Music();
+            } else {
+                sound.stopAllMusic();
+            }
             score = 0;
             coinCount = 0;
             cameraY = 0;
@@ -5230,6 +5354,7 @@
         function triggerGameOver() {
             gameState = 'GAMEOVER';
             sound.stopJetpackSound();
+            sound.stopLevel1Music();
             sound.playGameOver();
 
             const gameOverTitle = document.getElementById('gameOverTitle');
@@ -5533,6 +5658,7 @@
             gameState = 'ATTRACT';
             demoStartTime = Date.now();
             updateCharacterUI();
+            updateSoundUI();
             player.reset();
             generateInitialPlatforms();
             gameLoop();
