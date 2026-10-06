@@ -3094,29 +3094,45 @@
                 this.crumbleTimer = 0;
                 this.respawnTimer = 0;
 
-                // Generate unique irregular rock contour points
+                // Generate unique irregular rock contour points (inverted triangular wedge profile)
                 this.topRockPoints = [];
                 this.bottomRockPoints = [];
-                const segments = Math.max(5, Math.floor(width / 10));
+                const segments = Math.max(6, Math.floor(width / 10));
                 const segWidth = width / segments;
 
+                // Randomize inverted triangle tip position and depth for variety across Level 1 platforms
+                const tipXRatio = 0.35 + Math.random() * 0.30; // Tip located between 35% and 65% of width
+                const tipDepth = 18 + Math.random() * 12;      // Tapering downward depth (18px to 30px)
+
                 for (let i = 0; i <= segments; i++) {
+                    const normX = i / segments; // 0.0 to 1.0
                     const isEdge = (i === 0 || i === segments);
+
+                    // Top landing surface: relatively flat with organic rock bumpiness
                     const topY = isEdge ? (Math.random() * 2) : (Math.random() * 4 - 2);
                     this.topRockPoints.push({ x: i * segWidth, y: topY });
 
-                    const botY = isEdge ? (14 + Math.random() * 3) : (12 + Math.random() * 7);
+                    // Inverted triangle bottom shape: tapers down from thin edges (4-7px) to deep center tip
+                    const distToTip = normX < tipXRatio ? (normX / tipXRatio) : ((1 - normX) / (1 - tipXRatio));
+                    const baseBotY = 5 + distToTip * (tipDepth - 5);
+                    const jitter = isEdge ? (Math.random() * 2) : ((Math.random() - 0.5) * 4);
+                    const botY = Math.max(4, baseBotY + jitter);
+
                     this.bottomRockPoints.push({ x: i * segWidth, y: botY });
                 }
 
                 this.rockCrags = [];
                 const cragCount = 2 + Math.floor(width / 30);
                 for (let c = 0; c < cragCount; c++) {
+                    const relX = 0.12 + Math.random() * 0.76;
+                    const normX = relX;
+                    const distToTip = normX < tipXRatio ? (normX / tipXRatio) : ((1 - normX) / (1 - tipXRatio));
+                    const maxD = 5 + distToTip * (tipDepth - 5);
                     this.rockCrags.push({
-                        relX: 0.12 + Math.random() * 0.76,
-                        relY: 3 + Math.random() * 5,
-                        dx: (Math.random() - 0.5) * 12,
-                        dy: 3 + Math.random() * 6
+                        relX: relX,
+                        relY: 3 + Math.random() * Math.max(2, maxD * 0.4),
+                        dx: (Math.random() - 0.5) * 10,
+                        dy: 2 + Math.random() * Math.max(3, maxD * 0.4)
                     });
                 }
 
@@ -3124,9 +3140,13 @@
                 this.textureSpeckles = [];
                 const speckleCount = Math.floor(width / 7) + Math.floor(Math.random() * 3);
                 for (let s = 0; s < speckleCount; s++) {
+                    const relX = 4 + Math.random() * (width - 8);
+                    const normX = relX / width;
+                    const distToTip = normX < tipXRatio ? (normX / tipXRatio) : ((1 - normX) / (1 - tipXRatio));
+                    const maxD = 5 + distToTip * (tipDepth - 5);
                     this.textureSpeckles.push({
-                        relX: 4 + Math.random() * (width - 8),
-                        relY: 3 + Math.random() * 9,
+                        relX: relX,
+                        relY: 2 + Math.random() * Math.max(3, maxD - 3),
                         radius: 0.8 + Math.random() * 1.2,
                         isLight: Math.random() > 0.45
                     });
