@@ -3412,15 +3412,41 @@
                         isLight: Math.random() > 0.45
                     });
                 }
+
+                // Generate crystal cluster spires for Level 2 platforms (Grotas de Cristal)
+                this.crystalSpires = [];
+                const numCrystals = Math.max(4, Math.floor(width / 14));
+                const cWidth = width / numCrystals;
+
+                for (let i = 0; i < numCrystals; i++) {
+                    const cx = (i + 0.5) * cWidth;
+                    const ch = 14 + Math.random() * 16;  // downward stalactite tip depth
+                    const topH = 4 + Math.random() * 6;   // upward gem cap height
+                    const capOffset = (Math.random() - 0.5) * (cWidth * 0.4);
+                    this.crystalSpires.push({
+                        cx: cx,
+                        w: cWidth * (0.85 + Math.random() * 0.35),
+                        ch: ch,
+                        topH: topH,
+                        capOffset: capOffset
+                    });
+                }
+
+                this.lightBeamTimer = 0;
             }
 
             triggerBend() {
                 this.bendTimer = this.maxBendFrames;
+                this.lightBeamTimer = 28; // Beam burst duration when stepping on crystal trampoline
             }
 
             update() {
                 if (this.bendTimer > 0) {
                     this.bendTimer--;
+                }
+
+                if (this.lightBeamTimer > 0) {
+                    this.lightBeamTimer--;
                 }
 
                 if (this.type === 'moving') {
@@ -3726,8 +3752,220 @@
                 };
 
                 const isRockTheme = (gameMode === 'STORY' && currentStoryLevel === 1);
+                const isCrystalTheme = (gameMode === 'STORY' && currentStoryLevel === 2);
 
-                if (isRockTheme) {
+                if (isCrystalTheme) {
+                    // Level 2: Grotas de Cristal (Colorful, multi-faceted crystal platforms with static trampolines and light beams)
+                    const now = Date.now();
+                    const nowSec = now * 0.003;
+
+                    // Trampoline Crystal Beam Emission (Static platform, launches vertical light beam)
+                    if (this.type === 'spring' && this.lightBeamTimer > 0) {
+                        const alpha = this.lightBeamTimer / 28;
+                        const beamWidth = this.width * (0.7 + 0.3 * Math.sin(now * 0.02));
+                        const bx0 = midX - beamWidth / 2;
+
+                        ctx.save();
+                        // Outer glowing aura pillar
+                        const beamGrad = ctx.createLinearGradient(midX, y0, midX, y0 - 320);
+                        beamGrad.addColorStop(0, `rgba(232, 121, 249, ${0.85 * alpha})`);
+                        beamGrad.addColorStop(0.3, `rgba(192, 132, 252, ${0.65 * alpha})`);
+                        beamGrad.addColorStop(0.7, `rgba(56, 189, 248, ${0.35 * alpha})`);
+                        beamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                        ctx.fillStyle = beamGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(bx0, y0);
+                        ctx.lineTo(midX - beamWidth * 0.8, y0 - 320);
+                        ctx.lineTo(midX + beamWidth * 0.8, y0 - 320);
+                        ctx.lineTo(bx0 + beamWidth, y0);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Inner brilliant white/yellow core light ray
+                        const coreGrad = ctx.createLinearGradient(midX, y0, midX, y0 - 320);
+                        coreGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * alpha})`);
+                        coreGrad.addColorStop(0.5, `rgba(254, 240, 138, ${0.7 * alpha})`);
+                        coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                        ctx.fillStyle = coreGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(midX - beamWidth * 0.25, y0);
+                        ctx.lineTo(midX - beamWidth * 0.35, y0 - 320);
+                        ctx.lineTo(midX + beamWidth * 0.35, y0 - 320);
+                        ctx.lineTo(midX + beamWidth * 0.25, y0);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Floating prismatic light particles inside the beam
+                        for (let p = 0; p < 8; p++) {
+                            const pY = y0 - ((now * 0.2 + p * 40) % 300);
+                            const pX = midX + Math.sin(p * 2 + now * 0.01) * (beamWidth * 0.35);
+                            ctx.fillStyle = p % 2 === 0 ? `rgba(255, 255, 255, ${0.9 * alpha})` : `rgba(244, 114, 182, ${0.8 * alpha})`;
+                            ctx.beginPath();
+                            ctx.arc(pX, pY, 2 + Math.random() * 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
+
+                    // Multi-faceted Gem Palette based on platform type
+                    let baseCol = '#c084fc';
+                    let midCol  = '#a855f7';
+                    let darkCol = '#7e22ce';
+                    let glowCol = 'rgba(192, 132, 252, 0.7)';
+                    let facetLight = '#f0abfc';
+
+                    if (this.type === 'normal') {
+                        // Radiant Amethyst / Violet Crystal
+                        baseCol = '#e879f9'; midCol = '#c084fc'; darkCol = '#9333ea';
+                        glowCol = 'rgba(232, 121, 249, 0.65)'; facetLight = '#fae8ff';
+                    } else if (this.type === 'moving') {
+                        // Sapphire / Electric Cyan Crystal
+                        baseCol = '#38bdf8'; midCol = '#0284c7'; darkCol = '#0369a1';
+                        glowCol = 'rgba(56, 189, 248, 0.7)'; facetLight = '#e0f2fe';
+                    } else if (this.type === 'fragile') {
+                        // Ruby / Crimson Rose Crystal
+                        baseCol = '#f43f5e'; midCol = '#e11d48'; darkCol = '#9f1239';
+                        glowCol = 'rgba(244, 63, 94, 0.75)'; facetLight = '#ffe4e6';
+                    } else if (this.type === 'spring') {
+                        // Celestial Gold & Emerald Prismatic Crystal
+                        baseCol = '#facc15'; midCol = '#eab308'; darkCol = '#ca8a04';
+                        glowCol = 'rgba(250, 204, 21, 0.85)'; facetLight = '#fefce8';
+                    }
+
+                    // Ambient Outer Crystal Glow
+                    ctx.save();
+                    ctx.shadowColor = glowCol;
+                    ctx.shadowBlur = 14;
+
+                    // Draw Bottom Crystal Stalactite Spires / Faceted Polygon Base
+                    if (this.crystalSpires && this.crystalSpires.length > 0) {
+                        this.crystalSpires.forEach((spire, idx) => {
+                            const sx = x0 + spire.cx;
+                            const sy = y0 + 10;
+                            const halfW = spire.w / 2;
+                            const tipY = y0 + 10 + spire.ch;
+
+                            // Left Facet (Darker shadow side)
+                            ctx.fillStyle = darkCol;
+                            ctx.beginPath();
+                            ctx.moveTo(sx - halfW, sy);
+                            ctx.lineTo(sx, tipY);
+                            ctx.lineTo(sx, sy);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            // Right Facet (Midtone side)
+                            ctx.fillStyle = midCol;
+                            ctx.beginPath();
+                            ctx.moveTo(sx, sy);
+                            ctx.lineTo(sx, tipY);
+                            ctx.lineTo(sx + halfW, sy);
+                            ctx.closePath();
+                            ctx.fill();
+
+                            // Sharp Edge Highlight
+                            ctx.strokeStyle = facetLight;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(sx, sy);
+                            ctx.lineTo(sx, tipY);
+                            ctx.stroke();
+                        });
+                    }
+
+                    // Main Crystal Slab Polygon Body
+                    ctx.beginPath();
+                    ctx.moveTo(x0, y0 + 5);
+                    ctx.lineTo(x0 + 8, y0);
+                    ctx.lineTo(x0 + this.width - 8, y0);
+                    ctx.lineTo(x0 + this.width, y0 + 5);
+                    ctx.lineTo(x0 + this.width - 4, y0 + 14);
+                    ctx.lineTo(x0 + 4, y0 + 14);
+                    ctx.closePath();
+
+                    const cGrad = ctx.createLinearGradient(x0, y0, x0, y0 + 14);
+                    cGrad.addColorStop(0, baseCol);
+                    cGrad.addColorStop(0.5, midCol);
+                    cGrad.addColorStop(1, darkCol);
+                    ctx.fillStyle = cGrad;
+                    ctx.fill();
+
+                    // Facet Lines and Top Prismatic Surface
+                    ctx.shadowBlur = 0; // reset shadow for sharp geometry
+
+                    // Top Surface Gem Table
+                    ctx.fillStyle = facetLight;
+                    ctx.beginPath();
+                    ctx.moveTo(x0 + 10, y0 + 2);
+                    ctx.lineTo(x0 + this.width - 10, y0 + 2);
+                    ctx.lineTo(x0 + this.width - 14, y0 + 6);
+                    ctx.lineTo(x0 + 14, y0 + 6);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Internal Geometry Facet Highlights
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    // Horizontal ridge line
+                    ctx.moveTo(x0 + 4, y0 + 6);
+                    ctx.lineTo(x0 + this.width - 4, y0 + 6);
+                    // Diagonal facet cuts across the length
+                    const numCutLines = Math.floor(this.width / 18);
+                    for (let k = 1; k < numCutLines; k++) {
+                        const kx = x0 + k * (this.width / numCutLines);
+                        ctx.moveTo(kx - 4, y0 + 2);
+                        ctx.lineTo(kx, y0 + 6);
+                        ctx.lineTo(kx - 2, y0 + 14);
+                    }
+                    ctx.stroke();
+
+                    // Special Platform Type Indicator Overlay
+                    if (this.type === 'fragile') {
+                        // Glowing internal fracture cracks
+                        const pulse = 0.6 + 0.4 * Math.sin(now * 0.01);
+                        ctx.strokeStyle = `rgba(254, 240, 138, ${pulse})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.15, y0 + 3);
+                        ctx.lineTo(x0 + this.width * 0.35, y0 + 11);
+                        ctx.lineTo(x0 + this.width * 0.55, y0 + 4);
+                        ctx.lineTo(x0 + this.width * 0.85, y0 + 12);
+                        ctx.stroke();
+                    } else if (this.type === 'spring') {
+                        // Celestial Trampoline Crystal Crown Emblem & Pulsing Gem
+                        const pulse = 1 + 0.2 * Math.sin(now * 0.012);
+                        const gemY = y0 + 4;
+
+                        // Diamond Star Overlay on Center
+                        ctx.save();
+                        ctx.translate(midX, gemY);
+                        ctx.scale(pulse, pulse);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.moveTo(0, -7);
+                        ctx.lineTo(3, -2);
+                        ctx.lineTo(8, 0);
+                        ctx.lineTo(3, 2);
+                        ctx.moveTo(0, 7);
+                        ctx.lineTo(-3, 2);
+                        ctx.lineTo(-8, 0);
+                        ctx.lineTo(-3, -2);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.fillStyle = '#fef08a';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    ctx.restore();
+                } else if (isRockTheme) {
                     // Draw organic non-rectangular rock path for Story Mode Level 1 (Vulcão)
                     ctx.beginPath();
                     if (this.topRockPoints && this.topRockPoints.length > 0) {
@@ -5149,6 +5387,23 @@
                     ctx.fillStyle = '#18181b';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
+            } else if (gameMode === 'STORY' && currentStoryLevel === 2) {
+                // Repeating background image for Level 2 from Dropbox
+                if (level2BgImage.complete && level2BgImage.naturalWidth > 0) {
+                    const bgWidth = canvas.width;
+                    const bgHeight = canvas.width * (level2BgImage.naturalHeight / level2BgImage.naturalWidth);
+
+                    const startTileIndex = Math.floor(cameraY / bgHeight);
+                    const endTileIndex = Math.floor((cameraY + canvas.height) / bgHeight);
+
+                    for (let tileIndex = startTileIndex; tileIndex <= endTileIndex; tileIndex++) {
+                        const screenTopY = tileIndex * bgHeight - cameraY;
+                        ctx.drawImage(level2BgImage, 0, screenTopY, bgWidth, bgHeight);
+                    }
+                } else {
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
             } else if (gameMode === 'STORY') {
                 const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
                 const theme = STORY_THEMES[currentStoryLevel - 1] || STORY_THEMES[0];
@@ -5897,6 +6152,10 @@
         // Level 1 Background Image from Dropbox
         const level1BgImage = new Image();
         level1BgImage.src = 'https://dl.dropbox.com/scl/fi/ao72mrc1wacxhd0520hg3/e4dd25e6-c22c-4122-ae4e-5a0a23c637f1.png?rlkey=v10g1dklq77vvxjix2u238fxz&st=tf7esboj&raw=1';
+
+        // Level 2 Background Image from Dropbox (Grotas de Cristal)
+        const level2BgImage = new Image();
+        level2BgImage.src = 'https://dl.dropbox.com/scl/fi/9hl4nrj6wd5cqupexy1l6/df779e75-09be-4bc1-9f29-e0f5e5ab3319.png?rlkey=r6k86od8rkjydax7hswgp325c&st=cp4ah58w&raw=1';
 
         // Preload all cutscene images into browser cache so they appear instantly
         const preloadedCutsceneImages = [];
