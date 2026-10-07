@@ -645,6 +645,7 @@
                 this.audioPool = {};
                 this.jetpackSource = null;
                 this.jetpackGain = null;
+                this.lavaNodes = null;
                 this.bgMusicAudio = null;
                 this.level1MusicAudio = null;
                 this.keepAliveNode = null;
@@ -1164,6 +1165,7 @@
                 if (this.muted) {
                     this.stopAllMusic();
                     this.stopJetpackSound();
+                    this.stopLavaSound();
                 } else {
                     if (gameState === 'MENU') {
                         this.playMenuMusic();
@@ -1213,6 +1215,121 @@
                     }
                 } else {
                     this.stopJetpackSound();
+                }
+            }
+
+            // Realistic Lava Ambient Sound (Deep Sub Rumble + Molten Bubble Sizzle Modulation)
+            startLavaSound() {
+                if (this.muted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                if (!this.ctx || this.lavaNodes) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    const sr = this.ctx.sampleRate;
+
+                    // 1. Sub-bass molten rumble oscillator (Low frequency rumble with subtle lfo)
+                    const subOsc = this.ctx.createOscillator();
+                    subOsc.type = 'sawtooth';
+                    subOsc.frequency.setValueAtTime(45, now);
+
+                    const subFilter = this.ctx.createBiquadFilter();
+                    subFilter.type = 'lowpass';
+                    subFilter.frequency.setValueAtTime(140, now);
+
+                    const subGain = this.ctx.createGain();
+                    subGain.gain.setValueAtTime(0.0001, now);
+
+                    subOsc.connect(subFilter);
+                    subFilter.connect(subGain);
+
+                    // 2. Continuous churning noise for bubbling liquid texture
+                    const noiseBufLen = Math.floor(sr * 2);
+                    const noiseBuf = this.ctx.createBuffer(1, noiseBufLen, sr);
+                    const pcm = noiseBuf.getChannelData(0);
+                    for (let i = 0; i < noiseBufLen; i++) {
+                        pcm[i] = Math.random() * 2 - 1;
+                    }
+                    const noiseSource = this.ctx.createBufferSource();
+                    noiseSource.buffer = noiseBuf;
+                    noiseSource.loop = true;
+
+                    const noiseFilter = this.ctx.createBiquadFilter();
+                    noiseFilter.type = 'bandpass';
+                    noiseFilter.frequency.setValueAtTime(320, now);
+                    noiseFilter.Q.setValueAtTime(1.8, now);
+
+                    const noiseGain = this.ctx.createGain();
+                    noiseGain.gain.setValueAtTime(0.0001, now);
+
+                    noiseSource.connect(noiseFilter);
+                    noiseFilter.connect(noiseGain);
+
+                    // Master Lava Gain Node
+                    const masterGain = this.ctx.createGain();
+                    masterGain.gain.setValueAtTime(0.0001, now);
+
+                    subGain.connect(masterGain);
+                    noiseGain.connect(masterGain);
+                    masterGain.connect(this.ctx.destination);
+
+                    subOsc.start(now);
+                    noiseSource.start(now);
+
+                    this.lavaNodes = {
+                        subOsc,
+                        subFilter,
+                        subGain,
+                        noiseSource,
+                        noiseFilter,
+                        noiseGain,
+                        masterGain
+                    };
+                } catch (e) {}
+            }
+
+            stopLavaSound() {
+                if (this.lavaNodes) {
+                    try {
+                        this.lavaNodes.subOsc.stop();
+                        this.lavaNodes.noiseSource.stop();
+                    } catch (e) {}
+                    this.lavaNodes = null;
+                }
+            }
+
+            updateLavaSound(isActive, isSurging = false, proximityFactor = 1.0) {
+                if (isActive && !this.muted && gameState === 'PLAYING') {
+                    if (!this.lavaNodes) {
+                        this.startLavaSound();
+                    }
+                    if (this.lavaNodes && this.ctx) {
+                        const now = this.ctx.currentTime;
+                        // Calculate target volumes based on surge intensity & player proximity
+                        const baseVol = isSurging ? 0.45 : 0.22;
+                        const targetVol = Math.max(0.02, Math.min(0.65, baseVol * proximityFactor));
+
+                        const targetSubFreq = isSurging ? 75 : 45;
+                        const targetNoiseFreq = isSurging ? 620 : 320;
+                        const targetSubFilter = isSurging ? 260 : 140;
+
+                        this.lavaNodes.masterGain.gain.cancelScheduledValues(now);
+                        this.lavaNodes.masterGain.gain.linearRampToValueAtTime(targetVol, now + 0.1);
+
+                        this.lavaNodes.subOsc.frequency.cancelScheduledValues(now);
+                        this.lavaNodes.subOsc.frequency.linearRampToValueAtTime(targetSubFreq, now + 0.1);
+
+                        this.lavaNodes.subFilter.frequency.cancelScheduledValues(now);
+                        this.lavaNodes.subFilter.frequency.linearRampToValueAtTime(targetSubFilter, now + 0.1);
+
+                        this.lavaNodes.noiseFilter.frequency.cancelScheduledValues(now);
+                        this.lavaNodes.noiseFilter.frequency.linearRampToValueAtTime(targetNoiseFreq, now + 0.1);
+
+                        this.lavaNodes.subGain.gain.setValueAtTime(isSurging ? 0.5 : 0.3, now);
+                        this.lavaNodes.noiseGain.gain.setValueAtTime(isSurging ? 0.6 : 0.35, now);
+                    }
+                } else {
+                    this.stopLavaSound();
                 }
             }
 
@@ -2469,6 +2586,7 @@
             gameState = 'MENU';
             resetMenuInactivityTimer();
             sound.stopJetpackSound();
+            sound.stopLavaSound();
             sound.stopLevel1Music();
             sound.playMenuMusic();
             closeOptionsModal();
@@ -2774,6 +2892,7 @@
             demoStartTime = Date.now();
             sound.stopAllMusic();
             sound.stopJetpackSound();
+            sound.stopLavaSound();
 
             const startMenu = document.getElementById('startMenu');
             if (startMenu) startMenu.classList.add('hidden');
@@ -4010,6 +4129,7 @@
             victoryCelebrationTimer = 300; // 5 seconds at 60fps
 
             sound.stopJetpackSound();
+            sound.stopLavaSound();
             sound.stopLevel1Music();
             sound.playSpring();
             sound.playFireworks();
@@ -4542,6 +4662,15 @@
                         lavaSurgeActiveTimer > 0 ? 2 : 1
                     );
                 }
+
+                // Dynamic realistic lava sound updates based on proximity and surge state
+                const playerLavaDist = Math.abs((player.y + player.height) - lavaY);
+                const maxAudibleDist = canvas.height * 1.5;
+                const proximityFactor = Math.max(0.15, Math.min(1.0, 1 - (playerLavaDist / maxAudibleDist)));
+                const isSurging = (lavaSurgeActiveTimer > 0);
+                sound.updateLavaSound(true, isSurging, proximityFactor);
+            } else {
+                sound.updateLavaSound(false);
             }
 
             // Camera movement: Smoothly follows the player as they climb higher
@@ -5347,6 +5476,7 @@
             if (gameState === 'LEVEL_COMPLETE') return;
             gameState = 'LEVEL_COMPLETE';
             sound.stopJetpackSound();
+            sound.stopLavaSound();
             sound.playSpring();
 
             // Unlock next level in localStorage
@@ -5420,6 +5550,7 @@
         function triggerGameOver() {
             gameState = 'GAMEOVER';
             sound.stopJetpackSound();
+            sound.stopLavaSound();
             sound.stopLevel1Music();
             sound.playGameOver();
 
