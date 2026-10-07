@@ -1256,8 +1256,19 @@
 
                     const noiseFilter = this.ctx.createBiquadFilter();
                     noiseFilter.type = 'bandpass';
-                    noiseFilter.frequency.setValueAtTime(320, now);
-                    noiseFilter.Q.setValueAtTime(1.8, now);
+                    noiseFilter.frequency.setValueAtTime(380, now);
+                    noiseFilter.Q.setValueAtTime(4.5, now); // High Q resonant filter for liquid bubble pop resonance
+
+                    // Low-Frequency Oscillator (LFO) to modulate bandpass frequency for dynamic bubbling
+                    const bubbleLfo = this.ctx.createOscillator();
+                    bubbleLfo.type = 'sine';
+                    bubbleLfo.frequency.setValueAtTime(7.5, now); // 7.5 Hz bubbling pulse rate
+
+                    const bubbleLfoGain = this.ctx.createGain();
+                    bubbleLfoGain.gain.setValueAtTime(220, now); // Sweep frequency window
+
+                    bubbleLfo.connect(bubbleLfoGain);
+                    bubbleLfoGain.connect(noiseFilter.frequency);
 
                     const noiseGain = this.ctx.createGain();
                     noiseGain.gain.setValueAtTime(0.0001, now);
@@ -1275,6 +1286,7 @@
 
                     subOsc.start(now);
                     noiseSource.start(now);
+                    bubbleLfo.start(now);
 
                     this.lavaNodes = {
                         subOsc,
@@ -1283,6 +1295,8 @@
                         noiseSource,
                         noiseFilter,
                         noiseGain,
+                        bubbleLfo,
+                        bubbleLfoGain,
                         masterGain
                     };
                 } catch (e) {}
@@ -1293,6 +1307,7 @@
                     try {
                         this.lavaNodes.subOsc.stop();
                         this.lavaNodes.noiseSource.stop();
+                        if (this.lavaNodes.bubbleLfo) this.lavaNodes.bubbleLfo.stop();
                     } catch (e) {}
                     this.lavaNodes = null;
                 }
@@ -1310,8 +1325,9 @@
                         const targetVol = Math.max(0.02, Math.min(0.65, baseVol * proximityFactor));
 
                         const targetSubFreq = isSurging ? 75 : 45;
-                        const targetNoiseFreq = isSurging ? 620 : 320;
+                        const targetNoiseFreq = isSurging ? 720 : 380;
                         const targetSubFilter = isSurging ? 260 : 140;
+                        const targetLfoFreq = isSurging ? 12.0 : 7.5; // Rapid bubbling rate during surge
 
                         this.lavaNodes.masterGain.gain.cancelScheduledValues(now);
                         this.lavaNodes.masterGain.gain.linearRampToValueAtTime(targetVol, now + 0.1);
@@ -1324,6 +1340,11 @@
 
                         this.lavaNodes.noiseFilter.frequency.cancelScheduledValues(now);
                         this.lavaNodes.noiseFilter.frequency.linearRampToValueAtTime(targetNoiseFreq, now + 0.1);
+
+                        if (this.lavaNodes.bubbleLfo) {
+                            this.lavaNodes.bubbleLfo.frequency.cancelScheduledValues(now);
+                            this.lavaNodes.bubbleLfo.frequency.linearRampToValueAtTime(targetLfoFreq, now + 0.1);
+                        }
 
                         this.lavaNodes.subGain.gain.setValueAtTime(isSurging ? 0.5 : 0.3, now);
                         this.lavaNodes.noiseGain.gain.setValueAtTime(isSurging ? 0.6 : 0.35, now);
