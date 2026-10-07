@@ -4333,9 +4333,9 @@
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
                     angle: angle,
-                    radius: 6,
+                    radius: 7,
                     alive: true,
-                    isArrow: true
+                    isSlime: true
                 });
 
                 sound.playSpring();
@@ -4571,15 +4571,6 @@
 
                 ctx.restore();
 
-                // Spotted alert indicator ("!") above enemy
-                if (this.spotted && !this.launched) {
-                    ctx.save();
-                    ctx.fillStyle = '#ef4444';
-                    ctx.font = '900 20px "Fredoka One", cursive';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('!', this.x + this.width / 2, screenY - 8);
-                    ctx.restore();
-                }
             }
         }
 
@@ -4828,10 +4819,10 @@
                 platforms.push(platform);
                 prevPlatform = platform;
 
-                // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%). Doubled for Level 2 winged ants.
+                // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%).
                 const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (currentStoryLevel === 2 ? 0.08 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20)))) : 0.08;
                 if (gameMode === 'STORY' && currentStoryLevel > 1 && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                    const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.8 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
+                    const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
@@ -4925,10 +4916,10 @@
                     platforms.push(platform);
                     prevPlatform = platform;
 
-                    // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%). Doubled for Level 2 winged ants.
+                    // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%).
                     const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (currentStoryLevel === 2 ? 0.08 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20)))) : 0.08;
                     if (gameMode === 'STORY' && currentStoryLevel > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                        const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.8 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
+                        const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
@@ -5669,37 +5660,32 @@
             // Draw enemies
             enemies.forEach(e => e.draw(e.y));
 
-            // Draw enemy projectiles (custom rendering for Angel arrows)
+            // Draw enemy projectiles (custom rendering for Angel slime blobs)
             enemyProjectiles.forEach(p => {
                 ctx.save();
                 ctx.translate(p.x, p.y);
-                if (p.isArrow) {
+                if (p.isSlime) {
                     ctx.rotate(p.angle || 0);
-                    // Arrow Shaft
-                    ctx.strokeStyle = '#facc15';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(-10, 0);
-                    ctx.lineTo(10, 0);
-                    ctx.stroke();
 
-                    // Arrow Head (Golden Tip)
-                    ctx.fillStyle = '#ffffff';
+                    // Green Slime Blob (Goo drop)
+                    ctx.fillStyle = '#22c55e'; // Bright green
                     ctx.beginPath();
-                    ctx.moveTo(10, 0);
-                    ctx.lineTo(4, -4);
-                    ctx.lineTo(4, 4);
+                    ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Slime Tail extending backwards
+                    ctx.fillStyle = '#4ade80';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.radius + 1);
+                    ctx.lineTo(-12, 0);
+                    ctx.lineTo(0, p.radius - 1);
                     ctx.closePath();
                     ctx.fill();
 
-                    // Arrow Feathers / Fletching
-                    ctx.fillStyle = '#38bdf8';
+                    // Gooey Shiny Highlight
+                    ctx.fillStyle = '#bbf7d0';
                     ctx.beginPath();
-                    ctx.moveTo(-10, 0);
-                    ctx.lineTo(-14, -3);
-                    ctx.lineTo(-12, 0);
-                    ctx.lineTo(-14, 3);
-                    ctx.closePath();
+                    ctx.arc(2, -2, p.radius * 0.35, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
                     ctx.fillStyle = '#f43f5e';
