@@ -3752,25 +3752,23 @@
                 };
 
                 const isRockTheme = (gameMode === 'STORY' && currentStoryLevel === 1);
-                const isCrystalTheme = (gameMode === 'STORY' && currentStoryLevel === 2);
+                const isCrystalTheme = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
 
                 if (isCrystalTheme) {
-                    // Level 2: Grotas de Cristal (Colorful, multi-faceted crystal platforms with static trampolines and light beams)
+                    // Level 2 & 3: Crystal Platforms (Clean multifaceted crystal body, optimized performance without shadow glow or spires)
                     const now = Date.now();
-                    const nowSec = now * 0.003;
 
                     // Trampoline Crystal Beam Emission (Static platform, launches vertical light beam)
                     if (this.type === 'spring' && this.lightBeamTimer > 0) {
                         const alpha = this.lightBeamTimer / 28;
-                        const beamWidth = this.width * (0.7 + 0.3 * Math.sin(now * 0.02));
+                        const beamWidth = this.width * 0.7;
                         const bx0 = midX - beamWidth / 2;
 
                         ctx.save();
-                        // Outer glowing aura pillar
+                        // Outer aura pillar
                         const beamGrad = ctx.createLinearGradient(midX, y0, midX, y0 - 320);
-                        beamGrad.addColorStop(0, `rgba(232, 121, 249, ${0.85 * alpha})`);
-                        beamGrad.addColorStop(0.3, `rgba(192, 132, 252, ${0.65 * alpha})`);
-                        beamGrad.addColorStop(0.7, `rgba(56, 189, 248, ${0.35 * alpha})`);
+                        beamGrad.addColorStop(0, `rgba(232, 121, 249, ${0.7 * alpha})`);
+                        beamGrad.addColorStop(0.5, `rgba(192, 132, 252, ${0.4 * alpha})`);
                         beamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
                         ctx.fillStyle = beamGrad;
@@ -3782,10 +3780,9 @@
                         ctx.closePath();
                         ctx.fill();
 
-                        // Inner brilliant white/yellow core light ray
+                        // Inner white core ray
                         const coreGrad = ctx.createLinearGradient(midX, y0, midX, y0 - 320);
-                        coreGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * alpha})`);
-                        coreGrad.addColorStop(0.5, `rgba(254, 240, 138, ${0.7 * alpha})`);
+                        coreGrad.addColorStop(0, `rgba(255, 255, 255, ${0.9 * alpha})`);
                         coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
                         ctx.fillStyle = coreGrad;
@@ -3796,16 +3793,6 @@
                         ctx.lineTo(midX + beamWidth * 0.25, y0);
                         ctx.closePath();
                         ctx.fill();
-
-                        // Floating prismatic light particles inside the beam
-                        for (let p = 0; p < 8; p++) {
-                            const pY = y0 - ((now * 0.2 + p * 40) % 300);
-                            const pX = midX + Math.sin(p * 2 + now * 0.01) * (beamWidth * 0.35);
-                            ctx.fillStyle = p % 2 === 0 ? `rgba(255, 255, 255, ${0.9 * alpha})` : `rgba(244, 114, 182, ${0.8 * alpha})`;
-                            ctx.beginPath();
-                            ctx.arc(pX, pY, 2 + Math.random() * 2, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
                         ctx.restore();
                     }
 
@@ -3813,67 +3800,27 @@
                     let baseCol = '#c084fc';
                     let midCol  = '#a855f7';
                     let darkCol = '#7e22ce';
-                    let glowCol = 'rgba(192, 132, 252, 0.7)';
                     let facetLight = '#f0abfc';
 
                     if (this.type === 'normal') {
                         // Radiant Amethyst / Violet Crystal
                         baseCol = '#e879f9'; midCol = '#c084fc'; darkCol = '#9333ea';
-                        glowCol = 'rgba(232, 121, 249, 0.65)'; facetLight = '#fae8ff';
+                        facetLight = '#fae8ff';
                     } else if (this.type === 'moving') {
                         // Sapphire / Electric Cyan Crystal
                         baseCol = '#38bdf8'; midCol = '#0284c7'; darkCol = '#0369a1';
-                        glowCol = 'rgba(56, 189, 248, 0.7)'; facetLight = '#e0f2fe';
+                        facetLight = '#e0f2fe';
                     } else if (this.type === 'fragile') {
                         // Ruby / Crimson Rose Crystal
                         baseCol = '#f43f5e'; midCol = '#e11d48'; darkCol = '#9f1239';
-                        glowCol = 'rgba(244, 63, 94, 0.75)'; facetLight = '#ffe4e6';
+                        facetLight = '#ffe4e6';
                     } else if (this.type === 'spring') {
-                        // Celestial Gold & Emerald Prismatic Crystal
+                        // Celestial Gold Prismatic Crystal
                         baseCol = '#facc15'; midCol = '#eab308'; darkCol = '#ca8a04';
-                        glowCol = 'rgba(250, 204, 21, 0.85)'; facetLight = '#fefce8';
+                        facetLight = '#fefce8';
                     }
 
-                    // Ambient Outer Crystal Glow
                     ctx.save();
-                    ctx.shadowColor = glowCol;
-                    ctx.shadowBlur = 14;
-
-                    // Draw Bottom Crystal Stalactite Spires / Faceted Polygon Base
-                    if (this.crystalSpires && this.crystalSpires.length > 0) {
-                        this.crystalSpires.forEach((spire, idx) => {
-                            const sx = x0 + spire.cx;
-                            const sy = y0 + 10;
-                            const halfW = spire.w / 2;
-                            const tipY = y0 + 10 + spire.ch;
-
-                            // Left Facet (Darker shadow side)
-                            ctx.fillStyle = darkCol;
-                            ctx.beginPath();
-                            ctx.moveTo(sx - halfW, sy);
-                            ctx.lineTo(sx, tipY);
-                            ctx.lineTo(sx, sy);
-                            ctx.closePath();
-                            ctx.fill();
-
-                            // Right Facet (Midtone side)
-                            ctx.fillStyle = midCol;
-                            ctx.beginPath();
-                            ctx.moveTo(sx, sy);
-                            ctx.lineTo(sx, tipY);
-                            ctx.lineTo(sx + halfW, sy);
-                            ctx.closePath();
-                            ctx.fill();
-
-                            // Sharp Edge Highlight
-                            ctx.strokeStyle = facetLight;
-                            ctx.lineWidth = 1;
-                            ctx.beginPath();
-                            ctx.moveTo(sx, sy);
-                            ctx.lineTo(sx, tipY);
-                            ctx.stroke();
-                        });
-                    }
 
                     // Main Crystal Slab Polygon Body
                     ctx.beginPath();
@@ -3891,9 +3838,6 @@
                     cGrad.addColorStop(1, darkCol);
                     ctx.fillStyle = cGrad;
                     ctx.fill();
-
-                    // Facet Lines and Top Prismatic Surface
-                    ctx.shadowBlur = 0; // reset shadow for sharp geometry
 
                     // Top Surface Gem Table
                     ctx.fillStyle = facetLight;
@@ -3924,9 +3868,8 @@
 
                     // Special Platform Type Indicator Overlay
                     if (this.type === 'fragile') {
-                        // Glowing internal fracture cracks
-                        const pulse = 0.6 + 0.4 * Math.sin(now * 0.01);
-                        ctx.strokeStyle = `rgba(254, 240, 138, ${pulse})`;
+                        // Fracture cracks
+                        ctx.strokeStyle = 'rgba(254, 240, 138, 0.9)';
                         ctx.lineWidth = 1.8;
                         ctx.beginPath();
                         ctx.moveTo(x0 + this.width * 0.15, y0 + 3);
@@ -3935,14 +3878,10 @@
                         ctx.lineTo(x0 + this.width * 0.85, y0 + 12);
                         ctx.stroke();
                     } else if (this.type === 'spring') {
-                        // Celestial Trampoline Crystal Crown Emblem & Pulsing Gem
-                        const pulse = 1 + 0.2 * Math.sin(now * 0.012);
+                        // Celestial Trampoline Crystal Emblem
                         const gemY = y0 + 4;
-
-                        // Diamond Star Overlay on Center
                         ctx.save();
                         ctx.translate(midX, gemY);
-                        ctx.scale(pulse, pulse);
 
                         ctx.fillStyle = '#ffffff';
                         ctx.beginPath();
