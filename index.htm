@@ -4268,7 +4268,7 @@
                             });
                         }
 
-                        // Proximity explosion check (Explodes only after 2 seconds / 120 frames of direct contact)
+                        // Proximity explosion check (Explodes after 1 second / 60 frames of direct contact)
                         const distToPlayer = Math.hypot(
                             (player.x + player.width / 2) - enemyCenterX,
                             (player.y + player.height / 2) - (this.y + this.height / 2)
@@ -4276,7 +4276,7 @@
 
                         if (distToPlayer < 45) {
                             this.contactTimer++;
-                            if (this.contactTimer >= 120) {
+                            if (this.contactTimer >= 60) {
                                 this.explode();
                             }
                         } else {
@@ -4374,33 +4374,7 @@
                     ctx.scale(this.facingRight ? 1 : -1, 1);
 
                     // Formiga Alada (Winged Ant Enemy)
-                    const wingFlap = Math.sin(Date.now() * 0.025) * 8;
-
-                    // 1. Translucent Insect Wings (Left & Right)
-                    ctx.fillStyle = 'rgba(224, 242, 254, 0.75)';
-                    ctx.strokeStyle = 'rgba(186, 230, 253, 0.9)';
-                    ctx.lineWidth = 1.2;
-
-                    // Back Wing (Upper)
-                    ctx.beginPath();
-                    ctx.ellipse(-4, -12, 18, 7, -0.4 + wingFlap * 0.02, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Front Wing (Lower)
-                    ctx.beginPath();
-                    ctx.ellipse(6, -14, 20, 8, -0.25 - wingFlap * 0.02, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Wing veins detail
-                    ctx.strokeStyle = 'rgba(147, 197, 253, 0.8)';
-                    ctx.beginPath();
-                    ctx.moveTo(-2, -14); ctx.lineTo(-18, -12);
-                    ctx.moveTo(4, -15); ctx.lineTo(20, -12);
-                    ctx.stroke();
-
-                    // 2. Insect Legs
+                    // 1. Insect Legs
                     ctx.strokeStyle = '#1e110a';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -4412,7 +4386,7 @@
                     ctx.moveTo(-8, 2); ctx.lineTo(-14, 11); ctx.lineTo(-18, 15);
                     ctx.stroke();
 
-                    // 3. Ant Body Segments (Abdomen, Thorax, Head)
+                    // 2. Ant Body Segments (Abdomen, Thorax, Head)
                     // Abdomen (Gaster) - Large back segment
                     ctx.fillStyle = '#451a03'; // Dark reddish brown
                     ctx.beginPath();
@@ -4440,6 +4414,43 @@
                     ctx.beginPath();
                     ctx.ellipse(10, -3, 8, 7, 0.1, 0, Math.PI * 2);
                     ctx.fill();
+
+                    // 3. Translucent Insect Wings attached to top of Thorax (-2, -5)
+                    const wingFlap = Math.sin(Date.now() * 0.025) * 0.18;
+                    ctx.save();
+                    ctx.translate(-2, -5);
+
+                    ctx.fillStyle = 'rgba(224, 242, 254, 0.8)';
+                    ctx.strokeStyle = 'rgba(186, 230, 253, 0.95)';
+                    ctx.lineWidth = 1.2;
+
+                    // Back Wing (Upper)
+                    ctx.save();
+                    ctx.rotate(-0.85 + wingFlap);
+                    ctx.beginPath();
+                    ctx.ellipse(-12, 0, 15, 5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(147, 197, 253, 0.85)';
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0); ctx.lineTo(-22, 0);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Front Wing (Lower)
+                    ctx.save();
+                    ctx.rotate(-0.45 - wingFlap);
+                    ctx.beginPath();
+                    ctx.ellipse(-14, -2, 18, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(147, 197, 253, 0.85)';
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0); ctx.lineTo(-27, -2);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    ctx.restore();
 
                     // Large Glossy Compound Eye
                     ctx.fillStyle = '#ef4444'; // Red glossy ant eye
@@ -5478,7 +5489,7 @@
                         // Player hit by enemy body/side
                         if (e.type === 'exploder') {
                             e.contactTimer += 2; // Accelerate contact timer on direct side collision
-                            if (e.contactTimer >= 120) {
+                            if (e.contactTimer >= 60) {
                                 e.explode();
                             }
                         } else {
