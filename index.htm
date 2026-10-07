@@ -3184,6 +3184,8 @@
         let enemyProjectiles = [];
         let fallingVolcanicRocks = [];
         let rockSpawnTimer = 120;
+        let fallingRockets = [];
+        let rocketSpawnTimer = 400;
         let particles = [];
         let cameraY = 0;
         let highestY = 0;
@@ -4070,6 +4072,8 @@
             enemyProjectiles = [];
             fallingVolcanicRocks = [];
             rockSpawnTimer = 57;
+            fallingRockets = [];
+            rocketSpawnTimer = 300 + Math.floor(Math.random() * 300);
             
             const startY = canvas.height - 60;
             const groundWidth = Math.min(200, canvas.width * 0.4);
@@ -4134,14 +4138,12 @@
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
-                // Spawn Collectibles (Hearts ~25% chance in Level 1 to aid recovery from falling rocks, ~8% elsewhere; Jetpacks ~3% chance except Level 1)
+                // Spawn Collectibles (Hearts ~25% chance in Level 1 to aid recovery from falling rocks, ~8% elsewhere)
                 if (type !== 'fragile' && type !== 'finish') {
                     const randCollect = Math.random();
                     const heartChance = (gameMode === 'STORY' && currentStoryLevel === 1) ? 0.25 : 0.08;
                     if (randCollect < heartChance && player.lives < 5) {
                         collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                    } else if (randCollect < heartChance + 0.03 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
-                        collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                     }
                 }
             }
@@ -4233,14 +4235,12 @@
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
-                    // Spawn Collectibles (Hearts ~25% chance in Level 1 to aid recovery from falling rocks, ~8% elsewhere; Jetpacks ~3% chance except Level 1)
+                    // Spawn Collectibles (Hearts ~25% chance in Level 1 to aid recovery from falling rocks, ~8% elsewhere)
                     if (type !== 'fragile' && type !== 'finish') {
                         const randCollect = Math.random();
                         const heartChance = (gameMode === 'STORY' && currentStoryLevel === 1) ? 0.25 : 0.08;
                         if (randCollect < heartChance && player.lives < 5) {
                             collectibles.push(new Collectible(x + width / 2, currentY - 20, 'heart'));
-                        } else if (randCollect < heartChance + 0.03 && !(gameMode === 'STORY' && currentStoryLevel === 1)) {
-                            collectibles.push(new Collectible(x + width / 2, currentY - 20, 'jetpack'));
                         }
                     }
                 }
@@ -4557,6 +4557,63 @@
             if (currentMeter > score) {
                 score = currentMeter;
             }
+
+            // Spawning falling rockets rarely across all game modes (including Level 1 and Infinite Mode)
+            if (player.hasFirstJumped && gameState === 'PLAYING') {
+                rocketSpawnTimer--;
+                if (rocketSpawnTimer <= 0) {
+                    rocketSpawnTimer = 500 + Math.floor(Math.random() * 400); // 8.3s to 15s interval (rare)
+                    const rocketX = 30 + Math.random() * (canvas.width - 60);
+                    fallingRockets.push({
+                        x: rocketX,
+                        y: cameraY - 40,
+                        vx: (Math.random() - 0.5) * 0.4,
+                        vy: 1.2, // slow downward falling speed
+                        radius: 18,
+                        angle: 0,
+                        alive: true
+                    });
+                }
+            }
+
+            // Update falling rockets physics, collisions & particles
+            fallingRockets.forEach(rocket => {
+                if (!rocket.alive) return;
+                rocket.x += rocket.vx;
+                rocket.y += rocket.vy;
+                rocket.angle += 0.05;
+
+                // Collision with player
+                const px = player.x + player.width / 2;
+                const py = player.y + player.height / 2;
+                const dx = px - rocket.x;
+                const dy = py - rocket.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < (player.width / 2 + rocket.radius)) {
+                    rocket.alive = false;
+                    coinCount++;
+                    player.activateJetpack();
+                    sound.playSpring();
+                    createParticles(rocket.x, rocket.y, '#ff4500', 14);
+                    createParticles(rocket.x, rocket.y, '#facc15', 8);
+                }
+
+                // Subtle thruster particle trail
+                if (Math.random() < 0.3) {
+                    createParticles(
+                        rocket.x,
+                        rocket.y + 12,
+                        Math.random() < 0.5 ? '#f97316' : '#facc15',
+                        1
+                    );
+                }
+
+                // Cleanup offscreen or falling into lava (if in Level 1)
+                if (rocket.y > cameraY + canvas.height + 100 || (gameMode === 'STORY' && currentStoryLevel === 1 && rocket.y >= lavaY)) {
+                    rocket.alive = false;
+                }
+            });
+            fallingRockets = fallingRockets.filter(r => r.alive);
 
             // Generate platforms as we climb higher
             generateHigherPlatforms();
@@ -4943,6 +5000,15 @@
                     ctx.stroke();
 
                     ctx.restore();
+            });
+
+            // Draw falling rockets
+            fallingRockets.forEach(rocket => {
+                if (!rocket.alive) return;
+                ctx.save();
+                ctx.translate(rocket.x, rocket.y);
+                drawRocketSprite(ctx, 0, 0, { showIdleFlame: true, idleAngle: rocket.angle });
+                ctx.restore();
             });
 
             // Draw particles
