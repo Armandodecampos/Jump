@@ -2639,7 +2639,14 @@
                         sound.ensureContext();
                         gameMode = 'STORY';
                         levelSelectMenu.classList.add('hidden');
-                        openPreLevelDialogue(theme.id);
+                        sound.stopMenuMusic();
+                        if (theme.id === 1) {
+                            startCutsceneSequence(INTRO_CUTSCENE_SLIDES, () => {
+                                openPreLevelDialogue(1);
+                            });
+                        } else {
+                            openPreLevelDialogue(theme.id);
+                        }
                     });
                 }
 
@@ -6167,15 +6174,9 @@
         if (storyModeBtn) {
             storyModeBtn.addEventListener('click', () => {
                 sound.ensureContext();
-                sound.stopMenuMusic();
                 startMenu.classList.add('hidden');
-
-                // Show intro cutscene sequence when clicking "MODO HISTÓRIA"
-                startCutsceneSequence(INTRO_CUTSCENE_SLIDES, () => {
-                    gameMode = 'STORY';
-                    currentStoryLevel = 1;
-                    startGame();
-                });
+                renderLevelSelectGrid();
+                levelSelectMenu.classList.remove('hidden');
             });
         }
 
