@@ -674,6 +674,12 @@
                     this.level1MusicAudio.loop = true;
                     this.level1MusicAudio.volume = this.musicVolume;
                 }
+                if (!this.level2MusicAudio) {
+                    this.level2MusicAudio = new Audio('https://dl.dropbox.com/scl/fi/e4scjo9xwabi6g2ja498w/fase-2.mp3?rlkey=pnsz6i0wc0eqtrp20hrmnoqli&st=r20ga6kz&raw=1');
+                    this.level2MusicAudio.preload = 'auto';
+                    this.level2MusicAudio.loop = true;
+                    this.level2MusicAudio.volume = this.musicVolume;
+                }
             }
 
             ensureContext() {
@@ -1098,7 +1104,7 @@
             playMenuMusic() {
                 if (this.muted || this.musicMuted || gameState === 'ATTRACT') return;
                 this.ensureContext();
-                this.stopLevel1Music();
+                this.stopAllMusic();
                 this.initAudioElements();
                 this.bgMusicAudio.volume = this.musicVolume;
                 if (this.bgMusicAudio.paused) {
@@ -1117,7 +1123,7 @@
             playLevel1Music() {
                 if (this.muted || this.musicMuted || gameState === 'ATTRACT') return;
                 this.ensureContext();
-                this.stopMenuMusic();
+                this.stopAllMusic();
                 this.initAudioElements();
                 this.level1MusicAudio.volume = this.musicVolume;
                 if (this.level1MusicAudio.paused) {
@@ -1133,9 +1139,29 @@
                 }
             }
 
+            playLevel2Music() {
+                if (this.muted || this.musicMuted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                this.stopAllMusic();
+                this.initAudioElements();
+                this.level2MusicAudio.volume = this.musicVolume;
+                if (this.level2MusicAudio.paused) {
+                    this.level2MusicAudio.currentTime = 0;
+                    this.level2MusicAudio.play().catch(() => {});
+                }
+            }
+
+            stopLevel2Music() {
+                if (this.level2MusicAudio) {
+                    this.level2MusicAudio.pause();
+                    this.level2MusicAudio.currentTime = 0;
+                }
+            }
+
             stopAllMusic() {
                 this.stopMenuMusic();
                 this.stopLevel1Music();
+                this.stopLevel2Music();
             }
 
             setMusicVolume(vol) {
@@ -1143,6 +1169,7 @@
                 localStorage.setItem('subida_nuvens_music_volume', this.musicVolume.toString());
                 if (this.bgMusicAudio) this.bgMusicAudio.volume = this.musicVolume;
                 if (this.level1MusicAudio) this.level1MusicAudio.volume = this.musicVolume;
+                if (this.level2MusicAudio) this.level2MusicAudio.volume = this.musicVolume;
             }
 
             toggleMusicMute() {
@@ -1155,6 +1182,8 @@
                         this.playMenuMusic();
                     } else if (gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 1) {
                         this.playLevel1Music();
+                    } else if (gameState === 'PLAYING' && gameMode === 'STORY' && currentStoryLevel === 2) {
+                        this.playLevel2Music();
                     }
                 }
             }
@@ -2608,7 +2637,7 @@
             resetMenuInactivityTimer();
             sound.stopJetpackSound();
             sound.stopLavaSound();
-            sound.stopLevel1Music();
+            sound.stopAllMusic();
             sound.playMenuMusic();
             closeOptionsModal();
             gameOverMenu.classList.add('hidden');
@@ -3829,19 +3858,21 @@
 
                     ctx.save();
 
-                    // Main Crystal Slab Polygon Body
+                    // Thicker Main Crystal Slab Polygon Body (26px height for rich crystal thickness)
+                    const crystalDepth = 26;
                     ctx.beginPath();
-                    ctx.moveTo(x0, y0 + 5);
-                    ctx.lineTo(x0 + 8, y0);
-                    ctx.lineTo(x0 + this.width - 8, y0);
-                    ctx.lineTo(x0 + this.width, y0 + 5);
-                    ctx.lineTo(x0 + this.width - 4, y0 + 14);
-                    ctx.lineTo(x0 + 4, y0 + 14);
+                    ctx.moveTo(x0, y0 + 8);
+                    ctx.lineTo(x0 + 10, y0);
+                    ctx.lineTo(x0 + this.width - 10, y0);
+                    ctx.lineTo(x0 + this.width, y0 + 8);
+                    ctx.lineTo(x0 + this.width - 6, y0 + crystalDepth);
+                    ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4); // Chiseled central crystal tip
+                    ctx.lineTo(x0 + 6, y0 + crystalDepth);
                     ctx.closePath();
 
-                    const cGrad = ctx.createLinearGradient(x0, y0, x0, y0 + 14);
+                    const cGrad = ctx.createLinearGradient(x0, y0, x0, y0 + crystalDepth + 4);
                     cGrad.addColorStop(0, baseCol);
-                    cGrad.addColorStop(0.5, midCol);
+                    cGrad.addColorStop(0.4, midCol);
                     cGrad.addColorStop(1, darkCol);
                     ctx.fillStyle = cGrad;
                     ctx.fill();
@@ -3849,27 +3880,30 @@
                     // Top Surface Gem Table
                     ctx.fillStyle = facetLight;
                     ctx.beginPath();
-                    ctx.moveTo(x0 + 10, y0 + 2);
-                    ctx.lineTo(x0 + this.width - 10, y0 + 2);
-                    ctx.lineTo(x0 + this.width - 14, y0 + 6);
-                    ctx.lineTo(x0 + 14, y0 + 6);
+                    ctx.moveTo(x0 + 12, y0 + 2);
+                    ctx.lineTo(x0 + this.width - 12, y0 + 2);
+                    ctx.lineTo(x0 + this.width - 16, y0 + 9);
+                    ctx.lineTo(x0 + 16, y0 + 9);
                     ctx.closePath();
                     ctx.fill();
 
                     // Internal Geometry Facet Highlights
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                    ctx.lineWidth = 1.2;
+                    ctx.lineWidth = 1.3;
                     ctx.beginPath();
                     // Horizontal ridge line
-                    ctx.moveTo(x0 + 4, y0 + 6);
-                    ctx.lineTo(x0 + this.width - 4, y0 + 6);
+                    ctx.moveTo(x0 + 6, y0 + 9);
+                    ctx.lineTo(x0 + this.width - 6, y0 + 9);
+                    // Central vertical ridge line
+                    ctx.moveTo(x0 + this.width / 2, y0 + 9);
+                    ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4);
                     // Diagonal facet cuts across the length
                     const numCutLines = Math.floor(this.width / 18);
                     for (let k = 1; k < numCutLines; k++) {
                         const kx = x0 + k * (this.width / numCutLines);
-                        ctx.moveTo(kx - 4, y0 + 2);
-                        ctx.lineTo(kx, y0 + 6);
-                        ctx.lineTo(kx - 2, y0 + 14);
+                        ctx.moveTo(kx - 5, y0 + 2);
+                        ctx.lineTo(kx, y0 + 9);
+                        ctx.lineTo(kx - 3, y0 + crystalDepth - 2);
                     }
                     ctx.stroke();
 
@@ -4074,11 +4108,14 @@
         class Enemy {
             constructor(platform, type) {
                 this.platform = platform;
-                this.type = type; // 'shooter' or 'exploder'
+                this.type = type; // 'shooter', 'exploder', or 'angel'
 
                 if (type === 'shooter') {
                     this.width = 34; // same size as character
                     this.height = 38;
+                } else if (type === 'angel') {
+                    this.width = 42; // winged angel enemy
+                    this.height = 42;
                 } else {
                     this.width = 50; // large enemy
                     this.height = 50;
@@ -4100,6 +4137,8 @@
                 this.launched = false;
                 this.rotation = 0;
                 this.contactTimer = 0;
+                this.hoverAnim = Math.random() * Math.PI * 2;
+                this.baseY = this.y;
             }
 
             update() {
@@ -4113,10 +4152,35 @@
                     return;
                 }
 
-                // Vision check: Enemy spots player if player is at or above the horizontal line of the enemy / platform
+                // Vision check: Angel spots player anywhere (360 vision including below), others spot when at/above
                 if (!this.spotted) {
-                    if (player.y + player.height <= this.y + this.height) {
+                    if (this.type === 'angel') {
+                        this.spotted = true; // 360-degree vision in scenario
+                    } else if (player.y + player.height <= this.y + this.height) {
                         this.spotted = true;
+                    }
+                }
+
+                if (this.type === 'angel') {
+                    // Flying hovering movement in scene
+                    this.hoverAnim += 0.05;
+                    const hoverOffset = Math.sin(this.hoverAnim) * 1.2;
+
+                    if (this.standingPlatform && !this.standingPlatform.broken) {
+                        if (this.standingPlatform.type === 'moving') {
+                            this.x += this.standingPlatform.moveSpeed;
+                        }
+                    }
+                    this.y = this.baseY - 18 + hoverOffset;
+
+                    const playerCenterX = player.x + player.width / 2;
+                    const enemyCenterX = this.x + this.width / 2;
+                    this.facingRight = playerCenterX > enemyCenterX;
+
+                    this.shootTimer++;
+                    if (this.shootTimer >= 150) { // Fires arrows every ~2.5s
+                        this.shootTimer = 0;
+                        this.shootArrow();
                     }
                 }
 
@@ -4249,7 +4313,33 @@
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
                     radius: 7,
-                    alive: true
+                    alive: true,
+                    isArrow: false
+                });
+
+                sound.playSpring();
+            }
+
+            shootArrow() {
+                if (!this.alive) return;
+                const startX = this.x + this.width / 2;
+                const startY = this.y + this.height / 2;
+                const targetX = player.x + player.width / 2;
+                const targetY = player.y + player.height / 2;
+
+                // 360-degree vision aiming towards the player in all directions (including downwards)
+                const angle = Math.atan2(targetY - startY, targetX - startX);
+                const speed = 3.2;
+
+                enemyProjectiles.push({
+                    x: startX,
+                    y: startY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    angle: angle,
+                    radius: 6,
+                    alive: true,
+                    isArrow: true
                 });
 
                 sound.playSpring();
@@ -4284,7 +4374,76 @@
                     ctx.rotate(this.rotation);
                 }
 
-                if (this.type === 'shooter') {
+                if (this.type === 'angel') {
+                    ctx.scale(this.facingRight ? 1 : -1, 1);
+
+                    // Flying Winged Angel Enemy (Parecido com um anjo)
+                    const wingFlap = Math.sin(Date.now() * 0.012) * 6;
+
+                    // 1. Golden Halo
+                    ctx.strokeStyle = '#facc15';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -this.height / 2 - 4, 10, 3.5, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // 2. Feathered Angel Wings (Left & Right)
+                    ctx.fillStyle = '#ffffff';
+                    // Left Wing
+                    ctx.beginPath();
+                    ctx.moveTo(-6, -6);
+                    ctx.quadraticCurveTo(-18, -20 + wingFlap, -24, -8 + wingFlap * 0.5);
+                    ctx.quadraticCurveTo(-18, 4, -4, 2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Right Wing
+                    ctx.beginPath();
+                    ctx.moveTo(6, -6);
+                    ctx.quadraticCurveTo(18, -20 + wingFlap, 24, -8 + wingFlap * 0.5);
+                    ctx.quadraticCurveTo(18, 4, 4, 2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Wing feather highlights
+                    ctx.strokeStyle = '#e0f2fe';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // 3. Angel Robe Body & Head
+                    ctx.fillStyle = '#38bdf8'; // Celestial Cyan/Blue Robe
+                    ctx.beginPath();
+                    ctx.roundRect(-this.width / 2 + 8, -this.height / 2 + 10, this.width - 16, this.height - 12, [8]);
+                    ctx.fill();
+
+                    // White Sash Trim
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(-this.width / 2 + 8, 2, this.width - 16, 4);
+
+                    // Head / Face
+                    ctx.fillStyle = '#fdba74';
+                    ctx.beginPath();
+                    ctx.arc(0, -height / 2 + 8, 8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Angel Eyes looking down/forward
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(3, -height / 2 + 7, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(4, -height / 2 + 7, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Golden Bow Instrument
+                    ctx.strokeStyle = '#eab308';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(10, 0, 10, -Math.PI * 0.4, Math.PI * 0.4);
+                    ctx.stroke();
+
+                } else if (this.type === 'shooter') {
                     ctx.scale(this.facingRight ? 1 : -1, 1);
 
                     // Shooter Body (Character size 34x38)
@@ -4494,7 +4653,7 @@
 
             sound.stopJetpackSound();
             sound.stopLavaSound();
-            sound.stopLevel1Music();
+            sound.stopAllMusic();
             sound.playSpring();
             sound.playFireworks();
 
@@ -4618,7 +4777,7 @@
                 // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%)
                 const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20))) : 0.08;
                 if (gameMode === 'STORY' && currentStoryLevel > 1 && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                    const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                    const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
@@ -4715,7 +4874,7 @@
                     // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%)
                     const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20))) : 0.08;
                     if (gameMode === 'STORY' && currentStoryLevel > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                        const enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                        const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
@@ -5456,16 +5615,47 @@
             // Draw enemies
             enemies.forEach(e => e.draw(e.y));
 
-            // Draw enemy projectiles
+            // Draw enemy projectiles (custom rendering for Angel arrows)
             enemyProjectiles.forEach(p => {
                 ctx.save();
-                ctx.fillStyle = '#f43f5e';
-                ctx.strokeStyle = '#fef08a';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                ctx.translate(p.x, p.y);
+                if (p.isArrow) {
+                    ctx.rotate(p.angle || 0);
+                    // Arrow Shaft
+                    ctx.strokeStyle = '#facc15';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 0);
+                    ctx.lineTo(10, 0);
+                    ctx.stroke();
+
+                    // Arrow Head (Golden Tip)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(10, 0);
+                    ctx.lineTo(4, -4);
+                    ctx.lineTo(4, 4);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Arrow Feathers / Fletching
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 0);
+                    ctx.lineTo(-14, -3);
+                    ctx.lineTo(-12, 0);
+                    ctx.lineTo(-14, 3);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.strokeStyle = '#fef08a';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
                 ctx.restore();
             });
 
@@ -5824,6 +6014,8 @@
             gameState = 'PLAYING';
             if (gameMode === 'STORY' && currentStoryLevel === 1) {
                 sound.playLevel1Music();
+            } else if (gameMode === 'STORY' && currentStoryLevel === 2) {
+                sound.playLevel2Music();
             } else {
                 sound.stopAllMusic();
             }
@@ -5932,7 +6124,7 @@
             gameState = 'GAMEOVER';
             sound.stopJetpackSound();
             sound.stopLavaSound();
-            sound.stopLevel1Music();
+            sound.stopAllMusic();
             sound.playGameOver();
 
             const gameOverTitle = document.getElementById('gameOverTitle');
