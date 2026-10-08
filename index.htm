@@ -3928,53 +3928,56 @@
 
                     ctx.save();
 
-                    // Thicker Main Crystal Slab Polygon Body (26px height for rich crystal thickness)
-                    const crystalDepth = 26;
+                    // Stretched Hexagonal Crystal Prism Body
+                    const crystalDepth = 22;
+                    const hexIndent = 12;
+
+                    // Outer Ambient Crystal Glow
+                    ctx.shadowColor = baseCol;
+                    ctx.shadowBlur = 12;
+
+                    // Main Stretched Hexagon Path
                     ctx.beginPath();
-                    ctx.moveTo(x0, y0 + 8);
-                    ctx.lineTo(x0 + 10, y0);
-                    ctx.lineTo(x0 + this.width - 10, y0);
-                    ctx.lineTo(x0 + this.width, y0 + 8);
-                    ctx.lineTo(x0 + this.width - 6, y0 + crystalDepth);
-                    ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4); // Chiseled central crystal tip
-                    ctx.lineTo(x0 + 6, y0 + crystalDepth);
+                    ctx.moveTo(x0 + hexIndent, y0);
+                    ctx.lineTo(x0 + this.width - hexIndent, y0);
+                    ctx.lineTo(x0 + this.width, y0 + crystalDepth / 2);
+                    ctx.lineTo(x0 + this.width - hexIndent, y0 + crystalDepth);
+                    ctx.lineTo(x0 + hexIndent, y0 + crystalDepth);
+                    ctx.lineTo(x0, y0 + crystalDepth / 2);
                     ctx.closePath();
 
-                    const cGrad = ctx.createLinearGradient(x0, y0, x0, y0 + crystalDepth + 4);
-                    cGrad.addColorStop(0, baseCol);
-                    cGrad.addColorStop(0.4, midCol);
+                    const cGrad = ctx.createLinearGradient(x0, y0, x0, y0 + crystalDepth);
+                    cGrad.addColorStop(0, facetLight);
+                    cGrad.addColorStop(0.25, baseCol);
+                    cGrad.addColorStop(0.7, midCol);
                     cGrad.addColorStop(1, darkCol);
                     ctx.fillStyle = cGrad;
                     ctx.fill();
 
-                    // Top Surface Gem Table
-                    ctx.fillStyle = facetLight;
+                    // Outer Crystal Border Stroke
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                    ctx.lineWidth = 1.8;
+                    ctx.stroke();
+
+                    // Reset Shadow Glow for internal facets
+                    ctx.shadowBlur = 0;
+
+                    // Top Facet Glossy Specular Reflection
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
                     ctx.beginPath();
-                    ctx.moveTo(x0 + 12, y0 + 2);
-                    ctx.lineTo(x0 + this.width - 12, y0 + 2);
-                    ctx.lineTo(x0 + this.width - 16, y0 + 9);
-                    ctx.lineTo(x0 + 16, y0 + 9);
+                    ctx.moveTo(x0 + hexIndent, y0 + 1.5);
+                    ctx.lineTo(x0 + this.width - hexIndent, y0 + 1.5);
+                    ctx.lineTo(x0 + this.width - hexIndent - 4, y0 + crystalDepth / 2 - 1);
+                    ctx.lineTo(x0 + hexIndent + 4, y0 + crystalDepth / 2 - 1);
                     ctx.closePath();
                     ctx.fill();
 
-                    // Internal Geometry Facet Highlights
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                    ctx.lineWidth = 1.3;
+                    // Horizontal Central Ridge Light Line
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                    ctx.lineWidth = 1.2;
                     ctx.beginPath();
-                    // Horizontal ridge line
-                    ctx.moveTo(x0 + 6, y0 + 9);
-                    ctx.lineTo(x0 + this.width - 6, y0 + 9);
-                    // Central vertical ridge line
-                    ctx.moveTo(x0 + this.width / 2, y0 + 9);
-                    ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4);
-                    // Diagonal facet cuts across the length
-                    const numCutLines = Math.floor(this.width / 18);
-                    for (let k = 1; k < numCutLines; k++) {
-                        const kx = x0 + k * (this.width / numCutLines);
-                        ctx.moveTo(kx - 5, y0 + 2);
-                        ctx.lineTo(kx, y0 + 9);
-                        ctx.lineTo(kx - 3, y0 + crystalDepth - 2);
-                    }
+                    ctx.moveTo(x0 + 4, y0 + crystalDepth / 2);
+                    ctx.lineTo(x0 + this.width - 4, y0 + crystalDepth / 2);
                     ctx.stroke();
 
                     // Special Platform Type Indicator Overlay
@@ -3996,24 +3999,23 @@
                             ctx.lineWidth = 1.5;
                             ctx.beginPath();
                             ctx.moveTo(x0 + this.width * 0.35, y0 + 11);
-                            ctx.lineTo(x0 + this.width * 0.25, y0 + 22);
+                            ctx.lineTo(x0 + this.width * 0.25, y0 + 18);
                             ctx.moveTo(x0 + this.width * 0.55, y0 + 4);
-                            ctx.lineTo(x0 + this.width * 0.65, y0 + 18);
-                            ctx.lineTo(x0 + this.width * 0.75, y0 + 24);
+                            ctx.lineTo(x0 + this.width * 0.65, y0 + 15);
+                            ctx.lineTo(x0 + this.width * 0.75, y0 + 19);
                             ctx.moveTo(x0 + this.width * 0.85, y0 + 12);
                             ctx.lineTo(x0 + this.width * 0.95, y0 + 5);
                             ctx.stroke();
 
                             // Flashing energy overload fill
-                            ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.sin(Date.now() * 0.04) * 0.15})`;
+                            ctx.fillStyle = `rgba(255, 255, 255, ${0.25 + Math.sin(Date.now() * 0.04) * 0.18})`;
                             ctx.beginPath();
-                            ctx.moveTo(x0, y0 + 8);
-                            ctx.lineTo(x0 + 10, y0);
-                            ctx.lineTo(x0 + this.width - 10, y0);
-                            ctx.lineTo(x0 + this.width, y0 + 8);
-                            ctx.lineTo(x0 + this.width - 6, y0 + crystalDepth);
-                            ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4);
-                            ctx.lineTo(x0 + 6, y0 + crystalDepth);
+                            ctx.moveTo(x0 + hexIndent, y0);
+                            ctx.lineTo(x0 + this.width - hexIndent, y0);
+                            ctx.lineTo(x0 + this.width, y0 + crystalDepth / 2);
+                            ctx.lineTo(x0 + this.width - hexIndent, y0 + crystalDepth);
+                            ctx.lineTo(x0 + hexIndent, y0 + crystalDepth);
+                            ctx.lineTo(x0, y0 + crystalDepth / 2);
                             ctx.closePath();
                             ctx.fill();
                         }
