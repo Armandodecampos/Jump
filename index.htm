@@ -867,51 +867,52 @@
                     }
                 });
 
-                // 7. Realistic Crystal Shatter Buffer (High-pitched glass/crystal fracture & cascading shard tinkles)
-                createBuf('crystalBreak', 0.38, (data, sr, len) => {
-                    const freqs = [2400, 3150, 4200, 5600, 6800, 8400];
-                    const weights = [0.3, 0.35, 0.25, 0.2, 0.15, 0.1];
+                // 7. Realistic Strident Glass / Crystal Shatter Buffer (Ultra high-pitched glass fracture, sharp crack & cascading shard tinkles)
+                createBuf('crystalBreak', 0.4, (data, sr, len) => {
+                    // Piercing high-frequency resonant modes of thin glass
+                    const freqs = [3600, 5200, 7400, 9800, 12500, 15200];
+                    const weights = [0.25, 0.35, 0.3, 0.25, 0.2, 0.15];
 
-                    // Seeded micro shard delays for cascading glass tinkle
+                    // Seeded micro shard delays for cascading glass shatter tinkles
                     const shardDelays = [];
-                    for (let s = 0; s < 12; s++) {
+                    for (let s = 0; s < 16; s++) {
                         shardDelays.push({
-                            delay: (s * 0.015) + Math.sin(s * 1.7) * 0.01,
-                            freq: 2800 + (s * 420 % 4500),
-                            vol: 0.18 + (s % 3) * 0.08
+                            delay: (s * 0.012) + Math.sin(s * 2.1) * 0.008,
+                            freq: 4200 + ((s * 730) % 9500),
+                            vol: 0.22 + (s % 4) * 0.08
                         });
                     }
 
                     for (let i = 0; i < len; i++) {
                         const t = i / sr;
 
-                        // Initial sharp crystal fracture click
-                        const initialImpact = (Math.random() * 2 - 1) * Math.exp(-t * 220) * 0.6;
+                        // Sharp, strident glass fracture impact (high transient energy)
+                        const initialImpact = (Math.random() * 2 - 1) * Math.exp(-t * 380) * 0.85;
 
-                        // High Resonant Crystal Harmonics Ringing
+                        // Ultra-high resonant glass ringing with crisp decay
                         let crystalResonance = 0;
                         for (let k = 0; k < freqs.length; k++) {
-                            const decay = Math.exp(-t * (18 + k * 8));
+                            const decay = Math.exp(-t * (25 + k * 12));
                             crystalResonance += Math.sin(2 * Math.PI * freqs[k] * t) * weights[k] * decay;
                         }
 
-                        // Cascading glass shard tinkles
+                        // Cascading sharp glass shard tinkles
                         let shardTinkles = 0;
                         for (let s = 0; s < shardDelays.length; s++) {
                             const sd = shardDelays[s];
                             if (t > sd.delay) {
                                 const dt = t - sd.delay;
-                                const shardDecay = Math.exp(-dt * 85);
+                                const shardDecay = Math.exp(-dt * 110);
                                 const shardRing = Math.sin(2 * Math.PI * sd.freq * dt);
-                                const shardNoise = (Math.random() * 2 - 1) * 0.25;
-                                shardTinkles += (shardRing * 0.7 + shardNoise * 0.3) * shardDecay * sd.vol;
+                                const shardNoise = (Math.random() * 2 - 1) * 0.35;
+                                shardTinkles += (shardRing * 0.65 + shardNoise * 0.35) * shardDecay * sd.vol;
                             }
                         }
 
-                        // Glass friction / scatter noise
-                        const glassNoise = (Math.random() * 2 - 1) * Math.exp(-t * 35) * 0.25;
+                        // High-pitched glass crackle & friction noise burst
+                        const glassNoise = (Math.random() * 2 - 1) * Math.exp(-t * 60) * 0.38;
 
-                        data[i] = (initialImpact + crystalResonance * 0.5 + shardTinkles * 0.6 + glassNoise) * 0.65;
+                        data[i] = (initialImpact + crystalResonance * 0.55 + shardTinkles * 0.65 + glassNoise) * 0.7;
                     }
                 });
             }
