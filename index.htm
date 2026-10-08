@@ -866,6 +866,54 @@
                         data[i] = (sample + tap) * 0.8;
                     }
                 });
+
+                // 7. Realistic Crystal Shatter Buffer (High-pitched glass/crystal fracture & cascading shard tinkles)
+                createBuf('crystalBreak', 0.38, (data, sr, len) => {
+                    const freqs = [2400, 3150, 4200, 5600, 6800, 8400];
+                    const weights = [0.3, 0.35, 0.25, 0.2, 0.15, 0.1];
+
+                    // Seeded micro shard delays for cascading glass tinkle
+                    const shardDelays = [];
+                    for (let s = 0; s < 12; s++) {
+                        shardDelays.push({
+                            delay: (s * 0.015) + Math.sin(s * 1.7) * 0.01,
+                            freq: 2800 + (s * 420 % 4500),
+                            vol: 0.18 + (s % 3) * 0.08
+                        });
+                    }
+
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+
+                        // Initial sharp crystal fracture click
+                        const initialImpact = (Math.random() * 2 - 1) * Math.exp(-t * 220) * 0.6;
+
+                        // High Resonant Crystal Harmonics Ringing
+                        let crystalResonance = 0;
+                        for (let k = 0; k < freqs.length; k++) {
+                            const decay = Math.exp(-t * (18 + k * 8));
+                            crystalResonance += Math.sin(2 * Math.PI * freqs[k] * t) * weights[k] * decay;
+                        }
+
+                        // Cascading glass shard tinkles
+                        let shardTinkles = 0;
+                        for (let s = 0; s < shardDelays.length; s++) {
+                            const sd = shardDelays[s];
+                            if (t > sd.delay) {
+                                const dt = t - sd.delay;
+                                const shardDecay = Math.exp(-dt * 85);
+                                const shardRing = Math.sin(2 * Math.PI * sd.freq * dt);
+                                const shardNoise = (Math.random() * 2 - 1) * 0.25;
+                                shardTinkles += (shardRing * 0.7 + shardNoise * 0.3) * shardDecay * sd.vol;
+                            }
+                        }
+
+                        // Glass friction / scatter noise
+                        const glassNoise = (Math.random() * 2 - 1) * Math.exp(-t * 35) * 0.25;
+
+                        data[i] = (initialImpact + crystalResonance * 0.5 + shardTinkles * 0.6 + glassNoise) * 0.65;
+                    }
+                });
             }
 
             playPool(name) {
@@ -925,6 +973,10 @@
 
             playBreak() {
                 this.playBuffer('break', 0.5);
+            }
+
+            playCrystalBreak() {
+                this.playBuffer('crystalBreak', 0.65) || this.playBuffer('break', 0.5);
             }
 
             playGameOver() {
@@ -3492,17 +3544,29 @@
                     }
                 }
 
-                // Handle delayed crumbling for fragile red platforms
+                // Handle delayed crumbling for fragile platforms
                 if (this.crumbling && !this.broken) {
                     this.crumbleTimer--;
-                    if (this.crumbleTimer % 5 === 0) {
-                        createParticles(this.x + Math.random() * this.width, this.y, '#f87171', 1);
+                    const isCrystal = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
+
+                    if (this.crumbleTimer % 4 === 0) {
+                        if (isCrystal) {
+                            createCrystalShardParticles(this.x, this.y, this.width, 2);
+                        } else {
+                            createParticles(this.x + Math.random() * this.width, this.y, '#f87171', 1);
+                        }
                     }
+
                     if (this.crumbleTimer <= 0) {
                         this.broken = true;
                         this.respawnTimer = 180; // 3 seconds at 60fps
-                        sound.playBreak();
-                        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ef4444', 12);
+                        if (isCrystal) {
+                            sound.playCrystalBreak();
+                            createCrystalShardParticles(this.x, this.y, this.width, 24);
+                        } else {
+                            sound.playBreak();
+                            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ef4444', 12);
+                        }
                     }
                 }
 
@@ -3513,7 +3577,12 @@
                         this.broken = false;
                         this.crumbling = false;
                         this.crumbleTimer = 0;
-                        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#60a5fa', 10);
+                        const isCrystal = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
+                        if (isCrystal) {
+                            createCrystalShardParticles(this.x, this.y, this.width, 10);
+                        } else {
+                            createParticles(this.x + this.width / 2, this.y + this.height / 2, '#60a5fa', 10);
+                        }
                     }
                 }
             }
@@ -3910,14 +3979,43 @@
                     // Special Platform Type Indicator Overlay
                     if (this.type === 'fragile') {
                         // Fracture cracks
-                        ctx.strokeStyle = 'rgba(254, 240, 138, 0.9)';
-                        ctx.lineWidth = 1.8;
+                        const isCrumbling = this.crumbling;
+                        ctx.strokeStyle = isCrumbling ? 'rgba(255, 255, 255, 0.95)' : 'rgba(254, 240, 138, 0.9)';
+                        ctx.lineWidth = isCrumbling ? 2.2 : 1.8;
                         ctx.beginPath();
                         ctx.moveTo(x0 + this.width * 0.15, y0 + 3);
                         ctx.lineTo(x0 + this.width * 0.35, y0 + 11);
                         ctx.lineTo(x0 + this.width * 0.55, y0 + 4);
                         ctx.lineTo(x0 + this.width * 0.85, y0 + 12);
                         ctx.stroke();
+
+                        // Additional branching spiderweb cracks & flashing glow overlay when crumbling underfoot
+                        if (isCrumbling) {
+                            ctx.strokeStyle = '#38bdf8'; // Glowing cyan secondary stress cracks
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(x0 + this.width * 0.35, y0 + 11);
+                            ctx.lineTo(x0 + this.width * 0.25, y0 + 22);
+                            ctx.moveTo(x0 + this.width * 0.55, y0 + 4);
+                            ctx.lineTo(x0 + this.width * 0.65, y0 + 18);
+                            ctx.lineTo(x0 + this.width * 0.75, y0 + 24);
+                            ctx.moveTo(x0 + this.width * 0.85, y0 + 12);
+                            ctx.lineTo(x0 + this.width * 0.95, y0 + 5);
+                            ctx.stroke();
+
+                            // Flashing energy overload fill
+                            ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + Math.sin(Date.now() * 0.04) * 0.15})`;
+                            ctx.beginPath();
+                            ctx.moveTo(x0, y0 + 8);
+                            ctx.lineTo(x0 + 10, y0);
+                            ctx.lineTo(x0 + this.width - 10, y0);
+                            ctx.lineTo(x0 + this.width, y0 + 8);
+                            ctx.lineTo(x0 + this.width - 6, y0 + crystalDepth);
+                            ctx.lineTo(x0 + this.width / 2, y0 + crystalDepth + 4);
+                            ctx.lineTo(x0 + 6, y0 + crystalDepth);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
                     } else if (this.type === 'spring') {
                         // Celestial Trampoline Crystal Emblem
                         const gemY = y0 + 4;
@@ -4637,6 +4735,29 @@
             }
         }
 
+        function createCrystalShardParticles(x, y, width, count = 18) {
+            const crystalColors = ['#ffffff', '#f0abfc', '#e879f9', '#c084fc', '#38bdf8', '#fae8ff', '#f43f5e'];
+            for (let i = 0; i < count; i++) {
+                const px = x + Math.random() * width;
+                const angle = (Math.random() - 0.5) * Math.PI * 1.5 - Math.PI / 2; // Scatter upward and outward
+                const speed = 1.5 + Math.random() * 5.5;
+                const size = 3 + Math.random() * 5;
+                particles.push({
+                    x: px,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: size,
+                    size: size,
+                    color: crystalColors[Math.floor(Math.random() * crystalColors.length)],
+                    alpha: 1,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.25,
+                    isCrystalShard: true
+                });
+            }
+        }
+
         function createHeartParticle(x, y) {
             particles.push({
                 x: x,
@@ -4941,6 +5062,14 @@
                 const pt = particles[i];
                 pt.x += pt.vx;
                 pt.y += pt.vy;
+
+                if (pt.isCrystalShard) {
+                    pt.vy += 0.12; // Slight gravity pull on crystal shards
+                    if (pt.rotation !== undefined && pt.rotSpeed !== undefined) {
+                        pt.rotation += pt.rotSpeed;
+                    }
+                }
+
                 pt.alpha -= decay;
                 if (pt.alpha <= 0 || isNaN(pt.alpha)) {
                     particles.splice(i, 1);
@@ -5754,11 +5883,43 @@
             // Draw particles
             particles.forEach(pt => {
                 ctx.save();
-                ctx.globalAlpha = pt.alpha;
+                ctx.globalAlpha = Math.max(0, pt.alpha);
                 if (pt.isHeartText) {
                     ctx.fillStyle = '#ef4444';
                     ctx.font = 'bold 32px "Fredoka One", cursive';
                     ctx.fillText('+1 ❤️', pt.x - 30, pt.y);
+                } else if (pt.isCrystalShard) {
+                    ctx.save();
+                    ctx.translate(pt.x, pt.y);
+                    ctx.rotate(pt.rotation || 0);
+
+                    const s = pt.size || pt.radius || 4;
+
+                    // Shiny multi-faceted crystal diamond polygon
+                    ctx.fillStyle = pt.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -s);
+                    ctx.lineTo(s * 0.7, 0);
+                    ctx.lineTo(0, s * 1.3);
+                    ctx.lineTo(-s * 0.7, 0);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // White outer highlight edge
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // Specular facet highlight
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -s);
+                    ctx.lineTo(s * 0.35, -s * 0.2);
+                    ctx.lineTo(0, 0);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.restore();
                 } else {
                     ctx.fillStyle = pt.color;
                     ctx.beginPath();
