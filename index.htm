@@ -4298,6 +4298,20 @@
                 if (this.type === 'fish') {
                     this.jumpTimer++;
 
+                    const playerCenterX = player.x + player.width / 2;
+                    const enemyCenterX = this.x + this.width / 2;
+                    const dx = playerCenterX - enemyCenterX;
+
+                    this.facingRight = dx > 0;
+                    this.jawAngle = Math.abs(Math.sin(Date.now() * 0.018));
+
+                    // Chase player horizontally
+                    const moveSpeed = this.isGrounded ? 1.0 : 1.5;
+                    if (Math.abs(dx) > 6) {
+                        this.x += Math.sign(dx) * moveSpeed;
+                    }
+                    this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
                     if (this.isGrounded && this.standingPlatform && !this.standingPlatform.broken) {
                         this.y = this.standingPlatform.y - this.height;
                         if (this.standingPlatform.type === 'moving') {
@@ -4307,9 +4321,9 @@
                         this.y += 5;
                     }
 
-                    if (this.jumpTimer >= 80 && this.isGrounded) {
+                    if (this.jumpTimer >= 70 && this.isGrounded) {
                         this.jumpTimer = 0;
-                        this.vy = -10.5; // Jump upward
+                        this.vy = -10.5; // Jump upward towards player
                         this.isGrounded = false;
                         sound.playSpring();
                     }
@@ -4326,11 +4340,6 @@
                             }
                         }
                     }
-
-                    const playerCenterX = player.x + player.width / 2;
-                    const enemyCenterX = this.x + this.width / 2;
-                    this.facingRight = playerCenterX > enemyCenterX;
-                    this.jawAngle = Math.abs(Math.sin(Date.now() * 0.018));
                 }
 
                 if (this.type === 'pufferfish') {
@@ -5862,13 +5871,16 @@
                 const overlapY = player.y + player.height > e.y && player.y < e.y + e.height;
 
                 if (overlapX && overlapY) {
-                    // Stomping check: Player falling downward onto top portion of enemy
                     const feetY = player.y + player.height;
                     const prevFeetY = feetY - player.vy;
-                    const isStomping = player.vy > 0 && prevFeetY <= e.y + e.height * 0.5;
+                    const headY = player.y;
+                    const prevHeadY = headY - player.vy;
 
-                    // Bump from below check: Player jumping upward into enemy
-                    const isBumpedFromBelow = player.vy < 0;
+                    // Stomping check (Top hit): Player falling downward and feet are at or above upper half of enemy
+                    const isStomping = player.vy > 0 && prevFeetY <= e.y + e.height * 0.6;
+
+                    // Bump from below check (Bottom hit): Player jumping upward and head is at or below lower half of enemy
+                    const isBumpedFromBelow = player.vy < 0 && prevHeadY >= e.y + e.height * 0.4;
 
                     if (isStomping) {
                         e.alive = false;
@@ -5903,7 +5915,7 @@
                             12
                         );
                     } else {
-                        // Player hit by enemy body/side
+                        // Side collision: Enemy attacks player (enemy is NEVER defeated or launched when contacting from the side)
                         if (e.type === 'exploder') {
                             e.contactTimer += 2; // Accelerate contact timer on direct side collision
                             if (e.contactTimer >= 60) {
