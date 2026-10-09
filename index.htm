@@ -4244,75 +4244,134 @@
                         ctx.fill();
                     }
                 } else if (isTriangleTheme) {
-                    // Story Mode Level 3 ("Cachoeira Subterrânea"): Pronounced inverted triangular rock wedge
-                    const triHeight = Math.min(38, Math.max(26, this.width * 0.32));
-                    const topY0 = y0 + getCurveY(0);
-                    const topYMid = y0 + getCurveY(this.width / 2);
-                    const topYEnd = y0 + getCurveY(this.width);
-                    const tipY = y0 + triHeight + getCurveY(this.width / 2);
-
+                    // Story Mode Level 3 ("Cachoeira Subterrânea"): Organic, randomized inverted triangular rock wedge
                     ctx.save();
 
-                    // 1. Full Inverted Triangle Path
+                    // 1. Organic Inverted Triangle Rock Path
                     ctx.beginPath();
-                    ctx.moveTo(x0, topY0);
-                    ctx.lineTo(x0 + this.width, topYEnd);
-                    ctx.lineTo(midX, tipY);
+                    if (this.topRockPoints && this.topRockPoints.length > 0) {
+                        // Top surface (left to right)
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                        }
+                        // Bottom tapering triangular contour (right to left)
+                        for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                    } else {
+                        const triHeight = Math.min(38, Math.max(26, this.width * 0.32));
+                        ctx.moveTo(x0, y0);
+                        ctx.lineTo(x0 + this.width, y0);
+                        ctx.lineTo(midX, y0 + triHeight);
+                    }
                     ctx.closePath();
 
-                    // Triangle Gradient Base Fill
-                    const triGrad = ctx.createLinearGradient(x0, y0, x0, y0 + triHeight);
+                    // Base Organic Rock Gradient Fill
+                    const maxDepth = this.bottomRockPoints ? Math.max(...this.bottomRockPoints.map(p => p.y)) : 28;
+                    const triGrad = ctx.createLinearGradient(x0, y0, x0, y0 + maxDepth + 6);
                     triGrad.addColorStop(0, c1);
                     triGrad.addColorStop(0.65, c2);
                     triGrad.addColorStop(1, '#081a26');
                     ctx.fillStyle = triGrad;
                     ctx.fill();
 
-                    // 2. Left and Right 3D Facet Shading for sharp triangular wedge look
-                    // Right Face Shadow Overlay
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-                    ctx.beginPath();
-                    ctx.moveTo(midX, topYMid);
-                    ctx.lineTo(x0 + this.width, topYEnd);
-                    ctx.lineTo(midX, tipY);
-                    ctx.closePath();
-                    ctx.fill();
+                    // 2. Organic 3D Facet Shading & Central Ridge Line
+                    if (this.bottomRockPoints && this.bottomRockPoints.length > 0) {
+                        // Find peak tip point in bottom points
+                        let tipIdx = 0;
+                        for (let i = 1; i < this.bottomRockPoints.length; i++) {
+                            if (this.bottomRockPoints[i].y > this.bottomRockPoints[tipIdx].y) {
+                                tipIdx = i;
+                            }
+                        }
+                        const tipPt = this.bottomRockPoints[tipIdx];
+                        const tipX = x0 + tipPt.x;
+                        const tipY = y0 + tipPt.y + getCurveY(tipPt.x);
 
-                    // Left Face Highlight Overlay
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-                    ctx.beginPath();
-                    ctx.moveTo(x0, topY0);
-                    ctx.lineTo(midX, topYMid);
-                    ctx.lineTo(midX, tipY);
-                    ctx.closePath();
-                    ctx.fill();
+                        const topPtAtTip = this.topRockPoints[tipIdx] || { x: tipPt.x, y: 0 };
+                        const topMidX = x0 + topPtAtTip.x;
+                        const topMidY = y0 + topPtAtTip.y + getCurveY(topPtAtTip.x);
 
-                    // Central Vertical Ridge Line from top center to bottom tip
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath();
-                    ctx.moveTo(midX, topYMid);
-                    ctx.lineTo(midX, tipY);
-                    ctx.stroke();
+                        // Right Facet Shadow Overlay
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                        ctx.beginPath();
+                        ctx.moveTo(topMidX, topMidY);
+                        for (let i = tipIdx; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                        }
+                        for (let i = this.bottomRockPoints.length - 1; i >= tipIdx; i--) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                        ctx.closePath();
+                        ctx.fill();
 
-                    // Outer Crisp Triangle Border
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-                    ctx.lineWidth = 1.5;
-                    ctx.beginPath();
-                    ctx.moveTo(x0, topY0);
-                    ctx.lineTo(x0 + this.width, topYEnd);
-                    ctx.lineTo(midX, tipY);
-                    ctx.closePath();
-                    ctx.stroke();
+                        // Left Facet Highlight Overlay
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i <= tipIdx; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                        }
+                        ctx.lineTo(tipX, tipY);
+                        for (let i = tipIdx - 1; i >= 0; i--) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                        ctx.closePath();
+                        ctx.fill();
 
-                    // Mineral speckles
+                        // Organic Central Ridge Line from top surface down to the randomized tip
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(topMidX, topMidY);
+                        ctx.lineTo(tipX, tipY);
+                        ctx.stroke();
+
+                        // Top Surface Rim Highlight
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + 1 + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + 1 + getCurveY(this.topRockPoints[i].x));
+                        }
+                        ctx.stroke();
+
+                        // Outer Organic Rock Outline
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.topRockPoints[0].x, y0 + this.topRockPoints[0].y + getCurveY(this.topRockPoints[0].x));
+                        for (let i = 1; i < this.topRockPoints.length; i++) {
+                            ctx.lineTo(x0 + this.topRockPoints[i].x, y0 + this.topRockPoints[i].y + getCurveY(this.topRockPoints[i].x));
+                        }
+                        for (let i = this.bottomRockPoints.length - 1; i >= 0; i--) {
+                            ctx.lineTo(x0 + this.bottomRockPoints[i].x, y0 + this.bottomRockPoints[i].y + getCurveY(this.bottomRockPoints[i].x));
+                        }
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+
+                    // Internal Rock Crags & Crevices
+                    if (this.rockCrags) {
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.38)';
+                        ctx.lineWidth = 1.2;
+                        this.rockCrags.forEach(crag => {
+                            const cx = x0 + this.width * crag.relX;
+                            const cy = y0 + crag.relY + getCurveY(this.width * crag.relX);
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
+                            ctx.lineTo(cx + crag.dx, cy + crag.dy);
+                            ctx.stroke();
+                        });
+                    }
+
+                    // Mineral Speckles / Stippling Texture
                     if (this.textureSpeckles) {
                         this.textureSpeckles.forEach(s => {
                             const sx = x0 + s.relX;
-                            const normX = s.relX / this.width;
-                            const distToTip = normX < 0.5 ? (normX / 0.5) : ((1 - normX) / 0.5);
-                            const maxD = distToTip * triHeight;
-                            const sy = y0 + Math.min(maxD, s.relY) + getCurveY(s.relX);
+                            const sy = y0 + s.relY + getCurveY(s.relX);
                             ctx.fillStyle = s.isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.3)';
                             ctx.beginPath();
                             ctx.arc(sx, sy, s.radius, 0, Math.PI * 2);
