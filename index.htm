@@ -2282,9 +2282,9 @@
                 elementType: 'bubbles',
                 elementColor: 'rgba(186, 230, 253, 0.5)',
                 platformColors: {
-                    normal: ['#38bdf8', '#0284c7'],
-                    moving: ['#2dd4bf', '#0f766e'],
-                    spring: ['#a855f7', '#7e22ce'],
+                    normal: ['#475569', '#1e293b'],
+                    moving: ['#38bdf8', '#0369a1'],
+                    spring: ['#06b6d4', '#0f766e'],
                     fragile: ['#f87171', '#dc2626']
                 },
                 dialogue: {
@@ -3548,7 +3548,7 @@
                 // Handle delayed crumbling for fragile platforms
                 if (this.crumbling && !this.broken) {
                     this.crumbleTimer--;
-                    const isCrystal = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
+                    const isCrystal = (gameMode === 'STORY' && currentStoryLevel === 2);
 
                     if (this.crumbleTimer % 4 === 0) {
                         if (isCrystal) {
@@ -3578,7 +3578,7 @@
                         this.broken = false;
                         this.crumbling = false;
                         this.crumbleTimer = 0;
-                        const isCrystal = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
+                        const isCrystal = (gameMode === 'STORY' && currentStoryLevel === 2);
                         if (isCrystal) {
                             createCrystalShardParticles(this.x, this.y, this.width, 10);
                         } else {
@@ -3857,8 +3857,8 @@
                     return bendOffset * Math.sin((rx / this.width) * Math.PI);
                 };
 
-                const isRockTheme = (gameMode === 'STORY' && currentStoryLevel === 1);
-                const isCrystalTheme = (gameMode === 'STORY' && (currentStoryLevel === 2 || currentStoryLevel === 3));
+                const isRockTheme = (gameMode === 'STORY' && (currentStoryLevel === 1 || currentStoryLevel === 3));
+                const isCrystalTheme = (gameMode === 'STORY' && currentStoryLevel === 2);
 
                 if (isCrystalTheme) {
                     // Level 2 & 3: Crystal Platforms (Clean multifaceted crystal body, optimized performance without shadow glow or spires)
@@ -5688,6 +5688,115 @@
                 } else {
                     ctx.fillStyle = '#0f172a';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            } else if (gameMode === 'STORY' && currentStoryLevel === 3) {
+                // Subterranean Waterfall Cavern Background
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                bgGradient.addColorStop(0, '#031926');
+                bgGradient.addColorStop(0.5, '#072e44');
+                bgGradient.addColorStop(1, '#0f4c6e');
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const time = Date.now() * 0.003;
+                const flowTime = Date.now() * 0.09;
+
+                // 1. Background Rocky Cavern Wall Outlines & Shading
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+                for (let i = 0; i < 5; i++) {
+                    const cliffX = (i % 2 === 0) ? 0 : canvas.width;
+                    const sign = (i % 2 === 0) ? 1 : -1;
+                    const cliffY = ((i * 180 - cameraY * 0.1) % (canvas.height + 200)) - 100;
+                    const cliffW = 70 + (i % 3) * 30;
+
+                    ctx.beginPath();
+                    ctx.moveTo(cliffX, cliffY);
+                    ctx.lineTo(cliffX + sign * cliffW, cliffY + 20);
+                    ctx.lineTo(cliffX + sign * (cliffW - 20), cliffY + 120);
+                    ctx.lineTo(cliffX + sign * (cliffW + 15), cliffY + 200);
+                    ctx.lineTo(cliffX, cliffY + 220);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // 2. Main Cascading Waterfall Streams (Falling Water)
+                const waterfallStreams = [
+                    { xPct: 0.22, width: 65, alpha: 0.65 },
+                    { xPct: 0.52, width: 95, alpha: 0.75 },
+                    { xPct: 0.80, width: 55, alpha: 0.60 }
+                ];
+
+                waterfallStreams.forEach(wf => {
+                    const wx = canvas.width * wf.xPct - wf.width / 2;
+
+                    // Base water column gradient
+                    const wGrad = ctx.createLinearGradient(wx, 0, wx + wf.width, 0);
+                    wGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+                    wGrad.addColorStop(0.2, `rgba(56, 189, 248, ${wf.alpha})`);
+                    wGrad.addColorStop(0.5, `rgba(186, 230, 253, ${wf.alpha + 0.15})`);
+                    wGrad.addColorStop(0.8, `rgba(56, 189, 248, ${wf.alpha})`);
+                    wGrad.addColorStop(1, 'rgba(56, 189, 248, 0.2)');
+
+                    ctx.fillStyle = wGrad;
+                    ctx.fillRect(wx, 0, wf.width, canvas.height);
+
+                    // Falling animated water flow ribbons/lines
+                    const lineCount = Math.floor(wf.width / 12);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                    ctx.lineWidth = 1.8;
+                    for (let l = 0; l < lineCount; l++) {
+                        const lineX = wx + 6 + l * 12 + Math.sin(l * 1.5) * 3;
+                        const lineOffset = (flowTime * (0.8 + (l % 3) * 0.2) + l * 67) % canvas.height;
+                        const lineLen = 80 + (l % 4) * 40;
+
+                        ctx.beginPath();
+                        ctx.moveTo(lineX, lineOffset - lineLen);
+                        ctx.lineTo(lineX + Math.sin(lineOffset * 0.02) * 2, lineOffset);
+                        ctx.stroke();
+
+                        // Additional fast inner white foam streak
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(lineX + 1, lineOffset - lineLen * 0.4);
+                        ctx.lineTo(lineX + 1, lineOffset - lineLen * 0.1);
+                        ctx.stroke();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                        ctx.lineWidth = 1.8;
+                    }
+
+                    // Water spray & mist edge highlights
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    for (let s = 0; s < 8; s++) {
+                        const sprayY = (s * 90 + flowTime * 1.2) % canvas.height;
+                        const sprayX1 = wx - 4 + Math.sin(sprayY * 0.05 + s) * 4;
+                        const sprayX2 = wx + wf.width + 4 + Math.cos(sprayY * 0.05 + s) * 4;
+                        ctx.beginPath();
+                        ctx.arc(sprayX1, sprayY, 2.5 + (s % 3), 0, Math.PI * 2);
+                        ctx.arc(sprayX2, sprayY, 2.5 + (s % 3), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // 3. Floating Water Spray & Mist Droplets across scenario
+                ctx.fillStyle = 'rgba(186, 230, 253, 0.55)';
+                for (let i = 0; i < 30; i++) {
+                    const bx = (i * 59 + 15 + Math.sin(time + i) * 12) % canvas.width;
+                    const rawY = (i * 73 - cameraY * 0.25 + flowTime * 0.5) % canvas.height;
+                    const by = rawY < 0 ? rawY + canvas.height : rawY;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, (i % 4) + 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Foreground ambient mist/fog layers
+                ctx.fillStyle = 'rgba(186, 230, 253, 0.08)';
+                for (let m = 0; m < 4; m++) {
+                    const mistY = ((m * 160 - cameraY * 0.12) % canvas.height);
+                    const adjustedMistY = mistY < 0 ? mistY + canvas.height : mistY;
+                    ctx.beginPath();
+                    ctx.ellipse(canvas.width / 2 + Math.sin(time + m) * 40, adjustedMistY, canvas.width * 0.6, 28, 0, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             } else if (gameMode === 'STORY') {
                 const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
