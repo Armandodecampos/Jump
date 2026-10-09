@@ -3954,9 +3954,9 @@
                     return bendOffset * Math.sin((rx / this.width) * Math.PI);
                 };
 
-                const isRockTheme = (gameMode === 'STORY' && (currentStoryLevel === 1 || currentStoryLevel === 3));
+                const isRockTheme = (gameMode === 'STORY' && currentStoryLevel === 1);
                 const isCrystalTheme = (gameMode === 'STORY' && currentStoryLevel === 2);
-                const isEggTheme = (gameMode === 'STORY' && currentStoryLevel === 4);
+                const isEggTheme = (gameMode === 'STORY' && (currentStoryLevel === 3 || currentStoryLevel === 4));
 
                 if (isCrystalTheme) {
                     // Level 2 & 3: Crystal Platforms (Clean multifaceted crystal body, optimized performance without shadow glow or spires)
