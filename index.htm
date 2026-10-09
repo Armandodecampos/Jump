@@ -4220,6 +4220,17 @@
                 } else if (type === 'angel') {
                     this.width = 42; // winged angel enemy
                     this.height = 42;
+                } else if (type === 'fish') {
+                    this.width = 38; // jumping biting fish
+                    this.height = 34;
+                    this.jumpTimer = Math.floor(Math.random() * 60);
+                    this.jawAngle = 0;
+                } else if (type === 'pufferfish') {
+                    this.width = 42; // spiky blowing pufferfish
+                    this.height = 42;
+                    this.blowTimer = Math.floor(Math.random() * 100);
+                    this.isBlowing = false;
+                    this.puffScale = 1.0;
                 } else {
                     this.width = 50; // large enemy
                     this.height = 50;
@@ -4281,6 +4292,98 @@
                     if (this.shootTimer >= 150) { // Fires arrows every ~2.5s
                         this.shootTimer = 0;
                         this.shootArrow();
+                    }
+                }
+
+                if (this.type === 'fish') {
+                    this.jumpTimer++;
+
+                    if (this.isGrounded && this.standingPlatform && !this.standingPlatform.broken) {
+                        this.y = this.standingPlatform.y - this.height;
+                        if (this.standingPlatform.type === 'moving') {
+                            this.x += this.standingPlatform.moveSpeed;
+                        }
+                    } else if (this.standingPlatform && this.standingPlatform.broken) {
+                        this.y += 5;
+                    }
+
+                    if (this.jumpTimer >= 80 && this.isGrounded) {
+                        this.jumpTimer = 0;
+                        this.vy = -10.5; // Jump upward
+                        this.isGrounded = false;
+                        sound.playSpring();
+                    }
+
+                    if (!this.isGrounded) {
+                        this.vy += 0.42; // Gravity
+                        this.y += this.vy;
+
+                        if (this.standingPlatform && !this.standingPlatform.broken && this.vy > 0) {
+                            if (this.y + this.height >= this.standingPlatform.y) {
+                                this.y = this.standingPlatform.y - this.height;
+                                this.vy = 0;
+                                this.isGrounded = true;
+                            }
+                        }
+                    }
+
+                    const playerCenterX = player.x + player.width / 2;
+                    const enemyCenterX = this.x + this.width / 2;
+                    this.facingRight = playerCenterX > enemyCenterX;
+                    this.jawAngle = Math.abs(Math.sin(Date.now() * 0.018));
+                }
+
+                if (this.type === 'pufferfish') {
+                    if (this.standingPlatform && !this.standingPlatform.broken) {
+                        this.y = this.standingPlatform.y - this.height;
+                        if (this.standingPlatform.type === 'moving') {
+                            this.x += this.standingPlatform.moveSpeed;
+                        }
+                    } else if (this.standingPlatform && this.standingPlatform.broken) {
+                        this.y += 5;
+                    }
+
+                    const playerCenterX = player.x + player.width / 2;
+                    const enemyCenterX = this.x + this.width / 2;
+                    this.facingRight = playerCenterX > enemyCenterX;
+
+                    this.blowTimer++;
+                    const cycle = this.blowTimer % 180;
+                    if (cycle > 90) {
+                        this.isBlowing = true;
+                        this.puffScale = 1.0 + Math.sin(((cycle - 90) / 90) * Math.PI) * 0.35;
+                    } else {
+                        this.isBlowing = false;
+                        this.puffScale = 1.0;
+                    }
+
+                    if (this.isBlowing) {
+                        const ex = this.x + this.width / 2;
+                        const ey = this.y + this.height / 2;
+                        const px = player.x + player.width / 2;
+                        const py = player.y + player.height / 2;
+                        const dx = px - ex;
+                        const dy = py - ey;
+                        const dist = Math.hypot(dx, dy);
+
+                        if (dist < 180 && dist > 5) {
+                            const blowForce = (1 - dist / 180) * 0.85;
+                            const pushDir = Math.sign(dx) || (this.facingRight ? 1 : -1);
+                            player.vx += pushDir * blowForce; // Blows player off platform!
+
+                            if (Math.random() < 0.5) {
+                                particles.push({
+                                    x: ex + pushDir * 20,
+                                    y: ey + (Math.random() - 0.5) * 16,
+                                    vx: pushDir * (3.5 + Math.random() * 3.0),
+                                    vy: (Math.random() - 0.5) * 1.5,
+                                    radius: Math.random() * 3.5 + 2,
+                                    color: 'rgba(224, 242, 254, 0.85)',
+                                    alpha: 0.9,
+                                    life: 18
+                                });
+                            }
+                        }
                     }
                 }
 
@@ -4671,6 +4774,180 @@
                     ctx.arc(-7, -6, 1.5, 0, Math.PI * 2);
                     ctx.arc(7, -6, 1.5, 0, Math.PI * 2);
                     ctx.fill();
+                } else if (this.type === 'fish') {
+                    ctx.scale(this.facingRight ? 1 : -1, 1);
+
+                    const jaw = this.jawAngle || 0;
+
+                    // Tail fin (Wiggling on back)
+                    const tailAnim = Math.sin(Date.now() * 0.02) * 4;
+                    ctx.fillStyle = '#ea580c';
+                    ctx.beginPath();
+                    ctx.moveTo(-12, 0);
+                    ctx.lineTo(-22, -8 + tailAnim);
+                    ctx.lineTo(-18, 0);
+                    ctx.lineTo(-22, 8 + tailAnim);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Fish Body
+                    const bodyGrad = ctx.createRadialGradient(-2, -2, 2, 0, 0, 16);
+                    bodyGrad.addColorStop(0, '#fb923c');
+                    bodyGrad.addColorStop(0.6, '#ea580c');
+                    bodyGrad.addColorStop(1, '#9a3412');
+                    ctx.fillStyle = bodyGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 16, 13, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Top dorsal fin
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.moveTo(-6, -11);
+                    ctx.quadraticCurveTo(0, -19, 8, -10);
+                    ctx.lineTo(2, -10);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Belly scale stripes
+                    ctx.strokeStyle = 'rgba(254, 240, 138, 0.6)';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(-4, 2, 6, -0.3, 0.8);
+                    ctx.arc(2, 2, 6, -0.3, 0.8);
+                    ctx.stroke();
+
+                    // Large glossy eye
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(6, -4, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(7.5, -4, 2.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(6.5, -5.5, 1, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Upper Jaw & Sharp Teeth
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.moveTo(8, -1);
+                    ctx.lineTo(17, -2 - jaw * 8);
+                    ctx.lineTo(10, 3);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Lower Jaw
+                    ctx.beginPath();
+                    ctx.moveTo(8, 3);
+                    ctx.lineTo(16, 5 + jaw * 8);
+                    ctx.lineTo(9, 7);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Sharp White Teeth inside mouth
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(10, -1 - jaw * 4); ctx.lineTo(12, 2); ctx.lineTo(13, -1 - jaw * 4);
+                    ctx.moveTo(13, -1 - jaw * 4); ctx.lineTo(15, 2); ctx.lineTo(16, -1 - jaw * 4);
+                    ctx.fill();
+                } else if (this.type === 'pufferfish') {
+                    ctx.scale(this.facingRight ? 1 : -1, 1);
+
+                    const scale = this.puffScale || 1.0;
+                    ctx.scale(scale, scale);
+
+                    const r = 16;
+
+                    // Spikes radiating around body
+                    ctx.fillStyle = '#d97706';
+                    const spikeCount = 10;
+                    for (let i = 0; i < spikeCount; i++) {
+                        const a = (i / spikeCount) * Math.PI * 2 + (Date.now() * 0.002);
+                        const sx1 = Math.cos(a - 0.2) * (r - 2);
+                        const sy1 = Math.sin(a - 0.2) * (r - 2);
+                        const sx2 = Math.cos(a + 0.2) * (r - 2);
+                        const sy2 = Math.sin(a + 0.2) * (r - 2);
+                        const tipX = Math.cos(a) * (r + 7);
+                        const tipY = Math.sin(a) * (r + 7);
+
+                        ctx.beginPath();
+                        ctx.moveTo(sx1, sy1);
+                        ctx.lineTo(tipX, tipY);
+                        ctx.lineTo(sx2, sy2);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+
+                    // Round Pufferfish Body
+                    const bodyGrad = ctx.createRadialGradient(-3, -3, 2, 0, 0, r);
+                    bodyGrad.addColorStop(0, '#fef08a');
+                    bodyGrad.addColorStop(0.5, '#facc15');
+                    bodyGrad.addColorStop(1, '#eab308');
+                    ctx.fillStyle = bodyGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ca8a04';
+                    ctx.lineWidth = 1.2;
+                    ctx.stroke();
+
+                    // Cream/white spotted belly
+                    ctx.fillStyle = 'rgba(254, 252, 232, 0.7)';
+                    ctx.beginPath();
+                    ctx.ellipse(-1, 5, 10, 7, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Expressive Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(5, -5, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(6.5, -5, 2.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(5.5, -6.5, 1, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Pouting Mouth / Blowing Air Nozzle
+                    if (this.isBlowing) {
+                        ctx.fillStyle = '#dc2626';
+                        ctx.beginPath();
+                        ctx.ellipse(14, 2, 4, 5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#0f172a';
+                        ctx.beginPath();
+                        ctx.ellipse(14, 2, 2.5, 3.5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Air wind gust lines streaming out from mouth
+                        ctx.strokeStyle = 'rgba(224, 242, 254, 0.9)';
+                        ctx.lineWidth = 2;
+                        const wave = Math.sin(Date.now() * 0.03) * 3;
+                        ctx.beginPath();
+                        ctx.moveTo(18, -2); ctx.lineTo(32, -6 + wave);
+                        ctx.moveTo(18, 2); ctx.lineTo(36, 2 + wave);
+                        ctx.moveTo(18, 6); ctx.lineTo(32, 10 + wave);
+                        ctx.stroke();
+                    } else {
+                        ctx.strokeStyle = '#854d0e';
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.arc(10, 2, 3, 0.1 * Math.PI, 0.9 * Math.PI);
+                        ctx.stroke();
+                    }
                 }
 
                 ctx.restore();
@@ -4949,7 +5226,14 @@
                 // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%).
                 const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (currentStoryLevel === 2 ? 0.08 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20)))) : 0.08;
                 if (gameMode === 'STORY' && currentStoryLevel > 1 && i > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                    const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
+                    let enemyType = 'shooter';
+                    if (currentStoryLevel === 2) {
+                        enemyType = Math.random() < 0.5 ? 'angel' : 'exploder';
+                    } else if (currentStoryLevel === 3) {
+                        enemyType = Math.random() < 0.5 ? 'fish' : 'pufferfish';
+                    } else {
+                        enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                    }
                     enemies.push(new Enemy(platform, enemyType));
                 }
 
@@ -5046,7 +5330,14 @@
                     // Enemy spawn probability scales by level: Level 1 (0%) up to Level 21 (~21%).
                     const enemySpawnChance = gameMode === 'STORY' ? (currentStoryLevel === 1 ? 0 : (currentStoryLevel === 2 ? 0.08 : (0.03 + (currentStoryLevel - 1) * (0.18 / 20)))) : 0.08;
                     if (gameMode === 'STORY' && currentStoryLevel > 1 && type !== 'fragile' && type !== 'finish' && Math.random() < enemySpawnChance) {
-                        const enemyType = (currentStoryLevel === 2) ? (Math.random() < 0.5 ? 'angel' : 'exploder') : (Math.random() < 0.5 ? 'shooter' : 'exploder');
+                        let enemyType = 'shooter';
+                        if (currentStoryLevel === 2) {
+                            enemyType = Math.random() < 0.5 ? 'angel' : 'exploder';
+                        } else if (currentStoryLevel === 3) {
+                            enemyType = Math.random() < 0.5 ? 'fish' : 'pufferfish';
+                        } else {
+                            enemyType = Math.random() < 0.5 ? 'shooter' : 'exploder';
+                        }
                         enemies.push(new Enemy(platform, enemyType));
                     }
 
@@ -5699,89 +5990,93 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 const time = Date.now() * 0.003;
-                const flowTime = Date.now() * 0.09;
+                const flowTime = Date.now() * 0.1;
 
-                // 1. Background Rocky Cavern Wall Outlines & Shading
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
-                for (let i = 0; i < 5; i++) {
+                // 1. Background Rocky Cavern Wall Outlines & Shading on Left & Right Sides
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+                for (let i = 0; i < 6; i++) {
                     const cliffX = (i % 2 === 0) ? 0 : canvas.width;
                     const sign = (i % 2 === 0) ? 1 : -1;
-                    const cliffY = ((i * 180 - cameraY * 0.1) % (canvas.height + 200)) - 100;
-                    const cliffW = 70 + (i % 3) * 30;
+                    const cliffY = ((i * 150 - cameraY * 0.1) % (canvas.height + 200)) - 100;
+                    const cliffW = 50 + (i % 3) * 20;
 
                     ctx.beginPath();
                     ctx.moveTo(cliffX, cliffY);
                     ctx.lineTo(cliffX + sign * cliffW, cliffY + 20);
-                    ctx.lineTo(cliffX + sign * (cliffW - 20), cliffY + 120);
-                    ctx.lineTo(cliffX + sign * (cliffW + 15), cliffY + 200);
-                    ctx.lineTo(cliffX, cliffY + 220);
+                    ctx.lineTo(cliffX + sign * (cliffW - 15), cliffY + 100);
+                    ctx.lineTo(cliffX + sign * (cliffW + 10), cliffY + 180);
+                    ctx.lineTo(cliffX, cliffY + 200);
                     ctx.closePath();
                     ctx.fill();
                 }
 
-                // 2. Main Cascading Waterfall Streams (Falling Water)
-                const waterfallStreams = [
-                    { xPct: 0.22, width: 65, alpha: 0.65 },
-                    { xPct: 0.52, width: 95, alpha: 0.75 },
-                    { xPct: 0.80, width: 55, alpha: 0.60 }
-                ];
+                // 2. Single Large Wide Waterfall Curtain (Falling Water)
+                const wfWidth = canvas.width * 0.74;
+                const wx = (canvas.width - wfWidth) / 2;
 
-                waterfallStreams.forEach(wf => {
-                    const wx = canvas.width * wf.xPct - wf.width / 2;
+                // Outer ambient mist glow
+                const glowGrad = ctx.createLinearGradient(wx - 20, 0, wx + wfWidth + 20, 0);
+                glowGrad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+                glowGrad.addColorStop(0.2, 'rgba(56, 189, 248, 0.25)');
+                glowGrad.addColorStop(0.5, 'rgba(186, 230, 253, 0.45)');
+                glowGrad.addColorStop(0.8, 'rgba(56, 189, 248, 0.25)');
+                glowGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.fillRect(wx - 20, 0, wfWidth + 40, canvas.height);
 
-                    // Base water column gradient
-                    const wGrad = ctx.createLinearGradient(wx, 0, wx + wf.width, 0);
-                    wGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-                    wGrad.addColorStop(0.2, `rgba(56, 189, 248, ${wf.alpha})`);
-                    wGrad.addColorStop(0.5, `rgba(186, 230, 253, ${wf.alpha + 0.15})`);
-                    wGrad.addColorStop(0.8, `rgba(56, 189, 248, ${wf.alpha})`);
-                    wGrad.addColorStop(1, 'rgba(56, 189, 248, 0.2)');
+                // Main water body curtain
+                const wGrad = ctx.createLinearGradient(wx, 0, wx + wfWidth, 0);
+                wGrad.addColorStop(0, 'rgba(14, 165, 233, 0.4)');
+                wGrad.addColorStop(0.15, 'rgba(56, 189, 248, 0.75)');
+                wGrad.addColorStop(0.5, 'rgba(224, 242, 254, 0.9)');
+                wGrad.addColorStop(0.85, 'rgba(56, 189, 248, 0.75)');
+                wGrad.addColorStop(1, 'rgba(14, 165, 233, 0.4)');
+                ctx.fillStyle = wGrad;
+                ctx.fillRect(wx, 0, wfWidth, canvas.height);
 
-                    ctx.fillStyle = wGrad;
-                    ctx.fillRect(wx, 0, wf.width, canvas.height);
+                // Falling animated water flow ribbons/lines across the wide waterfall
+                const lineCount = Math.floor(wfWidth / 10);
+                for (let l = 0; l < lineCount; l++) {
+                    const lineX = wx + 5 + l * 10 + Math.sin(l * 1.8) * 2;
+                    const speedMult = 0.85 + ((l * 3) % 5) * 0.12;
+                    const lineOffset = (flowTime * speedMult + l * 47) % (canvas.height + 120);
+                    const lineLen = 90 + (l % 5) * 35;
 
-                    // Falling animated water flow ribbons/lines
-                    const lineCount = Math.floor(wf.width / 12);
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                    ctx.lineWidth = 1.8;
-                    for (let l = 0; l < lineCount; l++) {
-                        const lineX = wx + 6 + l * 12 + Math.sin(l * 1.5) * 3;
-                        const lineOffset = (flowTime * (0.8 + (l % 3) * 0.2) + l * 67) % canvas.height;
-                        const lineLen = 80 + (l % 4) * 40;
+                    ctx.strokeStyle = (l % 3 === 0) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(186, 230, 253, 0.7)';
+                    ctx.lineWidth = (l % 4 === 0) ? 2.5 : 1.5;
 
-                        ctx.beginPath();
-                        ctx.moveTo(lineX, lineOffset - lineLen);
-                        ctx.lineTo(lineX + Math.sin(lineOffset * 0.02) * 2, lineOffset);
-                        ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(lineX, lineOffset - lineLen);
+                    ctx.lineTo(lineX + Math.sin(lineOffset * 0.015) * 3, lineOffset);
+                    ctx.stroke();
 
-                        // Additional fast inner white foam streak
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                    // Fast inner white foam streak
+                    if (l % 2 === 0) {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
                         ctx.lineWidth = 1;
                         ctx.beginPath();
-                        ctx.moveTo(lineX + 1, lineOffset - lineLen * 0.4);
-                        ctx.lineTo(lineX + 1, lineOffset - lineLen * 0.1);
+                        ctx.moveTo(lineX + 1, lineOffset - lineLen * 0.5);
+                        ctx.lineTo(lineX + 1, lineOffset - lineLen * 0.15);
                         ctx.stroke();
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                        ctx.lineWidth = 1.8;
                     }
+                }
 
-                    // Water spray & mist edge highlights
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                    for (let s = 0; s < 8; s++) {
-                        const sprayY = (s * 90 + flowTime * 1.2) % canvas.height;
-                        const sprayX1 = wx - 4 + Math.sin(sprayY * 0.05 + s) * 4;
-                        const sprayX2 = wx + wf.width + 4 + Math.cos(sprayY * 0.05 + s) * 4;
-                        ctx.beginPath();
-                        ctx.arc(sprayX1, sprayY, 2.5 + (s % 3), 0, Math.PI * 2);
-                        ctx.arc(sprayX2, sprayY, 2.5 + (s % 3), 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
+                // Water spray & mist edge highlights on left and right waterfall boundaries
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                for (let s = 0; s < 12; s++) {
+                    const sprayY = (s * 60 + flowTime * 1.4) % canvas.height;
+                    const sprayX1 = wx - 2 + Math.sin(sprayY * 0.04 + s) * 6;
+                    const sprayX2 = wx + wfWidth + 2 + Math.cos(sprayY * 0.04 + s) * 6;
+                    ctx.beginPath();
+                    ctx.arc(sprayX1, sprayY, 3 + (s % 3), 0, Math.PI * 2);
+                    ctx.arc(sprayX2, sprayY, 3 + (s % 3), 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 // 3. Floating Water Spray & Mist Droplets across scenario
-                ctx.fillStyle = 'rgba(186, 230, 253, 0.55)';
-                for (let i = 0; i < 30; i++) {
-                    const bx = (i * 59 + 15 + Math.sin(time + i) * 12) % canvas.width;
+                ctx.fillStyle = 'rgba(186, 230, 253, 0.6)';
+                for (let i = 0; i < 35; i++) {
+                    const bx = (i * 59 + 15 + Math.sin(time + i) * 15) % canvas.width;
                     const rawY = (i * 73 - cameraY * 0.25 + flowTime * 0.5) % canvas.height;
                     const by = rawY < 0 ? rawY + canvas.height : rawY;
                     ctx.beginPath();
@@ -5790,12 +6085,12 @@
                 }
 
                 // Foreground ambient mist/fog layers
-                ctx.fillStyle = 'rgba(186, 230, 253, 0.08)';
+                ctx.fillStyle = 'rgba(186, 230, 253, 0.09)';
                 for (let m = 0; m < 4; m++) {
                     const mistY = ((m * 160 - cameraY * 0.12) % canvas.height);
                     const adjustedMistY = mistY < 0 ? mistY + canvas.height : mistY;
                     ctx.beginPath();
-                    ctx.ellipse(canvas.width / 2 + Math.sin(time + m) * 40, adjustedMistY, canvas.width * 0.6, 28, 0, 0, Math.PI * 2);
+                    ctx.ellipse(canvas.width / 2 + Math.sin(time + m) * 40, adjustedMistY, canvas.width * 0.65, 30, 0, 0, Math.PI * 2);
                     ctx.fill();
                 }
             } else if (gameMode === 'STORY') {
