@@ -1241,6 +1241,100 @@
                 }
             }
 
+            // Realistic Waterfall Ambient Sound (Filtered White/Pink Noise with Water Rush Resonance)
+            startWaterfallSound() {
+                if (this.muted || gameState === 'ATTRACT') return;
+                this.ensureContext();
+                if (!this.ctx || this.waterfallNodes) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    const sr = this.ctx.sampleRate;
+
+                    const noiseBufLen = Math.floor(sr * 2);
+                    const noiseBuf = this.ctx.createBuffer(1, noiseBufLen, sr);
+                    const pcm = noiseBuf.getChannelData(0);
+                    let lastOut = 0.0;
+                    for (let i = 0; i < noiseBufLen; i++) {
+                        const white = Math.random() * 2 - 1;
+                        lastOut = (lastOut + (0.05 * white)) / 1.05; // Pink/brownish noise
+                        pcm[i] = lastOut;
+                    }
+
+                    const noiseSource = this.ctx.createBufferSource();
+                    noiseSource.buffer = noiseBuf;
+                    noiseSource.loop = true;
+
+                    // Low-pass filter for heavy water roar
+                    const lpFilter = this.ctx.createBiquadFilter();
+                    lpFilter.type = 'lowpass';
+                    lpFilter.frequency.setValueAtTime(650, now);
+
+                    // Band-pass filter for splashing spray texture
+                    const bpFilter = this.ctx.createBiquadFilter();
+                    bpFilter.type = 'bandpass';
+                    bpFilter.frequency.setValueAtTime(1400, now);
+                    bpFilter.Q.setValueAtTime(1.2, now);
+
+                    // Subtle LFO for natural water flow pulsing
+                    const lfo = this.ctx.createOscillator();
+                    lfo.type = 'sine';
+                    lfo.frequency.setValueAtTime(0.6, now);
+
+                    const lfoGain = this.ctx.createGain();
+                    lfoGain.gain.setValueAtTime(180, now);
+
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(bpFilter.frequency);
+
+                    const masterGain = this.ctx.createGain();
+                    masterGain.gain.setValueAtTime(0.0001, now);
+
+                    noiseSource.connect(lpFilter);
+                    noiseSource.connect(bpFilter);
+                    lpFilter.connect(masterGain);
+                    bpFilter.connect(masterGain);
+                    masterGain.connect(this.ctx.destination);
+
+                    noiseSource.start(now);
+                    lfo.start(now);
+
+                    this.waterfallNodes = {
+                        noiseSource,
+                        lpFilter,
+                        bpFilter,
+                        lfo,
+                        lfoGain,
+                        masterGain
+                    };
+                } catch (e) {}
+            }
+
+            stopWaterfallSound() {
+                if (this.waterfallNodes) {
+                    try {
+                        this.waterfallNodes.noiseSource.stop();
+                        if (this.waterfallNodes.lfo) this.waterfallNodes.lfo.stop();
+                    } catch (e) {}
+                    this.waterfallNodes = null;
+                }
+            }
+
+            updateWaterfallSound(isActive, volume = 0.35) {
+                if (isActive && !this.muted && gameState === 'PLAYING') {
+                    if (!this.waterfallNodes) {
+                        this.startWaterfallSound();
+                    }
+                    if (this.waterfallNodes && this.ctx) {
+                        const now = this.ctx.currentTime;
+                        this.waterfallNodes.masterGain.gain.cancelScheduledValues(now);
+                        this.waterfallNodes.masterGain.gain.linearRampToValueAtTime(volume, now + 0.1);
+                    }
+                } else {
+                    this.stopWaterfallSound();
+                }
+            }
+
             toggleMute() {
                 this.muted = !this.muted;
                 localStorage.setItem('subida_nuvens_sound_muted', this.muted.toString());
@@ -1248,6 +1342,7 @@
                     this.stopAllMusic();
                     this.stopJetpackSound();
                     this.stopLavaSound();
+                    this.stopWaterfallSound();
                 } else {
                     if (gameState === 'MENU') {
                         this.playMenuMusic();
@@ -2690,6 +2785,7 @@
             resetMenuInactivityTimer();
             sound.stopJetpackSound();
             sound.stopLavaSound();
+            sound.stopWaterfallSound();
             sound.stopAllMusic();
             sound.playMenuMusic();
             closeOptionsModal();
@@ -3003,6 +3099,7 @@
             sound.stopAllMusic();
             sound.stopJetpackSound();
             sound.stopLavaSound();
+            sound.stopWaterfallSound();
 
             const startMenu = document.getElementById('startMenu');
             if (startMenu) startMenu.classList.add('hidden');
@@ -5111,6 +5208,7 @@
 
             sound.stopJetpackSound();
             sound.stopLavaSound();
+            sound.stopWaterfallSound();
             sound.stopAllMusic();
             sound.playSpring();
             sound.playFireworks();
@@ -5674,6 +5772,13 @@
                 sound.updateLavaSound(true, isSurging, proximityFactor);
             } else {
                 sound.updateLavaSound(false);
+            }
+
+            // Waterfall Ambient Sound for Level 3 (Story Mode)
+            if (gameMode === 'STORY' && currentStoryLevel === 3) {
+                sound.updateWaterfallSound(true);
+            } else {
+                sound.updateWaterfallSound(false);
             }
 
             // Camera movement: Smoothly follows the player as they climb higher
@@ -6673,6 +6778,7 @@
             gameState = 'LEVEL_COMPLETE';
             sound.stopJetpackSound();
             sound.stopLavaSound();
+            sound.stopWaterfallSound();
             sound.playSpring();
 
             // Unlock next level in localStorage
@@ -6747,6 +6853,7 @@
             gameState = 'GAMEOVER';
             sound.stopJetpackSound();
             sound.stopLavaSound();
+            sound.stopWaterfallSound();
             sound.stopAllMusic();
             sound.playGameOver();
 
