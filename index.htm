@@ -4418,10 +4418,11 @@
                         this.y += 5;
                     }
 
-                    if (this.jumpTimer >= 70 && this.isGrounded) {
+                    if (this.jumpTimer >= 65 && this.isGrounded) {
                         this.jumpTimer = 0;
                         this.vy = -10.5; // Jump upward towards player
                         this.isGrounded = false;
+                        this.standingPlatform = null;
                         sound.playSpring();
                     }
 
@@ -4429,18 +4430,43 @@
                         this.vy += 0.42; // Gravity
                         this.y += this.vy;
 
-                        if (this.standingPlatform && !this.standingPlatform.broken && this.vy > 0) {
-                            if (this.y + this.height >= this.standingPlatform.y) {
-                                this.y = this.standingPlatform.y - this.height;
-                                this.vy = 0;
-                                this.isGrounded = true;
-                            }
+                        // Check landing collision on all non-broken platforms
+                        if (this.vy > 0) {
+                            platforms.forEach(p => {
+                                if (p.broken) return;
+                                if (
+                                    this.x + this.width > p.x &&
+                                    this.x < p.x + p.width &&
+                                    this.y + this.height >= p.y &&
+                                    this.y + this.height <= p.y + p.height + this.vy
+                                ) {
+                                    this.y = p.y - this.height;
+                                    this.vy = 0;
+                                    this.isGrounded = true;
+                                    this.standingPlatform = p;
+                                }
+                            });
                         }
                     }
                 }
 
                 if (this.type === 'pufferfish') {
-                    if (this.standingPlatform && !this.standingPlatform.broken) {
+                    this.jumpTimer = (this.jumpTimer || 0) + 1;
+
+                    const playerCenterX = player.x + player.width / 2;
+                    const enemyCenterX = this.x + this.width / 2;
+                    const dx = playerCenterX - enemyCenterX;
+
+                    this.facingRight = dx > 0;
+
+                    // Chase player horizontally
+                    const moveSpeed = 0.8;
+                    if (Math.abs(dx) > 8) {
+                        this.x += Math.sign(dx) * moveSpeed;
+                    }
+                    this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
+                    if (this.isGrounded && this.standingPlatform && !this.standingPlatform.broken) {
                         this.y = this.standingPlatform.y - this.height;
                         if (this.standingPlatform.type === 'moving') {
                             this.x += this.standingPlatform.moveSpeed;
@@ -4449,9 +4475,36 @@
                         this.y += 5;
                     }
 
-                    const playerCenterX = player.x + player.width / 2;
-                    const enemyCenterX = this.x + this.width / 2;
-                    this.facingRight = playerCenterX > enemyCenterX;
+                    // Periodically hop towards player across platforms
+                    if (this.jumpTimer >= 90 && this.isGrounded) {
+                        this.jumpTimer = 0;
+                        this.vy = -10.5;
+                        this.isGrounded = false;
+                        this.standingPlatform = null;
+                        sound.playSpring();
+                    }
+
+                    if (!this.isGrounded) {
+                        this.vy += 0.42; // Gravity
+                        this.y += this.vy;
+
+                        if (this.vy > 0) {
+                            platforms.forEach(p => {
+                                if (p.broken) return;
+                                if (
+                                    this.x + this.width > p.x &&
+                                    this.x < p.x + p.width &&
+                                    this.y + this.height >= p.y &&
+                                    this.y + this.height <= p.y + p.height + this.vy
+                                ) {
+                                    this.y = p.y - this.height;
+                                    this.vy = 0;
+                                    this.isGrounded = true;
+                                    this.standingPlatform = p;
+                                }
+                            });
+                        }
+                    }
 
                     this.blowTimer++;
                     const cycle = this.blowTimer % 180;
