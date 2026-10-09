@@ -3956,6 +3956,7 @@
 
                 const isRockTheme = (gameMode === 'STORY' && (currentStoryLevel === 1 || currentStoryLevel === 3));
                 const isCrystalTheme = (gameMode === 'STORY' && currentStoryLevel === 2);
+                const isEggTheme = (gameMode === 'STORY' && currentStoryLevel === 4);
 
                 if (isCrystalTheme) {
                     // Level 2 & 3: Crystal Platforms (Clean multifaceted crystal body, optimized performance without shadow glow or spires)
@@ -4146,6 +4147,101 @@
                     }
 
                     ctx.restore();
+                } else if (isEggTheme) {
+                    // Story Mode Level 4 ("Raízes da Floresta"): Smooth egg-shaped / rounded pebble rocks
+                    const eggHeight = 22;
+                    const rX = Math.min(this.width / 2, 16);
+                    const topY0 = y0 + getCurveY(0);
+                    const topYMid = y0 + getCurveY(this.width / 2);
+                    const topYEnd = y0 + getCurveY(this.width);
+
+                    ctx.beginPath();
+                    ctx.moveTo(x0 + rX, topY0);
+                    ctx.quadraticCurveTo(midX, topYMid, x0 + this.width - rX, topYEnd);
+                    // Right bulbous egg curve down to bottom
+                    ctx.bezierCurveTo(
+                        x0 + this.width + 5, y0 + eggHeight * 0.35 + getCurveY(this.width),
+                        x0 + this.width - rX * 0.3, y0 + eggHeight + 5 + getCurveY(this.width),
+                        midX, y0 + eggHeight + 5 + getCurveY(this.width / 2)
+                    );
+                    // Left bulbous egg curve back to top left
+                    ctx.bezierCurveTo(
+                        x0 + rX * 0.3, y0 + eggHeight + 5 + getCurveY(0),
+                        x0 - 5, y0 + eggHeight * 0.35 + getCurveY(0),
+                        x0 + rX, topY0
+                    );
+                    ctx.closePath();
+
+                    // Smooth egg gradient fill
+                    const eggGrad = ctx.createLinearGradient(x0, y0, x0, y0 + eggHeight + 5);
+                    eggGrad.addColorStop(0, c1);
+                    eggGrad.addColorStop(0.65, c2);
+                    eggGrad.addColorStop(1, '#1a3a05'); // Deep organic mossy shadow
+                    ctx.fillStyle = eggGrad;
+                    ctx.fill();
+
+                    // Subtle organic stippling/texture speckles on egg surface
+                    if (this.textureSpeckles) {
+                        this.textureSpeckles.forEach(s => {
+                            const sx = x0 + s.relX;
+                            const sy = y0 + Math.min(eggHeight, s.relY) + getCurveY(s.relX);
+                            ctx.fillStyle = s.isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(20, 50, 5, 0.3)';
+                            ctx.beginPath();
+                            ctx.arc(sx, sy, s.radius * 1.1, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+
+                    // Top Surface Rim Highlight (Soft egg curve)
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x0 + rX + 2, topY0 + 2);
+                    ctx.quadraticCurveTo(midX, topYMid + 2, x0 + this.width - rX - 2, topYEnd + 2);
+                    ctx.stroke();
+
+                    // Specular egg sheen / shine spot
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+                    ctx.beginPath();
+                    ctx.ellipse(midX - this.width * 0.12, y0 + 6 + getCurveY(midX - this.width * 0.12), Math.min(30, this.width * 0.25), 3.5, -0.08, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Dark Rock Bottom Shadow Edge
+                    ctx.strokeStyle = 'rgba(10, 30, 0, 0.55)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x0 + this.width - rX * 0.3, y0 + eggHeight + 4 + getCurveY(this.width));
+                    ctx.bezierCurveTo(
+                        midX + this.width * 0.25, y0 + eggHeight + 5 + getCurveY(midX),
+                        midX - this.width * 0.25, y0 + eggHeight + 5 + getCurveY(midX),
+                        x0 + rX * 0.3, y0 + eggHeight + 4 + getCurveY(0)
+                    );
+                    ctx.stroke();
+
+                    // Special Platform Type Indicator Overlay
+                    if (this.type === 'fragile') {
+                        const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
+                        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
+                        ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
+                        ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
+                        ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
+                        ctx.stroke();
+                    } else if (this.type === 'spring') {
+                        const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
+                        const springY = y0 + 4 + getCurveY(this.width * 0.5);
+                        ctx.fillStyle = '#facc15';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 10 * pulse, 3.2 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.ellipse(midX, springY, 5 * pulse, 1.6 * pulse, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 } else if (isRockTheme) {
                     // Draw organic non-rectangular rock path for Story Mode Level 1 (Vulcão)
                     ctx.beginPath();
