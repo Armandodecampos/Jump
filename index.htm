@@ -4085,7 +4085,7 @@
                     if (this.type === 'fragile') {
                         // Fracture cracks
                         const isCrumbling = this.crumbling;
-                        ctx.strokeStyle = isCrumbling ? 'rgba(255, 255, 255, 0.95)' : 'rgba(254, 240, 138, 0.9)';
+                        ctx.strokeStyle = isCrumbling ? 'rgba(255, 255, 255, 0.95)' : 'rgba(17, 24, 39, 0.9)';
                         ctx.lineWidth = isCrumbling ? 2.2 : 1.8;
                         ctx.beginPath();
                         ctx.moveTo(x0 + this.width * 0.15, y0 + 3);
@@ -4317,14 +4317,21 @@
 
                     // Glowing details for Fragile and Spring rocks
                     if (this.type === 'fragile') {
-                        const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
-                        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+                        ctx.strokeStyle = 'rgba(17, 24, 39, 0.9)';
                         ctx.lineWidth = 1.8;
                         ctx.beginPath();
                         ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
                         ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
                         ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
                         ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
+                        ctx.stroke();
+
+                        // Additional branching dark crack lines
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
+                        ctx.lineTo(x0 + this.width * 0.28, y0 + 18 + getCurveY(this.width * 0.28));
+                        ctx.moveTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
+                        ctx.lineTo(x0 + this.width * 0.62, y0 + 15 + getCurveY(this.width * 0.62));
                         ctx.stroke();
                     } else if (this.type === 'spring') {
                         const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
@@ -4376,14 +4383,21 @@
 
                     // Fragile stripes or Spring gem indicator
                     if (this.type === 'fragile') {
-                        const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
-                        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+                        ctx.strokeStyle = 'rgba(17, 24, 39, 0.9)';
                         ctx.lineWidth = 1.8;
                         ctx.beginPath();
                         ctx.moveTo(x0 + this.width * 0.2, y0 + 3 + getCurveY(this.width * 0.2));
                         ctx.lineTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
                         ctx.lineTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
                         ctx.lineTo(x0 + this.width * 0.8, y0 + 13 + getCurveY(this.width * 0.8));
+                        ctx.stroke();
+
+                        // Additional branching dark crack lines
+                        ctx.beginPath();
+                        ctx.moveTo(x0 + this.width * 0.35, y0 + 10 + getCurveY(this.width * 0.35));
+                        ctx.lineTo(x0 + this.width * 0.28, y0 + 18 + getCurveY(this.width * 0.28));
+                        ctx.moveTo(x0 + this.width * 0.55, y0 + 6 + getCurveY(this.width * 0.55));
+                        ctx.lineTo(x0 + this.width * 0.62, y0 + 15 + getCurveY(this.width * 0.62));
                         ctx.stroke();
                     } else if (this.type === 'spring') {
                         const pulse = 1 + 0.15 * Math.sin(Date.now() * 0.01);
