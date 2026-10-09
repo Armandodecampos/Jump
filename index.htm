@@ -4379,14 +4379,6 @@
                         });
                     }
 
-                    // Top Surface Rim Highlight
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x0, topY0 + 1);
-                    ctx.lineTo(x0 + this.width, topYEnd + 1);
-                    ctx.stroke();
-
                     // Special Platform Type Indicator Overlay
                     if (this.type === 'fragile') {
                         const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.008);
